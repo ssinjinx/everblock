@@ -133,7 +133,10 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   step('necromancer pet');
   await ev(() => { const p = EB.game.player; p.level = 4; p.hp = p.maxHp; });
   await placeMob('gnoll', 7, 3);
-  await cast('cavorting_bones');
+  for (let k = 0; k < 3 && !(await ev(() => EB.game.mercs.some((m) => m.isPet))); k++) {
+    await ev(() => { window.__m.stunUntil = EB.game.time + 7; }); // hold the gnoll so a hit can't interrupt the 5s summon
+    await cast('cavorting_bones');
+  }
   const pet = await ev(() => { const g = EB.game, m = g.mercs.find((m) => m.isPet); return m ? { name: m.name, lvl: m.level, hp: m.hp, plate: !!m.plate, rows: document.querySelectorAll('#groupWin .gmem').length, pet: !!document.querySelector('#groupWin .gpet') } : null; });
   check('Cavorting Bones summons a level 3 pet in the group window', pet && pet.lvl === 3 && pet.name === 'Gabober' && pet.pet, pet);
   await cast('lifetap');
