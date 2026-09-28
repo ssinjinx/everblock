@@ -160,6 +160,52 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
 #zoneFade.on { opacity: 1; pointer-events: auto; }
 #zoneFade div { color: #c8b890; font-size: 22px; letter-spacing: 2px; text-shadow: 2px 2px 0 #000; }
 
+/* ---------- v3: icons, gems, spellbook, merc settings ---------- */
+.sic { width: 32px; height: 32px; image-rendering: auto; border: 1px solid #000; border-radius: 3px; display: block; }
+#hotbar .slot { padding-top: 2px; }
+#hotbar .slot .hic { width: 30px; height: 30px; margin: 10px auto 1px; }
+#hotbar .slot .hn { display: block; line-height: 1.05; font-size: 9px; }
+#hotbar .slot.empty { opacity: 0.55; border-style: dashed; }
+#hotbar .slot.unmem .hic { filter: grayscale(1) brightness(0.6); }
+#hotbar .slot.unmem { border-color: #5a4a3a; }
+.drop { outline: 2px solid #ffe060 !important; box-shadow: 0 0 10px #ffd040 !important; }
+#gemBar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 3px; pointer-events: auto; }
+#gemBar .gem { position: relative; width: 38px; height: 38px; background: rgba(18,14,10,0.85); border: 2px solid #8a5ac0; border-radius: 50% 50% 6px 6px; overflow: hidden; cursor: pointer; }
+#gemBar .gem .sic { width: 34px; height: 34px; border: 0; border-radius: 0; }
+#gemBar .gem.empty { border-color: #4a3a5a; border-style: dashed; }
+#gemBar .gem.book { border-color: #b08840; border-radius: 4px; font-size: 20px; text-align: center; line-height: 34px; }
+#gemBar .gem.nomana { opacity: 0.5; }
+#gemBar .gem.active { border-color: #ffe090; box-shadow: 0 0 8px #ffd060; }
+#gemBar .gem .cd, #gemBar .gem .mem { position: absolute; left: 0; right: 0; bottom: 0; height: 0; }
+#gemBar .gem .cd { background: rgba(0,0,0,0.65); }
+#gemBar .gem .mem { background: rgba(160,110,255,0.55); }
+#bookWin { width: 560px; max-height: 76vh; overflow-y: auto; }
+#bookWin h4 { margin: 8px 0 4px; color: #f3c85a; font-size: 12px; }
+.bookGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.bspell { display: flex; gap: 6px; align-items: center; padding: 3px; background: rgba(40,30,20,0.8); border: 1px solid #5a4a30; border-radius: 3px; cursor: grab; font-size: 11px; }
+.bspell span { color: #b0a080; font-size: 10px; }
+.bspell.memd { border-color: #8a5ac0; }
+.bspell.sel { border-color: #ffe060; box-shadow: 0 0 6px #ffd040; background: rgba(80,60,20,0.9); }
+#mercCfgWin { width: 380px; max-height: 78vh; overflow-y: auto; }
+#mercCfgWin h4 { margin: 8px 0 4px; color: #f3c85a; font-size: 12px; }
+.stanceRow { display: flex; gap: 4px; }
+.stanceRow .stance { flex: 1; }
+.stance.sel { background: #6a4a18; border-color: #ffd060; color: #fff; }
+.mequip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+.mgive .row { display: flex; align-items: center; gap: 6px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.mgive .row .n { flex: 1; font-size: 11px; }
+.gmem.dead { opacity: 0.85; }
+.gmem.dead .gname { color: #a08070; text-decoration: line-through; }
+.gdead { color: #ff6050; font-size: 10px; display: flex; align-items: center; justify-content: space-between; }
+.gcfg { cursor: pointer; margin-left: 4px; color: #d0c090; }
+.gcfg:hover { color: #fff; }
+.gstance { font-size: 9px; color: #b0a080; text-transform: capitalize; }
+.gpet { font-size: 9px; color: #90d0a0; }
+.fk { font-size: 9px; color: #f3c85a; }
+.grev { font-size: 9px !important; padding: 1px 4px !important; }
+.qblock { margin-bottom: 8px; padding: 4px 6px; background: rgba(40,30,20,0.6); border-left: 3px solid #b08840; }
+.qstep { color: #b0a080; font-weight: normal; font-size: 11px; }
+
 </style>
 </head>
 <body>
@@ -237,6 +283,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     <input id="chatInput" class="hidden" maxlength="120" autocomplete="off" placeholder="Type /help for commands">
   </div>
   <div id="hotbar"></div>
+  <div id="gemBar" class="hidden"></div>
   <div id="centerMsg"></div>
   <div id="corpseArrow" class="hidden"></div>
   <div id="clickToPlay" class="hidden">Click to resume &bull; ? for help</div>
@@ -268,6 +315,15 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     <div class="wtitle">Mercenary Liaison <span class="x" data-close="mercWin">✕</span></div>
     <div id="mercList"></div>
   </div>
+  <div id="bookWin" class="win panelwin hidden">
+    <div class="wtitle">Spellbook <span class="x" data-close="bookWin">✕</span></div>
+    <div id="bookHint" class="sub"></div>
+    <div id="bookList"></div>
+  </div>
+  <div id="mercCfgWin" class="win panelwin hidden">
+    <div class="wtitle" id="mcfgTitle">Mercenary <span class="x" data-close="mercCfgWin">✕</span></div>
+    <div id="mcfgBody"></div>
+  </div>
   <div id="dialogWin" class="win panelwin hidden">
     <div class="wtitle" id="dlgTitle">Quest <span class="x" data-close="dialogWin">✕</span></div>
     <div id="dlgText"></div>
@@ -281,24 +337,24 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         <p><b>W A S D</b> move &bull; <b>Space</b> jump/swim &bull; <b>Mouse</b> look<br><b>V</b> 1st/3rd person &bull; <b>Wheel</b> zoom</p>
         <h4>Combat</h4>
         <p><b>Left click</b> target &bull; <b>Tab</b> next target &bull; <b>Esc</b> clear target<br>
-        <b>Q</b> toggle auto attack &bull; <b>1-8</b> hotbar abilities/spells<br>
+        <b>Q</b> toggle auto attack &bull; <b>1-8</b> hotbar abilities/spells<br><b>K</b> spellbook: memorize spells into the 8 spell gems (left edge) &mdash; drag or click a spell, then click a gem or hotbar slot. Right-click a gem/slot to clear it.<br>
         <b>C</b> consider target &bull; <b>X</b> sit / stand (faster regen)<br>
-        <b>F1</b> target yourself &bull; <b>F2 / F3</b> target group members (heals &amp; buffs land on your friendly target)</p>
+        <b>F1</b> target yourself &bull; <b>F2-F5</b> target group members (heals &amp; buffs land on your friendly target)</p>
         <h4>Group</h4>
-        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Experience is split EQ-style. Click a name in the group window to target, ✕ to dismiss.</p>
+        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Click ⚙ in the group window to set stance (passive / balanced / aggressive), heal threshold, and hand them gear. Dead mercenaries can be revived for a fee (E on Brenna or the Revive button). Necromancers summon a pet. Experience is split EQ-style.</p>
         <h4>Interaction</h4>
-        <p><b>E</b> loot corpse / talk to merchant, guildmaster, soulbinder<br><b>H</b> hail target (quest givers offer work) &bull; <b>I</b> inventory &bull; <b>Enter</b> chat/commands<br><b>N</b> toggle minimap &bull; <b>?</b> / <b>F10</b> this help</p>
+        <p><b>E</b> loot corpse / talk to merchant, guildmaster, soulbinder<br><b>H</b> hail target (quest givers offer work) &bull; <b>I</b> inventory &bull; <b>Enter</b> chat/commands<br><b>N</b> toggle minimap &bull; <b>M</b> sound &bull; <b>Shift+M</b> music &bull; <b>?</b> / <b>F10</b> this help</p>
       </div>
       <div>
         <h4>Building</h4>
         <p><b>B</b> toggle build mode: <b>Left click</b> break, <b>Right click</b> place, <b>1-9</b> pick block.</p>
         <h4>Commands</h4>
-        <p>/save /loc /who /played /corpse /help /time /quests /dismiss /zone</p>
+        <p>/save /loc /who /played /corpse /help /time /quests /dismiss /zone /music /book /lights</p>
         <h4>Tips</h4>
         <p>Con colors: <span style="color:#36d436">green</span> &lt; <span style="color:#6fe0ff">light blue</span> &lt; <span style="color:#4f7bff">blue</span> &lt; <span style="color:#fff">white</span> &lt; <span style="color:#ffe23a">yellow</span> &lt; <span style="color:#ff3a3a">red</span>.
         Creatures that con green or grey give little or no experience.<br>
         When you die you return to your bind point without your gear. Run back and loot your corpse (a yellow arrow points the way).<br>
-        Train new spells and skills at Guildmaster Aldric as you level. The Sunken Crypt lies to the northeast. The North Pass leads to the <b>Frostfang Reaches</b> (levels 8-15) &mdash; walk through the shimmering zone line.<br>Quests: Merchant Tiloria, Guard Halric and Scout Hollis (Frostfang).</p>
+        Train new spells and skills at Guildmaster Aldric as you level. The Sunken Crypt lies to the northeast. The North Pass leads to the <b>Frostfang Reaches</b> (levels 8-15) &mdash; walk through the shimmering zone line.<br>Quests: Merchant Tiloria, Guard Halric, Guard Mossen, Scout Hollis and Trapper Gunnar (Frostfang). Epic chain: <b>The Warden's Legacy</b> begins with Soulbinder Kerra.</p>
       </div>
     </div>
   </div>
@@ -426,11 +482,13 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   // ---------- Races ----------
   // stats: STR STA AGI DEX WIS INT CHA
   const RACES = {
-    human:    { name: 'Human',     stats: [75, 75, 75, 75, 75, 75, 75], scale: 1.0,  skin: 0xe0b08a, hair: 0x5a3a1a, classes: ['warrior', 'cleric', 'wizard', 'rogue'], desc: 'Versatile and adaptable, humans may pursue any calling.' },
-    barbarian:{ name: 'Barbarian', stats: [103, 95, 82, 70, 70, 60, 55], scale: 1.12, skin: 0xf0c8a0, hair: 0xd8b060, classes: ['warrior', 'rogue'], desc: 'Hardy northern folk. Strong and tough, but slow of wit.' },
-    darkelf:  { name: 'Dark Elf',  stats: [60, 65, 90, 75, 83, 99, 60], scale: 0.95, skin: 0x5a5a8a, hair: 0xeeeeee, classes: ['warrior', 'cleric', 'wizard', 'rogue'], desc: 'Cunning children of the underfoot. Sharp minds and ultravision.' },
-    dwarf:    { name: 'Dwarf',     stats: [90, 90, 70, 90, 83, 60, 45], scale: 0.78, skin: 0xd8a080, hair: 0x8a3a1a, classes: ['warrior', 'cleric', 'rogue'], desc: 'Stout, stubborn mountain folk with a strong faith.' },
-    ogre:     { name: 'Ogre',      stats: [130, 122, 70, 70, 67, 60, 37], scale: 1.35, skin: 0x8a9a6a, hair: 0x2a2a1a, classes: ['warrior'], desc: 'Massive and immensely strong. Not known for their intellect.' },
+    human:    { name: 'Human',     stats: [75, 75, 75, 75, 75, 75, 75], scale: 1.0,  skin: 0xe0b08a, hair: 0x5a3a1a, classes: ['warrior', 'cleric', 'paladin', 'ranger', 'rogue', 'necromancer', 'wizard', 'enchanter'], desc: 'Versatile and adaptable, humans may pursue almost any calling.' },
+    barbarian:{ name: 'Barbarian', stats: [103, 95, 82, 70, 70, 60, 55], scale: 1.12, skin: 0xf0c8a0, hair: 0xd8b060, classes: ['warrior', 'rogue', 'shaman'], desc: 'Hardy northern folk. Strong and tough, but slow of wit. Their shamans commune with the spirits of the frozen north.' },
+    woodelf:  { name: 'Wood Elf',  stats: [65, 65, 95, 80, 80, 75, 75], scale: 0.92, skin: 0xe8c49a, hair: 0x6a8a3a, classes: ['warrior', 'ranger', 'rogue'], desc: 'Agile forest dwellers from the treetop city of Kelethin. Natural rangers.' },
+    darkelf:  { name: 'Dark Elf',  stats: [60, 65, 90, 75, 83, 99, 60], scale: 0.95, skin: 0x5a5a8a, hair: 0xeeeeee, classes: ['warrior', 'cleric', 'rogue', 'necromancer', 'wizard', 'enchanter'], desc: 'Cunning children of the underfoot. Sharp minds and ultravision.' },
+    dwarf:    { name: 'Dwarf',     stats: [90, 90, 70, 90, 83, 60, 45], scale: 0.78, skin: 0xd8a080, hair: 0x8a3a1a, classes: ['warrior', 'cleric', 'paladin', 'rogue'], desc: 'Stout, stubborn mountain folk with a strong faith.' },
+    gnome:    { name: 'Gnome',     stats: [60, 70, 85, 85, 67, 98, 60], scale: 0.68, skin: 0xe8b890, hair: 0xa0a0a0, classes: ['warrior', 'cleric', 'rogue', 'necromancer', 'wizard', 'enchanter'], desc: 'Tiny tinkerers with brilliant minds and a knack for the arcane.' },
+    ogre:     { name: 'Ogre',      stats: [130, 122, 70, 70, 67, 60, 37], scale: 1.35, skin: 0x8a9a6a, hair: 0x2a2a1a, classes: ['warrior', 'shaman'], desc: 'Massive and immensely strong. Not known for their intellect.' },
   };
   const STAT_NAMES = ['STR', 'STA', 'AGI', 'DEX', 'WIS', 'INT', 'CHA'];
 
@@ -444,6 +502,16 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       startItems: ['worn_staff', 'cloth_robe'], desc: 'Arcane nukers. Frail, but deal devastating spell damage.' },
     rogue:   { name: 'Rogue', bonus: [0, 0, 5, 10, 0, 0, 0], hpPer: 17, manaStat: null, dmgMult: 1.05, color: 0x404040,
       startItems: ['rusty_dagger', 'cloth_shirt'], desc: 'Sneaky melee. Backstab from behind for massive damage.' },
+    ranger:  { name: 'Ranger', bonus: [5, 0, 5, 5, 5, 0, 0], hpPer: 18, manaStat: 4, manaMult: 0.6, dmgMult: 1.08, color: 0x3a7a3a,
+      startItems: ['rusty_short_sword', 'cloth_shirt'], desc: 'Woodland hybrid. Archery at range, snares and damage-over-time, and a little healing.' },
+    paladin: { name: 'Paladin', bonus: [5, 5, 0, 0, 5, 0, 5], hpPer: 20, manaStat: 4, manaMult: 0.6, dmgMult: 1.08, color: 0xd8c070,
+      startItems: ['rusty_short_sword', 'cloth_shirt'], desc: 'Holy knight. Heavy melee, Lay on Hands, stuns and minor healing.' },
+    shaman:  { name: 'Shaman', bonus: [5, 5, 0, 0, 10, 0, 0], hpPer: 15, manaStat: 4, dmgMult: 0.95, color: 0x4a8a8a,
+      startItems: ['rusty_mace', 'cloth_shirt'], desc: 'Spirit caller. Slows foes, heals, buffs, and rots enemies with disease.' },
+    necromancer: { name: 'Necromancer', bonus: [0, 0, 0, 5, 0, 10, 0], hpPer: 10, manaStat: 5, dmgMult: 0.8, color: 0x3a1a4a,
+      startItems: ['worn_staff', 'cloth_robe'], desc: 'Master of death. Raises undead pets, drains life and melts foes with DoTs.' },
+    enchanter: { name: 'Enchanter', bonus: [0, 0, 0, 0, 0, 10, 5], hpPer: 10, manaStat: 5, dmgMult: 0.75, color: 0xa040c0,
+      startItems: ['worn_staff', 'cloth_robe'], desc: 'Crowd controller. Mesmerizes enemies, stuns, and grants Clarity to the group.' },
   };
 
   // ---------- Items ----------
@@ -500,6 +568,13 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     frozen_heart:      { name: 'Heart of Vorgath', slot: 'ring', stats: { STR: 4, STA: 4, INT: 5, WIS: 5 }, hp: 40, mana: 40, value: 8000, icon: '💎', rare: true },
     militia_bracer:    { name: 'Everblock Militia Bracer', slot: 'hands', ac: 4, stats: { STR: 2, STA: 2 }, value: 200, icon: '🧤' },
     hollis_cloak:      { name: "Hollis's Ranger Cloak", slot: 'back', ac: 7, stats: { AGI: 3, DEX: 3 }, hp: 15, value: 1200, icon: '🧥' },
+    // v3 quest rewards & quest items
+    warden_signet:     { name: 'Signet of the Everblock Warden', slot: 'ring', ac: 5, stats: { STR: 5, STA: 5, AGI: 5, DEX: 5, WIS: 5, INT: 5, CHA: 5 }, hp: 50, mana: 50, value: 10000, icon: '💍', rare: true },
+    gunnar_boots:      { name: "Gunnar's Trapper Boots", slot: 'feet', ac: 6, stats: { AGI: 3, STA: 3 }, hp: 20, value: 1500, icon: '🥾' },
+    blessed_bone_amulet:{ name: 'Blessed Bone Amulet', slot: 'neck', stats: { WIS: 2, INT: 2 }, hp: 10, mana: 10, value: 250, icon: '📿' },
+    kerra_letter:      { name: "Kerra's Sealed Letter", value: 0, quest: true, icon: '✉' },
+    hollis_map:        { name: "Hollis's Warcamp Map", value: 0, quest: true, icon: '🗺' },
+    warden_shard:      { name: "Shard of the Warden's Signet", value: 0, quest: true, icon: '💠' },
     healing_potion:    { name: 'Minor Healing Potion', value: 30, stack: true, use: { heal: 45 }, icon: '🧪' },
     greater_potion:    { name: 'Healing Potion', value: 120, stack: true, use: { heal: 150 }, icon: '🧪' },
     bread:             { name: 'Loaf of Bread', value: 3, stack: true, use: { heal: 10 }, icon: '🍞' },
@@ -509,24 +584,49 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   // ---------- Spells / abilities ----------
   // kind: heal | nuke | buff | gate | root | skill
   const SPELLS = {
-    bind_wound:   { name: 'Bind Wound', classes: { warrior: 1, cleric: 1, wizard: 1, rogue: 1 }, mana: 0, cast: 4, recast: 25, kind: 'heal', amt: [5, 8], perLvl: 2, skill: true, desc: 'Bandage your wounds. Slow but free.' },
-    kick:         { name: 'Kick', classes: { warrior: 1 }, mana: 0, cast: 0, recast: 6, kind: 'skill', dmg: [2, 5], perLvl: 1, verb: 'kick', desc: 'A quick kick. Instant.' },
-    battle_fury:  { name: 'Battle Fury', classes: { warrior: 5 }, mana: 0, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 25 }, dur: 30, self: true, skill: true, desc: '+25% melee damage for 30s.' },
-    backstab:     { name: 'Backstab', classes: { rogue: 1 }, mana: 0, cast: 0, recast: 8, kind: 'skill', backstab: true, verb: 'backstab', desc: 'Must be behind target. Massive piercing damage.' },
-    evade:        { name: 'Evade', classes: { rogue: 3 }, mana: 0, cast: 0, recast: 30, kind: 'buff', buff: { dodge: 40 }, dur: 8, self: true, skill: true, desc: '+40% dodge for 8s.' },
-    minor_healing:{ name: 'Minor Healing', classes: { cleric: 1 }, mana: 10, cast: 1.5, recast: 2, kind: 'heal', amt: [12, 18], perLvl: 1, desc: 'Heals a small amount. Target a group member to heal them.', friendly: true },
+    bind_wound:   { name: 'Bind Wound', classes: { warrior: 1, cleric: 1, wizard: 1, rogue: 1, ranger: 1, paladin: 1, shaman: 1, necromancer: 1, enchanter: 1 }, ic: 'bandage', mana: 0, cast: 4, recast: 25, kind: 'heal', amt: [5, 8], perLvl: 2, skill: true, desc: 'Bandage your wounds. Slow but free.' },
+    kick:         { name: 'Kick', classes: { warrior: 1, ranger: 1 }, ic: 'boot', mana: 0, cast: 0, recast: 6, kind: 'skill', dmg: [2, 5], perLvl: 1, verb: 'kick', desc: 'A quick kick. Instant.' },
+    battle_fury:  { name: 'Battle Fury', classes: { warrior: 5 }, ic: 'fury', mana: 0, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 25 }, dur: 30, self: true, skill: true, desc: '+25% melee damage for 30s.' },
+    backstab:     { name: 'Backstab', classes: { rogue: 1 }, ic: 'dagger', mana: 0, cast: 0, recast: 8, kind: 'skill', backstab: true, verb: 'backstab', desc: 'Must be behind target. Massive piercing damage.' },
+    evade:        { name: 'Evade', classes: { rogue: 3 }, ic: 'evade', mana: 0, cast: 0, recast: 30, kind: 'buff', buff: { dodge: 40 }, dur: 8, self: true, skill: true, desc: '+40% dodge for 8s.' },
+    minor_healing:{ name: 'Minor Healing', classes: { cleric: 1, shaman: 1, paladin: 3 }, mana: 10, cast: 1.5, recast: 2, kind: 'heal', amt: [12, 18], perLvl: 1, desc: 'Heals a small amount. Target a group member to heal them.', friendly: true },
     strike:       { name: 'Strike', classes: { cleric: 1 }, mana: 12, cast: 1.5, recast: 4, kind: 'nuke', dmg: [6, 10], perLvl: 1, school: 'magic', desc: 'A divine strike against your foe.' },
-    courage:      { name: 'Courage', classes: { cleric: 1 }, mana: 15, cast: 2, recast: 3, kind: 'buff', buff: { ac: 4, hp: 10 }, dur: 900, friendly: true, desc: '+4 AC, +10 HP.' },
-    light_healing:{ name: 'Light Healing', classes: { cleric: 4 }, mana: 25, cast: 2, recast: 2, kind: 'heal', amt: [30, 45], perLvl: 2, desc: 'Heals a moderate amount.', friendly: true },
-    holy_armor:   { name: 'Holy Armor', classes: { cleric: 6 }, mana: 30, cast: 2.5, recast: 3, kind: 'buff', buff: { ac: 10 }, dur: 1200, friendly: true, desc: '+10 AC.' },
+    courage:      { name: 'Courage', classes: { cleric: 1, paladin: 1 }, mana: 15, cast: 2, recast: 3, kind: 'buff', buff: { ac: 4, hp: 10 }, dur: 900, friendly: true, desc: '+4 AC, +10 HP.' },
+    light_healing:{ name: 'Light Healing', classes: { cleric: 4, shaman: 9, paladin: 9, ranger: 9 }, mana: 25, cast: 2, recast: 2, kind: 'heal', amt: [30, 45], perLvl: 2, desc: 'Heals a moderate amount.', friendly: true },
+    holy_armor:   { name: 'Holy Armor', classes: { cleric: 6, paladin: 8 }, mana: 30, cast: 2.5, recast: 3, kind: 'buff', buff: { ac: 10 }, dur: 1200, friendly: true, desc: '+10 AC.' },
     furor:        { name: 'Furor', classes: { cleric: 8 }, mana: 35, cast: 2, recast: 6, kind: 'nuke', dmg: [28, 38], perLvl: 2, school: 'magic', desc: 'Holy wrath.' },
     word_of_health:{ name: 'Word of Health', classes: { cleric: 7 }, mana: 50, cast: 3, recast: 8, kind: 'groupheal', amt: [35, 50], perLvl: 2, desc: 'Heals you and your whole group.' },
     healing:      { name: 'Healing', classes: { cleric: 9 }, mana: 55, cast: 2.5, recast: 2, kind: 'heal', amt: [75, 95], perLvl: 3, desc: 'Heals a large amount.', friendly: true },
     blast_of_cold:{ name: 'Blast of Cold', classes: { wizard: 1 }, mana: 8, cast: 1.5, recast: 3, kind: 'nuke', dmg: [8, 12], perLvl: 1.5, school: 'cold', desc: 'A blast of frigid air.' },
-    minor_shielding:{ name: 'Minor Shielding', classes: { wizard: 1 }, mana: 10, cast: 2, recast: 3, kind: 'buff', buff: { ac: 3, hp: 8 }, dur: 900, self: true, desc: '+3 AC, +8 HP.' },
+    minor_shielding:{ name: 'Minor Shielding', classes: { wizard: 1, enchanter: 1, necromancer: 2 }, mana: 10, cast: 2, recast: 3, kind: 'buff', buff: { ac: 3, hp: 8 }, dur: 900, self: true, desc: '+3 AC, +8 HP.' },
     shock_of_fire:{ name: 'Shock of Fire', classes: { wizard: 4 }, mana: 20, cast: 2, recast: 5, kind: 'nuke', dmg: [20, 28], perLvl: 2, school: 'fire', desc: 'Scorches your foe.' },
     root:         { name: 'Root', classes: { wizard: 5 }, mana: 18, cast: 1.5, recast: 10, kind: 'root', dur: 18, desc: 'Roots the target in place.' },
-    gate:         { name: 'Gate', classes: { wizard: 4, cleric: 5 }, mana: 30, cast: 5, recast: 60, kind: 'gate', desc: 'Teleports you to your bind point.' },
+    gate:         { name: 'Gate', classes: { wizard: 4, cleric: 5, necromancer: 4, enchanter: 5, shaman: 6 }, mana: 30, cast: 5, recast: 60, kind: 'gate', desc: 'Teleports you to your bind point.' },
+    // ---- v3 classes ----
+    archery:      { name: 'Archery', classes: { ranger: 1 }, mana: 0, cast: 0, recast: 4, kind: 'skill', archery: true, range: 32, dmg: [5, 9], perLvl: 1.6, verb: 'shoot', ic: 'arrow', desc: 'Fire an arrow at your target from range (LOS required).' },
+    flame_lick:   { name: 'Flame Lick', classes: { ranger: 1 }, mana: 10, cast: 1.5, recast: 6, kind: 'dot', tick: [3, 4], perLvl: 0.6, dur: 18, school: 'fire', desc: 'Burns the target over 18 seconds.' },
+    snare:        { name: 'Snare', classes: { ranger: 3, necromancer: 7 }, mana: 12, cast: 1.5, recast: 6, kind: 'snare', dur: 36, desc: 'Slows the target\'s movement by half.' },
+    salve:        { name: 'Salve', classes: { ranger: 5 }, mana: 14, cast: 1.5, recast: 3, kind: 'heal', amt: [22, 32], perLvl: 1.5, friendly: true, ic: 'leaf', desc: 'A soothing woodland heal.' },
+    skin_like_wood:{ name: 'Skin like Wood', classes: { ranger: 7, shaman: 7 }, mana: 22, cast: 2.5, recast: 3, kind: 'buff', buff: { ac: 8, hp: 18 }, dur: 1200, friendly: true, ic: 'bark', desc: '+8 AC, +18 HP.' },
+    lay_hands:    { name: 'Lay on Hands', classes: { paladin: 1 }, mana: 0, cast: 0, recast: 300, kind: 'heal', amt: [60, 80], perLvl: 8, skill: true, friendly: true, ic: 'hand', desc: 'A massive instant heal on you or a group member. Long recast.' },
+    bash:         { name: 'Bash', classes: { paladin: 1 }, mana: 0, cast: 0, recast: 7, kind: 'skill', dmg: [3, 6], perLvl: 1, verb: 'bash', ic: 'shieldbash', desc: 'Slam your target. Instant.' },
+    yaulp:        { name: 'Yaulp', classes: { paladin: 4 }, mana: 12, cast: 0, recast: 45, kind: 'buff', buff: { dmgPct: 15 }, dur: 60, self: true, ic: 'fury', desc: '+15% melee damage for 60s. Instant.' },
+    stun:         { name: 'Stun', classes: { paladin: 6, enchanter: 3 }, mana: 20, cast: 1, recast: 12, kind: 'stun', dur: 3.5, dmg: [4, 8], desc: 'Stuns the target for a few seconds, interrupting spells.' },
+    sicken:       { name: 'Sicken', classes: { shaman: 1 }, mana: 10, cast: 1.5, recast: 6, kind: 'dot', tick: [2, 4], perLvl: 0.5, dur: 21, school: 'disease', desc: 'Disease eats at the target over 21 seconds.' },
+    inner_fire:   { name: 'Inner Fire', classes: { shaman: 1 }, mana: 12, cast: 2, recast: 3, kind: 'buff', buff: { ac: 5, hp: 10 }, dur: 900, friendly: true, ic: 'shield', desc: '+5 AC, +10 HP.' },
+    frost_rift:   { name: 'Frost Rift', classes: { shaman: 4 }, mana: 20, cast: 2, recast: 5, kind: 'nuke', dmg: [16, 22], perLvl: 1.5, school: 'cold', desc: 'Freezing spirit energy.' },
+    spirit_of_wolf:{ name: 'Spirit of Wolf', classes: { shaman: 6, ranger: 8 }, mana: 25, cast: 3, recast: 3, kind: 'buff', buff: { speed: 0.35 }, dur: 900, friendly: true, ic: 'paw', desc: '+35% run speed.' },
+    drowsy:       { name: 'Drowsy', classes: { shaman: 8 }, mana: 22, cast: 2, recast: 8, kind: 'slow', dur: 40, desc: 'Slows the target\'s attacks by 40%.' },
+    lifetap:      { name: 'Lifetap', classes: { necromancer: 1 }, mana: 10, cast: 1.5, recast: 3, kind: 'nuke', lifetap: true, dmg: [6, 9], perLvl: 1, school: 'life', ic: 'heart', desc: 'Drains life from the target to heal yourself.' },
+    disease_cloud:{ name: 'Disease Cloud', classes: { necromancer: 1 }, mana: 8, cast: 1.5, recast: 6, kind: 'dot', tick: [2, 3], perLvl: 0.5, dur: 18, school: 'disease', desc: 'A choking cloud of disease.' },
+    cavorting_bones:{ name: 'Cavorting Bones', classes: { necromancer: 1 }, mana: 20, cast: 5, recast: 10, kind: 'pet', petLvl: 3, desc: 'Raise a skeletal servant (level 3) to fight for you.' },
+    heat_blood:   { name: 'Heat Blood', classes: { necromancer: 4 }, mana: 20, cast: 2, recast: 6, kind: 'dot', tick: [5, 7], perLvl: 0.8, dur: 24, school: 'fire', desc: 'Boils the target\'s blood over 24 seconds.' },
+    bone_walk:    { name: 'Bone Walk', classes: { necromancer: 6 }, mana: 45, cast: 6, recast: 10, kind: 'pet', petLvl: 8, desc: 'Raise a skeletal warrior (level 8).' },
+    convoke_shadow:{ name: 'Convoke Shadow', classes: { necromancer: 10 }, mana: 80, cast: 7, recast: 10, kind: 'pet', petLvl: 13, desc: 'Raise a shadow knight (level 13).' },
+    mesmerize:    { name: 'Mesmerize', classes: { enchanter: 1 }, mana: 15, cast: 2, recast: 4, kind: 'mez', dur: 24, maxLvl: 16, ic: 'eye', desc: 'Puts the target into a trance (up to level 16). Any damage wakes it.' },
+    chaos_flux:   { name: 'Chaos Flux', classes: { enchanter: 2 }, mana: 14, cast: 1.5, recast: 4, kind: 'nuke', dmg: [10, 16], perLvl: 1.2, school: 'magic', desc: 'Raw chaotic energy.' },
+    breeze:       { name: 'Breeze', classes: { enchanter: 4 }, mana: 25, cast: 3, recast: 3, kind: 'buff', buff: { manaRegen: 2 }, dur: 1200, friendly: true, ic: 'drop', desc: '+2 mana per tick.' },
+    clarity:      { name: 'Clarity', classes: { enchanter: 8 }, mana: 45, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 5 }, dur: 1500, friendly: true, ic: 'drop', desc: '+5 mana per tick.' },
     shock_of_lightning:{ name: 'Shock of Lightning', classes: { wizard: 8 }, mana: 38, cast: 2.5, recast: 6, kind: 'nuke', dmg: [40, 55], perLvl: 2.5, school: 'magic', desc: 'Calls down lightning.' },
   };
 
@@ -567,7 +667,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     frost_giant: { name: 'a frost giant', lvl: [13, 15], model: 'biped', color: 0x8fb4d8, scale: 2.0, aggro: 14, aggressive: true, faction: 'giant', social: true, verb: 'crush', delay: 3.0, speed: 3.4, hpMult: 1.4,
       loot: [['giant_toe', 0.8], ['giant_helm', 0.08], ['greater_potion', 0.2]] },
     grimtusk: { name: 'Warlord Grimtusk', lvl: [13, 13], model: 'biped', color: 0x2f4a2a, scale: 1.4, snout: true, weapon: true, glow: 0xff5020, aggro: 16, aggressive: true, faction: 'orc', social: true, verb: 'slash', delay: 2.4, speed: 3.8, named: true, hpMult: 2.0, dmgMult: 1.2,
-      loot: [['tusk_necklace', 0.6], ['fang_warblade', 0.5], ['orc_chain', 0.4]] },
+      loot: [['warden_shard', 1.0], ['tusk_necklace', 0.6], ['fang_warblade', 0.5], ['orc_chain', 0.4]] },
     vorgath: { name: 'Vorgath the Frostbound', lvl: [15, 15], model: 'biped', color: 0x5a8ac8, scale: 2.3, weapon: true, glow: 0x80ffff, aggro: 16, aggressive: true, faction: 'giant', social: true, verb: 'crush', delay: 3.2, speed: 3.4, named: true, hpMult: 3.0, dmgMult: 1.3,
       caster: { name: 'Glacial Breath', dmg: [30, 50], cast: 3, cd: 16, range: 22 }, loot: [['frost_greatsword', 0.5], ['frozen_heart', 0.5], ['giant_helm', 0.5]] },
   };
@@ -576,6 +676,12 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   const MERCS = {
     healer: { name: 'Sister Maelin', cls: 'cleric', color: 0xeaeaff, skin: 0xe8c0a0, hair: 0xc89040, desc: 'A devoted cleric. Heals the group and buffs Courage.' },
     tank:   { name: 'Borin Stoutshield', cls: 'warrior', color: 0x8a8a9a, skin: 0xd8a080, hair: 0x8a3a1a, scale: 0.85, desc: 'A dwarven warrior. Taunts foes off you and holds aggro.' },
+  };
+  // Necromancer pets (summoned by spell; share the merc group logic)
+  const PETS = {
+    3: { name: 'Gabober', desc: 'A cavorting skeleton.', color: 0xe8e2c8 },
+    8: { name: 'Jobekab', desc: 'A skeletal warrior.', color: 0xd0c8b0 },
+    13: { name: 'Xabanek', desc: 'A shadow knight.', color: 0x3a3a4a },
   };
   function mercCost(role, L) { return (role === 'healer' ? 25 : 20) + L * L * 10; }
 
@@ -591,6 +697,36 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       offer: "The Frostfang orcs raid my outpost every night. Bring me 3 of their scalps and my old ranger cloak is yours.",
       done: "That'll give them pause. Take my cloak; it has kept me warm through many a Frostfang winter." },
   };
+
+  // New v3 single-step quests
+  Object.assign(QUESTS, {
+    restless_dead: { name: 'Bones of the Restless', giver: 'Guard Mossen', item: 'bone_chips', count: 6, coins: 150, reward: 'blessed_bone_amulet', rewardCount: 1, xp: 350,
+      offer: 'The skeletons in the Forsaken Graveyard to the south keep clawing their way back up. Bring me 6 Bone Chips and the temple will bless an amulet for you.',
+      done: 'Six more that will not rise again. Soulbinder Kerra blessed this amulet. Wear it well.' },
+    yeti_hunt: { name: 'Yeti Hunt', giver: 'Trapper Gunnar', item: 'yeti_fang', count: 3, coins: 2000, reward: 'gunnar_boots', rewardCount: 1, xp: 5000,
+      offer: "The mountain yetis east of here have been raiding my traplines. Bring me 3 Yeti Fangs and I'll give you my spare trapper boots. Best boots in the Highlands.",
+      done: 'Hah! Three fangs. Those boots are yours. Keep your toes warm, friend.' },
+  });
+  // Multi-step quest chain spanning both zones
+  QUESTS.warden_legacy = { name: "The Warden's Legacy", chain: true, coins: 5000, reward: 'warden_signet', rewardCount: 1, xp: 14000, title: 'Warden of Everblock',
+    steps: [
+      { giver: 'Soulbinder Kerra', items: [['ghoul_ichor', 2]], give: 'kerra_letter', zone: 'Everblock',
+        offer: 'Long ago the Wardens of Everblock held the Frostfang orcs beyond the North Pass. The last Warden fell, and his signet was lost. The dead of the Sunken Crypt stir with the same dark power. Bring me 2 vials of Crypt Ghoul Ichor and I will know the truth of it.',
+        done: 'Just as I feared: the ichor reeks of Frostfang sorcery. Take this sealed letter north through the pass to Scout Hollis. She served the last Warden.',
+        hint: 'Bring 2 Crypt Ghoul Ichor to Soulbinder Kerra (Everblock temple)' },
+      { giver: 'Scout Hollis', items: [['kerra_letter', 1]], zone: 'Frostfang',
+        offer: 'You have something for me? Kerra has not written in years...',
+        done: "Kerra's seal... So the old stories are true. Warlord Grimtusk wears a shard of the Warden's Signet on his belt. Before I send you into that warcamp, prove you can survive the Highlands.",
+        hint: "Deliver Kerra's Sealed Letter to Scout Hollis (Frostfang Highlands outpost)" },
+      { giver: 'Scout Hollis', items: [['frost_wolf_pelt', 4]], give: 'hollis_map', zone: 'Frostfang',
+        offer: 'Bring me 4 Frost Wolf Pelts. If you can hunt frost wolves, you might survive the orcs.',
+        done: 'Good pelts. Here, my map of the warcamp. Grimtusk keeps to the war banner in the center. Kill him, take the shard, and bring it and my map to Guildmaster Aldric in Everblock. He will know how to restore it.',
+        hint: 'Bring 4 Frost Wolf Pelts to Scout Hollis' },
+      { giver: 'Guildmaster Aldric', items: [['warden_shard', 1], ['hollis_map', 1]], zone: 'Everblock',
+        offer: 'Hollis sent you? Then you seek the Warden\'s Signet. Bring me the shard from Warlord Grimtusk and her map.',
+        done: 'The shard... and it still hums with the Warden\'s oath. I have reforged the signet. Wear it, Warden of Everblock. The Keep is in your debt.',
+        hint: "Slay Warlord Grimtusk (Frostfang Warcamp) and bring the Signet Shard and Hollis's Map to Guildmaster Aldric (Everblock)" },
+    ] };
 
   // Con colors: grey green lightblue blue white yellow red
   function conColor(plLvl, mobLvl) {
@@ -615,7 +751,85 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   function xpToNext(L) { return Math.floor(80 * L * L + 20 * L); }
   const MAX_LEVEL = 20;
 
-  EB.data = { MERCS, mercCost, QUESTS, B, BLOCKS, BUILDABLE, RACES, STAT_NAMES, CLASSES, ITEMS, EQUIP_SLOTS, SPELLS, MOBS, conColor, CON_HEX, CON_XP, CON_MSG, xpToNext, MAX_LEVEL };
+  EB.data = { PETS, MERCS, mercCost, QUESTS, B, BLOCKS, BUILDABLE, RACES, STAT_NAMES, CLASSES, ITEMS, EQUIP_SLOTS, SPELLS, MOBS, conColor, CON_HEX, CON_XP, CON_MSG, xpToNext, MAX_LEVEL };
+})();
+
+</script>
+<script>
+// Everblock - procedurally drawn spell/ability icons (canvas, cached as data URLs)
+(function () {
+  const EB = window.EB;
+  const { SPELLS } = EB.data;
+  const cache = {};
+  const SCHOOL = { fire: ['#ff9040', '#8a1a00'], cold: ['#a8e0ff', '#1a4a8a'], magic: ['#fff0a0', '#8a6a10'], disease: ['#b8e070', '#2a4a10'], life: ['#ff7090', '#5a0a2a'] };
+  function palette(sp) {
+    if (sp.school && SCHOOL[sp.school]) return SCHOOL[sp.school];
+    switch (sp.kind) {
+      case 'heal': case 'groupheal': return ['#f0fff0', '#2a7a3a'];
+      case 'buff': return ['#e0c8ff', '#4a2a8a'];
+      case 'gate': return ['#c0a0ff', '#2a1a5a'];
+      case 'root': case 'snare': return ['#b0e090', '#3a5a1a'];
+      case 'slow': return ['#90d0d0', '#1a4a5a'];
+      case 'mez': case 'stun': return ['#ffb0ff', '#6a1a7a'];
+      case 'pet': return ['#e8e2c8', '#3a3a3a'];
+      default: return ['#e0c090', '#5a3a1a'];
+    }
+  }
+  function glyphFor(id, sp) {
+    if (sp.ic) return sp.ic;
+    const map = { heal: 'cross', groupheal: 'cross3', buff: 'shield', gate: 'portal', root: 'roots', snare: 'roots', slow: 'swirl', mez: 'eye', stun: 'star', pet: 'skull', dot: 'skullsmall' };
+    if (sp.kind === 'nuke') return { fire: 'flame', cold: 'snow', magic: 'bolt', life: 'heart' }[sp.school] || 'bolt';
+    if (sp.kind === 'dot') return sp.school === 'fire' ? 'flame' : 'skullsmall';
+    return map[sp.kind] || 'sword';
+  }
+  const G = {
+    sword(c) { c.save(); c.translate(20, 20); c.rotate(-Math.PI / 4); c.fillRect(-2, -14, 4, 20); c.fillRect(-7, 5, 14, 3); c.fillRect(-1.5, 8, 3, 6); c.restore(); },
+    dagger(c) { c.save(); c.translate(20, 20); c.rotate(Math.PI / 5); c.beginPath(); c.moveTo(0, -14); c.lineTo(3, 2); c.lineTo(-3, 2); c.fill(); c.fillRect(-6, 2, 12, 3); c.fillRect(-1.5, 5, 3, 8); c.restore(); },
+    boot(c) { c.beginPath(); c.moveTo(12, 8); c.lineTo(21, 8); c.lineTo(21, 22); c.lineTo(31, 26); c.lineTo(31, 32); c.lineTo(12, 32); c.closePath(); c.fill(); },
+    bandage(c) { c.save(); c.translate(20, 20); c.rotate(-0.6); c.fillRect(-13, -5, 26, 10); c.restore(); c.globalCompositeOperation = 'destination-out'; c.fillRect(18, 18, 4, 4); c.globalCompositeOperation = 'source-over'; },
+    cross(c) { c.fillRect(16, 7, 8, 26); c.fillRect(7, 16, 26, 8); },
+    cross3(c) { c.fillRect(17, 5, 6, 16); c.fillRect(12, 10, 16, 6); c.fillRect(7, 20, 5, 13); c.fillRect(3, 24, 13, 5); c.fillRect(28, 20, 5, 13); c.fillRect(24, 24, 13, 5); },
+    shield(c) { c.beginPath(); c.moveTo(20, 6); c.lineTo(32, 10); c.quadraticCurveTo(32, 26, 20, 34); c.quadraticCurveTo(8, 26, 8, 10); c.closePath(); c.fill(); },
+    fury(c) { c.beginPath(); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2, r = i % 2 ? 7 : 15; c.lineTo(20 + Math.cos(a) * r, 20 + Math.sin(a) * r); } c.closePath(); c.fill(); },
+    evade(c) { c.lineWidth = 3; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(8 + i * 3, 10 + i * 8); c.lineTo(32 - i * 3, 10 + i * 8); c.stroke(); } },
+    flame(c) { c.beginPath(); c.moveTo(20, 5); c.quadraticCurveTo(33, 18, 28, 29); c.quadraticCurveTo(24, 35, 20, 35); c.quadraticCurveTo(10, 34, 11, 24); c.quadraticCurveTo(13, 16, 18, 14); c.quadraticCurveTo(17, 22, 22, 24); c.quadraticCurveTo(24, 14, 20, 5); c.fill(); },
+    snow(c) { c.lineWidth = 3; for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI; c.beginPath(); c.moveTo(20 - Math.cos(a) * 14, 20 - Math.sin(a) * 14); c.lineTo(20 + Math.cos(a) * 14, 20 + Math.sin(a) * 14); c.stroke(); } c.beginPath(); c.arc(20, 20, 3, 0, 7); c.fill(); },
+    bolt(c) { c.beginPath(); c.moveTo(23, 4); c.lineTo(11, 22); c.lineTo(19, 22); c.lineTo(15, 36); c.lineTo(29, 16); c.lineTo(21, 16); c.closePath(); c.fill(); },
+    heart(c) { c.beginPath(); c.moveTo(20, 33); c.bezierCurveTo(4, 22, 6, 8, 14, 8); c.bezierCurveTo(18, 8, 20, 12, 20, 14); c.bezierCurveTo(20, 12, 22, 8, 26, 8); c.bezierCurveTo(34, 8, 36, 22, 20, 33); c.fill(); },
+    portal(c) { c.lineWidth = 3; for (let r = 5; r <= 14; r += 4.5) { c.beginPath(); c.arc(20, 20, r, 0, 7); c.stroke(); } },
+    roots(c) { c.lineWidth = 3; c.beginPath(); c.moveTo(20, 6); c.lineTo(20, 22); c.moveTo(20, 22); c.quadraticCurveTo(12, 26, 8, 34); c.moveTo(20, 22); c.quadraticCurveTo(28, 26, 32, 34); c.moveTo(20, 22); c.lineTo(20, 34); c.stroke(); },
+    swirl(c) { c.lineWidth = 3; c.beginPath(); for (let t = 0; t < 14; t += 0.2) c.lineTo(20 + Math.cos(t) * t, 20 + Math.sin(t) * t); c.stroke(); },
+    eye(c) { c.beginPath(); c.moveTo(5, 20); c.quadraticCurveTo(20, 6, 35, 20); c.quadraticCurveTo(20, 34, 5, 20); c.fill(); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(20, 20, 5, 0, 7); c.fill(); c.globalCompositeOperation = 'source-over'; c.beginPath(); c.arc(20, 20, 2.5, 0, 7); c.fill(); },
+    star(c) { c.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 - Math.PI / 2, r = i % 2 ? 6 : 15; c.lineTo(20 + Math.cos(a) * r, 20 + Math.sin(a) * r); } c.closePath(); c.fill(); },
+    skull(c) { c.beginPath(); c.arc(20, 17, 11, 0, 7); c.fill(); c.fillRect(13, 24, 14, 9); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(15.5, 17, 3.2, 0, 7); c.arc(24.5, 17, 3.2, 0, 7); c.fill(); c.fillRect(17, 28, 2, 5); c.fillRect(21, 28, 2, 5); c.globalCompositeOperation = 'source-over'; },
+    skullsmall(c) { c.beginPath(); c.arc(20, 16, 8, 0, 7); c.fill(); c.fillRect(15, 21, 10, 6); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(17, 16, 2.3, 0, 7); c.arc(23, 16, 2.3, 0, 7); c.fill(); c.globalCompositeOperation = 'source-over'; for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(9 + i * 7, 33, 2, 0, 7); c.fill(); } },
+    arrow(c) { c.lineWidth = 3; c.beginPath(); c.moveTo(7, 33); c.lineTo(31, 9); c.stroke(); c.beginPath(); c.moveTo(34, 6); c.lineTo(24, 9); c.lineTo(31, 16); c.closePath(); c.fill(); c.fillRect(6, 29, 6, 3); c.fillRect(9, 32, 3, 6); },
+    hand(c) { c.fillRect(12, 18, 16, 15); for (let i = 0; i < 4; i++) c.fillRect(12 + i * 4.2, 6 + (i === 0 || i === 3 ? 4 : 0), 3.4, 14); c.save(); c.translate(11, 22); c.rotate(-0.7); c.fillRect(-2, -8, 4, 10); c.restore(); },
+    shieldbash(c) { c.beginPath(); c.arc(20, 20, 13, 0, 7); c.fill(); c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(20, 20, 9, 0, 7); c.fill(); c.globalCompositeOperation = 'source-over'; c.beginPath(); c.arc(20, 20, 4, 0, 7); c.fill(); },
+    leaf(c) { c.beginPath(); c.moveTo(8, 32); c.quadraticCurveTo(8, 8, 32, 8); c.quadraticCurveTo(32, 32, 8, 32); c.fill(); },
+    bark(c) { for (let i = 0; i < 4; i++) c.fillRect(8 + i * 7, 6 + (i % 2) * 3, 5, 28 - (i % 2) * 5); },
+    paw(c) { c.beginPath(); c.arc(20, 26, 7, 0, 7); c.fill(); for (const [x, y] of [[10, 16], [16, 10], [24, 10], [30, 16]]) { c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill(); } },
+    drop(c) { c.beginPath(); c.moveTo(20, 5); c.quadraticCurveTo(32, 20, 30, 26); c.arc(20, 25, 10, 0, Math.PI); c.quadraticCurveTo(8, 20, 20, 5); c.fill(); },
+  };
+  function draw(id, size) {
+    const sp = SPELLS[id];
+    const cv = document.createElement('canvas'); cv.width = cv.height = size || 40;
+    const c = cv.getContext('2d'); c.scale(cv.width / 40, cv.height / 40);
+    const [hi, lo] = palette(sp);
+    const grd = c.createRadialGradient(14, 12, 2, 20, 20, 28); grd.addColorStop(0, hi); grd.addColorStop(1, lo);
+    c.fillStyle = grd; c.fillRect(0, 0, 40, 40);
+    c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = 2; c.strokeRect(1, 1, 38, 38);
+    c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(2, 2, 36, 3);
+    const g = G[glyphFor(id, sp)] || G.sword;
+    // glyph with dark outline for readability
+    c.save(); c.translate(1.2, 1.2); c.fillStyle = 'rgba(0,0,0,0.55)'; c.strokeStyle = 'rgba(0,0,0,0.55)'; g(c); c.restore();
+    c.fillStyle = '#fffaf0'; c.strokeStyle = '#fffaf0'; g(c);
+    return cv.toDataURL();
+  }
+  EB.icons = {
+    url(id) { if (!SPELLS[id]) return ''; return cache[id] || (cache[id] = draw(id)); },
+    img(id, cls) { return `<img class="${cls || 'sic'}" src="${EB.icons.url(id)}" alt="" draggable="false">`; },
+  };
 })();
 
 </script>
@@ -841,6 +1055,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     }
     finish() {
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.computeHeightColumn(x, z);
+      // lantern positions for dynamic point lights
+      this.lanterns = new Map();
+      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN) this.lanterns.set(i, this.idxPos(i));
       this.buildMapColors();
       this.renderMap();
     }
@@ -996,6 +1213,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.rawSet(O.x, g + 1, O.z, B.COBBLE); this.rawSet(O.x, g + 2, O.z, B.LANTERN);
       for (const [x, z] of [[O.x - 6, O.z - 6], [O.x + 6, O.z - 6], [O.x - 6, O.z + 6], [O.x + 6, O.z + 6]]) this.lanternPost(x, g + 1, z);
       this.npcs.push({ kind: 'binder', name: 'Scout Hollis', x: O.x - 2.5, y: g + 1, z: O.z - 2.5, color: 0x3a6a3a, sub: '<Ranger Outpost>' });
+      this.npcs.push({ kind: 'quest', name: 'Trapper Gunnar', x: O.x + 4.5, y: g + 1, z: O.z - 3.5, color: 0x7a5a3a, sub: '<Trapper>' });
       this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 3.5 };
       this.zones.push({ name: 'Hollis Outpost', x0: O.x - 7, x1: O.x + 7, z0: O.z - 7, z1: O.z + 7 });
     }
@@ -1372,9 +1590,11 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         if (nx >= 0 && nz >= 0 && nx < NCX && nz < NCZ) this.dirty.add(nx + nz * NCX);
       }
     }
+    idxPos(i) { const x = i % W, z = Math.floor(i / W) % D, y = Math.floor(i / (W * D)); return { x, y, z }; }
     setBlock(x, y, z, b, record = true) {
       if (!this.inBounds(x, y, z)) return false;
       this.data[this.idx(x, y, z)] = b;
+      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
       if (record) this.edits[this.idx(x, y, z)] = b;
       const oldH = this.height[x + z * W];
       this.computeHeightColumn(x, z);
@@ -1852,6 +2072,17 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         return;
       }
       let dir = null, speed = this.def.speed;
+      // crowd control: mesmerize / stun freeze the mob completely
+      if (game.time < (this.mezUntil || 0) || game.time < (this.stunUntil || 0)) {
+        this.casting = null; this.vel.x = this.vel.z = 0;
+        physicsMove(world, this, dt, true);
+        animateModel(this.model, this.walkPhase, false, 0, false);
+        this.model.group.rotation.z = game.time < (this.mezUntil || 0) ? Math.sin(game.time * 2) * 0.06 : 0;
+        this.syncModel();
+        return;
+      }
+      this.model.group.rotation.z = 0;
+      if (game.time < (this.snaredUntil || 0)) speed *= 0.5;
       if (this.state === 'idle' && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.03 * dt);
       this.aggroCheck -= dt;
       if (this.aggroCheck <= 0) {
@@ -1893,7 +2124,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
             if (!dir) this.faceTo(t.pos.x, t.pos.z);
             this.swing -= dt;
             if (d <= reach + 0.4 && this.swing <= 0) {
-              this.swing = this.def.delay * (0.9 + Math.random() * 0.2);
+              this.swing = this.def.delay * (0.9 + Math.random() * 0.2) * (game.time < (this.slowedUntil || 0) ? 1.65 : 1);
               this.attackT = 0.01;
               game.mobAttack(this, t);
             }
@@ -2024,36 +2255,52 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
 
 </script>
 <script>
-// Everblock - hireable NPC mercenaries (Cleric healer / Warrior tank) that group with the player
+// Everblock - group members: hireable mercenaries (Cleric healer / Warrior tank) and necromancer pets
 (function () {
   const EB = window.EB;
   const U = EB.util;
-  const { MERCS, SPELLS } = EB.data;
+  const { MERCS, PETS, SPELLS, ITEMS } = EB.data;
   const { buildModel, animateModel, makeNameplate, physicsMove, Entity } = EB.ent;
   const Nav = EB.path.Nav;
+  const STANCES = ['passive', 'balanced', 'aggressive'];
 
   class Merc extends Entity {
     constructor(role, game, saved) {
-      const M = MERCS[role];
+      const isPet = role === 'pet';
+      const petLvl = isPet ? (saved && saved.petLvl) || 3 : 0;
+      const M = isPet ? Object.assign({ cls: 'warrior' }, PETS[petLvl] || PETS[3]) : MERCS[role];
       super('merc', M.name);
-      this.role = role; this.cls = M.cls; this.level = game.player.level;
+      this.role = role; this.cls = M.cls; this.isPet = isPet; this.petLvl = petLvl;
+      this.level = isPet ? petLvl : game.player.level;
       const tank = role === 'tank';
-      this.model = buildModel({ model: 'biped', color: M.color, skin: M.skin, hair: tank ? null : M.hair, scale: M.scale || 1, weapon: true,
+      if (isPet) this.model = buildModel({ model: 'biped', color: M.color, skin: M.color, hair: null, thin: petLvl < 13, weapon: petLvl >= 8, scale: petLvl >= 13 ? 1.1 : 0.95, legColor: M.color, glow: petLvl >= 13 ? 0x8040ff : undefined });
+      else this.model = buildModel({ model: 'biped', color: M.color, skin: M.skin, hair: tank ? null : M.hair, scale: M.scale || 1, weapon: true,
         shield: tank ? 0x7a5a3a : undefined, helm: tank ? 0x9a9aa8 : undefined, legColor: tank ? 0x5a5a6a : 0xd0d0e8 });
-      this.hw = 0.3; this.h = Math.max(1.6, this.model.height * 0.95);
-      this.plate = makeNameplate(M.name, '#70ff70', tank ? '<Warrior Mercenary>' : '<Cleric Mercenary>');
-      this.buffs = (saved && saved.buffs) || []; this.nav = new Nav(); this.swing = 1; this.casting = null; this.dead = false; this.tauntT = 0; this.healT = 0;
-      this.hp = saved && saved.hp > 0 ? saved.hp : this.maxHp;
+      this.hw = 0.3; this.h = Math.max(1.4, this.model.height * 0.95);
+      const owner = game.player.name;
+      this.plate = makeNameplate(M.name, '#70ff70', isPet ? `<${owner}'s pet>` : tank ? '<Warrior Mercenary>' : '<Cleric Mercenary>');
+      this.buffs = (saved && saved.buffs) || []; this.nav = new Nav(); this.swing = 1; this.casting = null; this.tauntT = 0; this.healT = 0;
+      this.stance = (saved && STANCES.includes(saved.stance)) ? saved.stance : 'balanced';
+      this.healAt = saved && saved.healAt ? U.clamp(saved.healAt, 0.2, 0.95) : 0.62;
+      this.equip = (saved && saved.equip) || {};
+      this.dead = !!(saved && saved.dead);
+      this.hp = saved && saved.hp > 0 ? Math.min(saved.hp, this.maxHp) : this.maxHp;
       this.mana = saved && saved.mana != null ? saved.mana : this.maxMana;
       this.eyeH = this.h * 0.9;
     }
     get alive() { return !this.dead; }
     buffSum(f) { let t = 0; for (const b of this.buffs) if (b.buff[f]) t += b.buff[f]; return t; }
-    get maxHp() { return Math.floor(EB.calc.maxHp(this.cls, this.level, this.role === 'tank' ? 100 : 85) * (this.role === 'tank' ? 1.3 : 1)) + this.buffSum('hp'); }
-    get maxMana() { return this.role === 'healer' ? EB.calc.maxMana('cleric', this.level, [0, 0, 0, 0, 110, 0, 0]) : 0; }
-    get ac() { return (this.role === 'tank' ? 20 + this.level * 4 : 8 + this.level * 2) + this.buffSum('ac'); }
+    itemSum(f) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it[f]) t += it[f]; } return t; }
+    statSum(n) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it.stats && it.stats[n]) t += it.stats[n]; } return t; }
+    get maxHp() {
+      if (this.isPet) return Math.floor(EB.calc.maxHp('warrior', this.level, 80) * 0.85);
+      const base = Math.floor(EB.calc.maxHp(this.cls, this.level, this.role === 'tank' ? 100 : 85) * (this.role === 'tank' ? 1.3 : 1));
+      return base + this.buffSum('hp') + this.itemSum('hp') + Math.floor(this.statSum('STA') * this.level / 6);
+    }
+    get maxMana() { return this.role === 'healer' ? EB.calc.maxMana('cleric', this.level, [0, 0, 0, 0, 110 + this.statSum('WIS'), 0, 0]) + this.itemSum('mana') : 0; }
+    get ac() { if (this.isPet) return 10 + this.level * 3; return (this.role === 'tank' ? 20 + this.level * 4 : 8 + this.level * 2) + this.buffSum('ac') + this.itemSum('ac') + Math.floor(this.statSum('AGI') / 4); }
     healSpell() { const L = this.level; return L >= 9 ? 'healing' : L >= 4 ? 'light_healing' : 'minor_healing'; }
-    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs }; }
+    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs, stance: this.stance, healAt: this.healAt, equip: this.equip, dead: this.dead, petLvl: this.petLvl || undefined }; }
     startCast(id, target, game) {
       const sp = SPELLS[id];
       this.casting = { id, sp, target, t: sp.cast };
@@ -2079,12 +2326,13 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       }
     }
     update(dt, game) {
+      if (this.dead) return;
       const pl = game.player;
       let dir = null, speed = 5.9;
-      if (this.level !== pl.level) { const pct = this.hp / this.maxHp; this.level = pl.level; this.hp = Math.ceil(this.maxHp * pct); }
+      if (!this.isPet && this.level !== pl.level) { const pct = this.hp / this.maxHp; this.level = pl.level; this.hp = Math.ceil(this.maxHp * pct); }
       if (!pl.alive) { this.vel.set(0, this.vel.y, 0); physicsMove(game.world, this, dt, true); this.syncModel(); return; }
       if (this.pos.distanceTo(pl.pos) > 60) { this.pos.set(pl.pos.x + 1.5, pl.pos.y + 0.2, pl.pos.z + 1.5); this.nav.reset(); }
-      const foe = game.groupFoe();
+      const foe = game.mercFoe(this);
       const distPl = this.pos.distanceTo(pl.pos);
       if (this.casting) {
         this.casting.t -= dt;
@@ -2094,8 +2342,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         this.healT -= dt;
         const members = game.groupMembers().filter((m) => m.alive && m.pos.distanceTo(this.pos) < 30).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
         const low = members[0], hs = SPELLS[this.healSpell()];
-        if (low && low.hp / low.maxHp < 0.62 && this.mana >= hs.mana && this.healT <= 0) { this.startCast(this.healSpell(), low, game); this.healT = 1; }
-        else if (!foe && this.mana > this.maxMana * 0.5) {
+        if (low && low.hp / low.maxHp < this.healAt && this.mana >= hs.mana && this.healT <= 0) { this.startCast(this.healSpell(), low, game); this.healT = 1; }
+        else if (!foe && !game.groupInCombat() && this.mana > this.maxMana * 0.5) {
           const need = members.find((m) => !m.buffs.some((b) => b.id === 'courage'));
           if (need && this.mana >= SPELLS.courage.mana) this.startCast('courage', need, game);
         }
@@ -2103,7 +2351,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           if (foe && foe.alive && this.dist(foe) < 2.8 && this.mana > this.maxMana * 0.3) this.melee(foe, game, dt);
           else if (distPl > 5) dir = this.nav.steer(this, pl.pos.x, pl.pos.y, pl.pos.z, game, 3.5, dt);
         }
-      } else { // tank
+      } else { // tank or pet
         if (foe && foe.alive) {
           const reach = 2.2 + foe.hw + (foe.def.scale > 1.2 ? foe.def.scale * 0.4 : 0);
           const d = this.dist(foe);
@@ -2112,7 +2360,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           if (d < reach + 0.3) {
             this.melee(foe, game, dt);
             this.tauntT -= dt;
-            if (this.tauntT <= 0 && foe.target !== this) {
+            if (!this.isPet && this.tauntT <= 0 && foe.target !== this) {
               this.tauntT = 6;
               let top = 0; for (const v of foe.hate.values()) top = Math.max(top, v);
               foe.addHate(this, top - (foe.hate.get(this) || 0) + 30); foe.target = this;
@@ -2135,16 +2383,19 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     melee(foe, game, dt) {
       this.swing -= dt;
       if (this.swing > 0) return;
-      const tank = this.role === 'tank';
-      this.swing = tank ? 2.4 : 3.0; this.attackT = 0.01;
-      const verb = tank ? 'slashes' : 'crushes';
+      const tank = this.role === 'tank', w = this.equip.primary && ITEMS[this.equip.primary.id];
+      this.swing = this.isPet ? 2.2 : w && w.delay ? w.delay : tank ? 2.4 : 3.0; this.attackT = 0.01;
+      const verb = this.isPet ? 'hits' : w ? { slash: 'slashes', pierce: 'pierces', crush: 'crushes' }[w.verb] || 'hits' : tank ? 'slashes' : 'crushes';
       if (Math.random() > U.clamp(0.72 + (this.level - foe.level) * 0.05, 0.3, 0.95)) { game.log(`${this.name} tries to hit ${foe.name}, but misses!`, 'other'); foe.addHate(this, 1); return; }
-      const max = Math.max(2, Math.floor(((tank ? 7 : 5) * 2) * (1 + this.level / 12)));
+      let max = Math.max(2, Math.floor(((tank || this.isPet ? 7 : 5) * 2) * (1 + this.level / 12)));
+      if (w && w.dmg) max = Math.max(max, Math.floor(w.dmg * 2 * (1 + this.level / 12)));
+      max += Math.floor(this.statSum('STR') / 5);
       const dmg = U.randInt(Math.max(1, Math.floor(max / 4)), max);
       game.log(`${this.name} ${verb} ${foe.name} for ${dmg} points of damage.`, 'other');
       game.damageMob(foe, dmg, this);
     }
   }
+  Merc.STANCES = STANCES;
   EB.Merc = Merc;
 })();
 
@@ -2180,9 +2431,55 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     const g = ctx.createGain(); g.gain.value = vol || 0.4;
     src.connect(f); f.connect(g); g.connect(master); src.start();
   }
+  // ---------- synthesized music loop ----------
+  // Each mood: tempo, root (Hz), scale degrees (semitones), chord progression (scale indexes), lead pattern
+  const MOODS = {
+    town:  { bpm: 84, root: 196.0, scale: [0, 2, 4, 5, 7, 9, 11], prog: [0, 5, 3, 4], lead: [4, 2, 0, 2, 4, 4, 4, -1, 2, 2, 2, -1, 4, 6, 6, -1], wave: 'triangle' },
+    wild:  { bpm: 76, root: 174.6, scale: [0, 2, 3, 5, 7, 9, 10], prog: [0, 6, 3, 4], lead: [0, -1, 2, 4, -1, 3, 2, -1, 0, -1, 4, 6, -1, 4, 2, -1], wave: 'triangle' },
+    frost: { bpm: 64, root: 146.8, scale: [0, 2, 3, 5, 7, 8, 10], prog: [0, 5, 2, 6], lead: [4, -1, -1, 3, 2, -1, 0, -1, 4, -1, 7, -1, 6, -1, 4, -1], wave: 'sine' },
+    crypt: { bpm: 56, root: 110.0, scale: [0, 1, 3, 5, 6, 8, 10], prog: [0, 1, 0, 5], lead: [0, -1, -1, -1, 1, -1, -1, -1, 4, -1, 3, -1, 1, -1, -1, -1], wave: 'sine' },
+  };
+  let musicOn = true, mood = null, musicGain = null, nextT = 0, step = 0, timer = null;
+  const hz = (m, deg, oct) => { const n = m.scale.length, o = Math.floor(deg / n); const d = ((deg % n) + n) % n; return m.root * Math.pow(2, (m.scale[d] + 12 * (o + (oct || 0))) / 12); };
+  function note(f, t0, dur, type, vol, dest) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t0);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + Math.min(0.08, dur * 0.3)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(dest); o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  function schedule() {
+    if (!ctx || !mood || !musicOn || !enabled || ctx.state !== 'running') return;
+    const m = MOODS[mood], beat = 60 / m.bpm / 2; // eighth notes
+    if (nextT < ctx.currentTime) nextT = ctx.currentTime + 0.05;
+    while (nextT < ctx.currentTime + 0.6) {
+      const bar = Math.floor(step / 16) % m.prog.length, pos = step % 16, ch = m.prog[bar];
+      if (pos === 0) { // pad chord: root, third, fifth
+        for (const d of [0, 2, 4]) note(hz(m, ch + d, -1), nextT, beat * 16, 'sine', 0.05, musicGain);
+        note(hz(m, ch, -2), nextT, beat * 8, 'triangle', 0.07, musicGain);
+      }
+      if (pos === 8) note(hz(m, ch, -2), nextT, beat * 8, 'triangle', 0.06, musicGain);
+      const l = m.lead[pos];
+      if (l >= 0 && (bar % 2 === 0 || pos % 4 === 0)) note(hz(m, ch + l, 0), nextT, beat * 1.8, m.wave, 0.035, musicGain);
+      if (mood !== 'crypt' && pos % 4 === 2) note(hz(m, ch + 4, 1), nextT, beat * 0.6, 'sine', 0.012, musicGain);
+      nextT += beat; step++;
+    }
+  }
+  function setMood(md) {
+    if (md === mood) return;
+    mood = md; step = 0;
+    if (!ensure()) return;
+    if (!musicGain) { musicGain = ctx.createGain(); musicGain.gain.value = 0.9; musicGain.connect(master); }
+    if (!timer) timer = setInterval(schedule, 200);
+  }
+
   EB.audio = {
     unlock() { ensure(); if (ctx && ctx.state === 'suspended') ctx.resume(); },
     toggle() { enabled = !enabled; return enabled; },
+    setMood,
+    get mood() { return mood; },
+    toggleMusic() { musicOn = !musicOn; if (musicGain) musicGain.gain.value = musicOn ? 0.9 : 0; return musicOn; },
+    get musicOn() { return musicOn; },
+    get musicActive() { return !!(ctx && timer && musicOn && enabled && ctx.state === 'running'); },
     swing() { noise(0.12, 0.25, 2500); },
     hit() { noise(0.1, 0.5, 700); tone(110, 0.12, 'square', 0.15, 60); },
     hurt() { tone(220, 0.18, 'sawtooth', 0.2, 110); },
@@ -2211,7 +2508,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   // ---------- formulas ----------
   const calc = {
     maxHp(cls, L, STA) { return 20 + L * CLASSES[cls].hpPer + Math.floor(STA * L / 12); },
-    maxMana(cls, L, stats) { const ms = CLASSES[cls].manaStat; if (ms == null) return 0; return 15 + L * 5 + Math.floor(stats[ms] * L / 6); },
+    maxMana(cls, L, stats) { const C = CLASSES[cls], ms = C.manaStat; if (ms == null) return 0; return Math.floor((15 + L * 5 + Math.floor(stats[ms] * L / 6)) * (C.manaMult || 1)); },
     xpForKill(mobL) { return mobL * mobL * 9 + mobL * 6 + 5; },
     fizzle(L, stat) { return U.clamp(20 - L * 1.5 - (stat - 75) / 8, 2, 25); },
   };
@@ -2365,6 +2662,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   const D = EB.data;
   const { B, BLOCKS, RACES, CLASSES, ITEMS, SPELLS, EQUIP_SLOTS, STAT_NAMES, conColor, CON_HEX, CON_XP, CON_MSG, MERCS, QUESTS, mercCost } = D;
   const { Mob, NPC, PlayerCorpse, buildModel, animateModel, physicsMove, collides } = EB.ent;
+  const isSpell = (id) => !!SPELLS[id] && !SPELLS[id].skill && SPELLS[id].kind !== 'skill';
 
   const SAVE_KEY = 'everblock_save_v1';
   EB.SAVE_KEY = SAVE_KEY;
@@ -2387,7 +2685,15 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.coins = c.coins != null ? c.coins : 150;
       this.inv = c.inv || new Array(24).fill(null);
       this.equip = c.equip || {};
-      this.spells = c.spells || Object.keys(SPELLS).filter((s) => SPELLS[s].classes[c.cls] === 1);
+      this.spells = (c.spells || Object.keys(SPELLS).filter((s) => SPELLS[s].classes[c.cls] === 1)).filter((s) => SPELLS[s]);
+      // v3: spell gems + configurable hotbar (migrates v1/v2 saves)
+      const key = (id) => (SPELLS[id].classes[c.cls] || 99) + (id === 'bind_wound' ? 0.5 : 0);
+      const known = this.spells.slice().sort((a, b) => key(a) - key(b));
+      const pad = (a) => { a = (a || []).slice(0, 8).map((x) => (x && SPELLS[x] && this.spells.includes(x) ? x : null)); while (a.length < 8) a.push(null); return a; };
+      this.gems = pad(c.gems || known.filter(isSpell));
+      this.hotbar = pad(c.hotbar || known);
+      this.title = c.title || '';
+      this.memorizing = null;
       this.buffs = (c.buffs || []).filter((b) => b.left > 0);
       this.bind = c.bind || null;
       this.played = c.played || 0;
@@ -2412,7 +2718,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     buffSum(field) { let t = 0; for (const b of this.buffs) if (b.buff[field]) t += b.buff[field]; return t; }
     get maxHp() { return calc.maxHp(this.cls, this.level, this.stats().STA) + this.itemSum('hp') + this.buffSum('hp'); }
     get maxMana() { const m = calc.maxMana(this.cls, this.level, this.statArr()); return m ? m + this.itemSum('mana') : 0; }
-    get ac() { return this.itemSum('ac') + this.buffSum('ac') + Math.floor(this.stats().AGI / 8) + this.level * (this.cls === 'warrior' ? 3 : this.cls === 'rogue' ? 2 : 1); }
+    get ac() { return this.itemSum('ac') + this.buffSum('ac') + Math.floor(this.stats().AGI / 8) + this.level * ({ warrior: 3, paladin: 3, rogue: 2, ranger: 2, shaman: 1.5 }[this.cls] || 1); }
     weapon() { return this.equip.primary ? ITEMS[this.equip.primary.id] : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
     castStat() { const ms = CLASSES[this.cls].manaStat; return ms != null ? this.statArr()[ms] : 75; }
     modelOpts() {
@@ -2422,7 +2728,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
       return { name: this.name, race: this.race, cls: this.cls, level: this.level, xp: this.xp, stats: this.base, coins: this.coins, inv: this.inv, equip: this.equip,
-        spells: this.spells, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
+        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
     }
   }
 
@@ -2433,7 +2739,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.mobs = []; this.npcs = []; this.pcorpses = []; this.slots = [];
       this.camDist = 5.5; this.buildMode = false; this.buildSel = 0; this.lastZone = ''; this.hudT = 0; this.tickT = TICK; this.spawnT = 0;
       this.msgThrottle = {}; this.dayT = 0.3; this.saveT = 30; this.deathT = 0;
-      this.mercs = []; this.otherCorpses = []; this.zoneEdits = {}; this.quests = {}; this.zoneMeshes = []; this.pathBudget = 6; this.showMap = true;
+      this.mercs = []; this.otherCorpses = []; this.zoneEdits = {}; this.quests = {}; this.zoneMeshes = []; this.pathBudget = 6; this.showMap = true; this.questSteps = {}; this.lightT = 0;
     }
     initThree() {
       const r = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: true });
@@ -2460,6 +2766,12 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.72, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false }));
       this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; this.scene.add(this.ring);
       this.raycaster = new THREE.Raycaster();
+      // v3: a fixed pool of point lights reassigned to the nearest lanterns (+1 player torch) so shaders never recompile
+      this.lampLights = [];
+      for (let i = 0; i < 4; i++) { const L = new THREE.PointLight(i === 3 ? 0xffb060 : 0xffc070, 0, i === 3 ? 11 : 13, 1.6); this.lampLights.push(L); }
+      this.lightsPref = localStorage.getItem('everblock_lights'); // '1' forced on, '0' forced off, null = auto
+      this.setLights(this.lightsPref === '1'); // auto mode starts off and switches on only if the frame rate can afford it
+      this.perf = { t: 0, n: 0 };
       window.addEventListener('resize', () => { this.camera.aspect = window.innerWidth / window.innerHeight; this.camera.updateProjectionMatrix(); r.setSize(window.innerWidth, window.innerHeight); });
     }
 
@@ -2482,6 +2794,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         this.zoneEdits = save.zoneEdits || { everblock: save.edits || {} };
         this.otherCorpses = (save.corpses || []).map((c) => Object.assign({ zone: 'everblock' }, c));
         this.quests = save.quests || {};
+        this.questSteps = save.questSteps || {};
         this.dayT = save.dayT || 0.3;
       }
       if (newChar) {
@@ -2510,12 +2823,14 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.bindInput();
       this.buildCompass();
       this.rebuildHotbar();
+      this.renderGems();
       this.renderGroup();
+      this.renderQuests();
       $('loading').classList.add('hidden');
       $('hud').classList.remove('hidden');
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`MOTD: Greetings, ${pl.name}. Mercenaries can now be hired from Liaison Brenna by the fountain. Beyond the northern pass lie the Frostfang Highlands. Press ? for help.`, 'help');
+      ui.log(`MOTD: Greetings, ${pl.name}. New in v3: Rangers, Paladins, Shamans, Necromancers and Enchanters; a spellbook (K) with spell gems; mercenary stances and gear; and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guildmaster Aldric says, 'Welcome, young ${RACES[pl.race].name.toLowerCase()}. Hunt the rats and snakes outside the walls to start. Return to me as you grow in power.'`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
       this.last = performance.now();
@@ -2590,8 +2905,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (!this.player || !this.world) return;
       const zoneEdits = Object.assign({}, this.zoneEdits, { [this.world.zoneId]: this.world.edits });
       let n = 0; for (const k in zoneEdits) n += Object.keys(zoneEdits[k]).length;
-      const data = { v: 2, seed: this.seed, zone: this.world.zoneId, char: this.player.toSave(), zoneEdits: n < 20000 ? zoneEdits : {},
-        corpses: this.pcorpses.map((c) => c.toSave()).concat(this.otherCorpses), mercs: this.mercs.filter((m) => !m.dead).map((m) => m.toSave()), quests: this.quests, dayT: this.dayT };
+      const data = { v: 3, seed: this.seed, zone: this.world.zoneId, char: this.player.toSave(), zoneEdits: n < 20000 ? zoneEdits : {},
+        corpses: this.pcorpses.map((c) => c.toSave()).concat(this.otherCorpses), mercs: this.mercs.map((m) => m.toSave()), quests: this.quests, questSteps: this.questSteps, dayT: this.dayT };
       if (!this.player.alive) data.char.hp = 0;
       try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); if (manual) ui.log('Your character has been saved.', 'sys'); }
       catch (e) { ui.log('Save failed: ' + e.message, 'death'); }
@@ -2662,7 +2977,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if ($('hud').classList.contains('hidden')) return;
       if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
       const k = e.code;
-      if (k === 'Tab' || k === 'F1' || k === 'F2' || k === 'F3' || k === 'F10' || k === 'Space') e.preventDefault();
+      if (k === 'Tab' || /^F([1-5]|10)$/.test(k) || k === 'Space') e.preventDefault();
       this.keys[k] = down;
       if (!down || e.repeat) return;
       EB.audio.unlock();
@@ -2670,10 +2985,12 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (k === 'Escape') { if (this.windows.size) this.closeAll(); else this.setTarget(null); return; }
       if ((k === 'Slash' && e.shiftKey) || k === 'F10') { this.toggleWin('helpWin'); return; }
       if (k === 'F1') { e.preventDefault(); this.setTarget(null); this.log('You target yourself.', 'sys'); return; }
-      if (k === 'F2' || k === 'F3') { e.preventDefault(); const m = this.mercs[k === 'F2' ? 0 : 1]; if (m) this.setTarget(m); return; }
+      if (/^F[2-5]$/.test(k)) { e.preventDefault(); const m = this.mercs[+k.slice(1) - 2]; if (m && !m.dead) this.setTarget(m); return; }
+      if (k === 'KeyK') { this.toggleWin('bookWin'); return; }
       if (k === 'KeyN') { this.showMap = !this.showMap; $('minimap').classList.toggle('hidden', !this.showMap); return; }
       if (k === 'Enter' || k === 'Slash') { const ci = $('chatInput'); ci.classList.remove('hidden'); if (k === 'Slash') ci.value = '/'; setTimeout(() => ci.focus(), 0); if (this.locked()) document.exitPointerLock(); e.preventDefault(); return; }
       if (k === 'KeyI') { this.toggleWin('invWin'); return; }
+      if (k === 'KeyM' && e.shiftKey) { this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); return; }
       if (k === 'KeyM') { this.log(EB.audio.toggle() ? 'Sound on.' : 'Sound off.', 'sys'); return; }
       if (!pl.alive) return;
       if (k === 'Tab') this.tabTarget(e.shiftKey);
@@ -2748,6 +3065,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       else if (id === 'merchantWin') this.renderMerchant();
       else if (id === 'trainerWin') this.renderTrainer();
       else if (id === 'mercWin') this.renderMercWin();
+      else if (id === 'bookWin') this.renderBook();
+      else if (id === 'mercCfgWin') this.renderMercCfg();
     }
 
     // ---------- targeting ----------
@@ -2778,10 +3097,11 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       const t = this.target, pl = this.player;
       if (!t) { this.log("You say, 'Hail'", 'say'); return; }
       this.log(`You say, 'Hail, ${t.name}'`, 'say');
-      if (t.kind === 'merc') { setTimeout(() => this.log(`${t.name} says, '${t.role === 'healer' ? 'I will keep you standing, ' + pl.name + '.' : 'Point me at something to hit!'}'`, 'say'), 400); return; }
+      if (t.kind === 'merc') { setTimeout(() => this.log(`${t.name} says, '${t.isPet ? 'Yes, master?' : t.role === 'healer' ? 'I will keep you standing, ' + pl.name + '.' : 'Point me at something to hit!'}'`, 'say'), 400); return; }
       if (t.kind !== 'npc' || t.pos.distanceTo(pl.pos) > 20) return;
       if (this.questFor(t)) { setTimeout(() => this.openDialog(t), 300); return; }
       const lines = {
+        quest: `Well met, ${pl.name}.`,
         liaison: `Looking for a sword arm or a healer, ${pl.name}? My mercenaries will follow you anywhere, for a price. (Press E to hire)`,
         merchant: `Welcome, ${pl.name}! Browse my wares? I buy anything you dig out of those critters, too. (Press E to trade)`,
         trainer: pl.level < 5 ? `Ah, ${pl.name}. Rats, snakes and fire beetles roam outside our walls. Hunt them, and return to me when you have grown. (Press E to train)` : `You have grown strong, ${pl.name}. The Darkpaw gnolls to the west and the Forsaken Graveyard to the south will test you. The Sunken Crypt to the northeast... only the bravest return. (Press E to train)`,
@@ -2857,6 +3177,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     damageMob(m, dmg, src) {
       if (!m.alive) return;
       m.hp -= dmg;
+      if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} has been awakened by ${src === this.player ? 'you' : src.name}.`, 'spell'); }
       if (src === this.player || (src && src.kind === 'merc')) m.grpDamage += dmg;
       if (m.state !== 'chase' && m.state !== 'flee') m.aggroOn(src, this);
       m.addHate(src, dmg + 1);
@@ -2872,7 +3193,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (byPlayer && pl.alive) {
         const c = conColor(pl.level, m.level);
         let xp = Math.floor(calc.xpForKill(m.level) * CON_XP[c] * (m.def.named ? 2 : 1));
-        const grp = this.groupMembers();
+        const grp = this.groupMembers().filter((g) => !g.isPet);
         if (grp.length > 1 && xp > 0) { // EQ-style split: group bonus, then shares weighted by level
           const total = xp * (1 + 0.15 * (grp.length - 1)), sumL = grp.reduce((a, g) => a + g.level, 0);
           xp = Math.floor(total * pl.level / sumL);
@@ -2959,7 +3280,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     }
     playerDie(src) {
       const pl = this.player;
-      pl.hp = 0; pl.alive = false; pl.autoAttack = false; pl.casting = null; pl.sitting = false;
+      pl.hp = 0; pl.alive = false; pl.autoAttack = false; pl.casting = null; pl.sitting = false; pl.memorizing = null;
       $('castBar').classList.add('hidden');
       this.log(`You have been slain by ${src ? src.name : 'something'}!`, 'death');
       EB.audio.death();
@@ -2972,7 +3293,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         pl.inv = new Array(24).fill(null); pl.equip = {}; pl.coins = 0;
       }
       for (const m of this.mobs) if (m.alive && (m.state === 'chase' || m.state === 'flee') && (m.hate.has(pl) || this.mercs.some((mc) => m.hate.has(mc)))) m.goHome();
-      for (const mc of this.mercs) { mc.casting = null; mc.hp = mc.maxHp; }
+      for (const mc of this.mercs) { mc.casting = null; if (!mc.dead) mc.hp = mc.maxHp; }
       this.closeAll();
       if (this.locked()) document.exitPointerLock();
       $('deathScreen').classList.remove('hidden');
@@ -3002,36 +3323,37 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       pl.sitting = true; pl.autoAttack = false;
       this.log('You sit down.', 'sys');
     }
-    stand() { if (this.player.sitting) { this.player.sitting = false; this.log('You stand up.', 'sys'); } }
+    stand() { if (this.player.sitting) { this.player.sitting = false; this.log('You stand up.', 'sys'); if (this.player.memorizing) this.interruptMemorize(); } }
 
     // ---------- abilities & spells ----------
-    hotbarList() {
-      const c = this.player.cls;
-      const key = (id) => SPELLS[id].classes[c] + (id === 'bind_wound' ? 0.5 : 0);
-      return this.player.spells.slice().sort((a, b) => key(a) - key(b)).slice(0, 8);
-    }
+    hotbarList() { return this.player.hotbar; }
     hotkey(i) {
       if (this.buildMode) { if (i < D.BUILDABLE.length) { this.buildSel = i; this.rebuildHotbar(); } return; }
       const list = this.hotbarList();
+      if (this.bookSel) { const s = this.bookSel; this.bookSel = null; if (i < 8) this.assignHotbar(i, s); if (this.windows.has('bookWin')) this.renderBook(); return; }
       if (list[i]) this.useAbility(list[i]);
     }
     useAbility(id) {
       const pl = this.player, sp = SPELLS[id];
       if (!pl.alive) return;
       if (pl.casting) { this.log('You are already casting a spell!', 'sys'); return; }
+      if (pl.memorizing) { this.log('You are busy memorizing a spell.', 'sys'); return; }
+      if (isSpell(id) && !pl.gems.includes(id)) { this.log(`You do not have ${sp.name} memorized. Open your spellbook (K) and memorize it into a spell gem.`, 'sys'); return; }
       const cd = (pl.cooldowns[id] || 0) - this.time;
       if (cd > 0) { this.log(`You can use ${sp.name} again in ${Math.ceil(cd)} seconds.`, 'sys'); return; }
       if (sp.mana > pl.mana) { this.log('Insufficient Mana to cast this spell!', 'sys'); return; }
       const t = this.target;
-      const needsTarget = sp.kind === 'nuke' || sp.kind === 'root' || sp.kind === 'skill';
+      const needsTarget = ['nuke', 'root', 'skill', 'dot', 'snare', 'slow', 'mez', 'stun'].includes(sp.kind);
       if (needsTarget) {
         if (!t || t.kind !== 'mob' || !t.alive) { this.log('You must first select a target for this spell!', 'sys'); return; }
-        const range = sp.kind === 'skill' ? this.meleeReach(t) : 32;
-        if (pl.pos.distanceTo(t.pos) > range) { this.log(sp.kind === 'skill' ? 'Your target is too far away, get closer!' : 'Your target is out of range, get closer!', 'sys'); return; }
-        if (sp.kind !== 'skill' && !this.lineOfSight(pl, t)) { this.log('You cannot see your target.', 'sys'); return; }
+        const melee = sp.kind === 'skill' && !sp.range;
+        const range = melee ? this.meleeReach(t) : sp.range || 32;
+        if (pl.pos.distanceTo(t.pos) > range) { this.log(melee ? 'Your target is too far away, get closer!' : 'Your target is out of range, get closer!', 'sys'); return; }
+        if (!melee && !this.lineOfSight(pl, t)) { this.log('You cannot see your target.', 'sys'); return; }
       }
       let ft = needsTarget ? t : null;
       if (sp.friendly) { ft = t && t.kind === 'merc' && !t.dead && t.pos.distanceTo(pl.pos) < 32 ? t : pl; }
+      if (sp.kind === 'pet' && this.mercs.filter((m) => !m.isPet).length >= 2 && !this.mercs.some((m) => m.isPet)) { /* group of 4 max: player + 2 mercs + pet is fine */ }
       this.stand();
       if (sp.cast > 0) {
         pl.casting = { id, t: 0, total: sp.cast, target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
@@ -3079,7 +3401,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           const before = tg.hp; tg.hp = Math.min(tg.maxHp, tg.hp + amt);
           const got = Math.round(tg.hp - before);
           if (tg !== pl) this.log(`${tg.name} feels much better. (+${got} HP)`, 'spell');
-          else this.log(sp.skill ? `You bandage your wounds. (+${got} HP)` : `You feel much better. (+${got} HP)`, 'spell');
+          else this.log(id === 'bind_wound' ? `You bandage your wounds. (+${got} HP)` : sp.skill ? `Divine power washes over you. (+${got} HP)` : `You feel much better. (+${got} HP)`, 'spell');
           this.healAggro(pl, got);
           EB.audio.heal();
           break;
@@ -3098,12 +3420,55 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
-          const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power' }[sp.school] || 'is struck';
+          const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
           this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
           EB.audio.spell();
           this.spellFx(t, sp.school);
           this.damageMob(t, dmg, pl);
+          if (sp.lifetap) { const before = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + dmg); this.log(`You feel invigorated. (+${Math.round(pl.hp - before)} HP)`, 'spell'); }
+          break;
+        }
+        case 'dot': {
+          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          const per = U.randInt(sp.tick[0], sp.tick[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          t.dots = (t.dots || []).filter((d) => d.id !== id);
+          t.dots.push({ id, name: sp.name, src: pl, dmg: per, left: sp.dur, next: 3, school: sp.school });
+          this.log(`${U.cap(t.name)} ${sp.school === 'fire' ? 'is covered in flames' : 'begins to sicken'}. (${sp.name})`, 'spell');
+          this.spellFx(t, sp.school); EB.audio.spell();
+          this.damageMob(t, 0, pl); t.addHate(pl, per * 2);
+          break;
+        }
+        case 'snare': case 'slow': {
+          if (Math.random() < 0.08 + Math.max(0, t.level - L) * 0.05) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (sp.kind === 'snare') { t.snaredUntil = this.time + sp.dur; this.log(`${U.cap(t.name)} is ensnared.`, 'spell'); }
+          else { t.slowedUntil = this.time + sp.dur; this.log(`${U.cap(t.name)} yawns. (slowed)`, 'spell'); }
+          this.spellFx(t, 'magic'); EB.audio.spell();
+          this.damageMob(t, 0, pl); t.addHate(pl, 10);
+          break;
+        }
+        case 'mez': {
+          if (t.def.named || t.level > sp.maxLvl) { this.log(`Your target is immune to changes in its attack speed... er, too powerful to be mesmerized.`, 'spell'); pl.cooldowns[id] = this.time + 1; break; }
+          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this, true);
+          t.addHate(pl, 20); t.casting = null;
+          t.mezUntil = this.time + sp.dur;
+          this.log(`${U.cap(t.name)} has been mesmerized.`, 'spell');
+          this.spellFx(t, 'magic'); EB.audio.spell();
+          if (this.target === t && pl.autoAttack) { pl.autoAttack = false; this.log('Auto attack is off (your target is mesmerized).', 'sys'); }
+          break;
+        }
+        case 'stun': {
+          const dmg = U.randInt(sp.dmg[0], sp.dmg[1]);
+          this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
+          this.damageMob(t, dmg, pl);
+          if (t.alive && !t.def.named) { t.stunUntil = this.time + sp.dur; t.casting = null; this.log(`${U.cap(t.name)} is stunned.`, 'spell'); }
+          else if (t.alive) this.log(`${U.cap(t.name)} is unaffected by the stun.`, 'spell');
+          this.spellFx(t, 'magic'); EB.audio.hit();
+          break;
+        }
+        case 'pet': {
+          this.summonPet(sp.petLvl); EB.audio.spell();
           break;
         }
         case 'buff': {
@@ -3140,7 +3505,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
             EB.audio.hit(); this.pAttackAnim = 0.01;
             this.damageMob(t, dmg, pl);
           } else {
-            if (Math.random() < 0.15) { this.log(`You try to ${sp.verb} ${t.name}, but miss!`, 'miss'); this.damageMob(t, 0, pl); break; }
+            if (Math.random() < (sp.archery ? 0.2 : 0.15)) { this.log(`You try to ${sp.verb} ${t.name}, but miss!`, 'miss'); this.damageMob(t, 0, pl); break; }
+            if (sp.archery) this.arrowFx(t);
             const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
             this.log(`You ${sp.verb} ${t.name} for ${dmg} points of damage.`, 'melee');
             EB.audio.hit(); this.pAttackAnim = 0.01;
@@ -3151,8 +3517,14 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       }
       if (pl.hp > pl.maxHp) pl.hp = pl.maxHp;
     }
+    arrowFx(t) {
+      const pl = this.player, a = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.9), new THREE.MeshBasicMaterial({ color: 0xd8c090, transparent: true, depthWrite: false }));
+      a.position.set(pl.pos.x, pl.pos.y + pl.h * 0.75, pl.pos.z); a.lookAt(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z);
+      this.scene.add(a); this.fx = this.fx || [];
+      this.fx.push({ m: a, life: 0.35, from: a.position.clone(), to: new THREE.Vector3(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z), arrow: true });
+    }
     spellFx(t, school) {
-      const color = { cold: 0x80d0ff, fire: 0xff7020, magic: 0xfff080 }[school] || 0xffffff;
+      const color = { cold: 0x80d0ff, fire: 0xff7020, magic: 0xfff080, disease: 0x90d040, life: 0xff4070 }[school] || 0xffffff;
       const g = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false }));
       g.position.set(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z);
       this.scene.add(g);
@@ -3190,7 +3562,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says, 'Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}'`, 'say'); this.openWin('merchantWin'); }
       else if (t.npcKind === 'trainer') this.openWin('trainerWin');
       else if (t.npcKind === 'liaison') this.openWin('mercWin');
-      else if (t.npcKind === 'guard' && this.questFor(t)) this.openDialog(t);
+      else if ((t.npcKind === 'guard' || t.npcKind === 'quest') && this.questFor(t)) this.openDialog(t);
+      else if (t.npcKind === 'quest') this.hail();
       else if (t.npcKind === 'binder') {
         pl.bind = { zone: this.world.zoneId, x: pl.pos.x, y: pl.pos.y, z: pl.pos.z };
         this.log(`${t.name} says, 'Binding your soul. You will return here when you die.'`, 'say');
@@ -3251,10 +3624,11 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     addItem(id, count, silent) {
       const pl = this.player, it = ITEMS[id];
       count = count || 1;
-      if (it.stack) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; return true; } }
+      if (it.stack) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; this.questDirty = true; return true; } }
       const i = pl.inv.indexOf(null);
       if (i < 0) { if (!silent) this.log('Your inventory is full!', 'sys'); return false; }
       pl.inv[i] = { id, count };
+      this.questDirty = true;
       return true;
     }
     renderInv() {
@@ -3362,24 +3736,45 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       const pl = this.player, sp = SPELLS[id], c = this.trainCost(sp.classes[pl.cls]);
       if (pl.coins < c) return;
       pl.coins -= c; pl.spells.push(id);
-      this.log(sp.mana ? `You have finished scribing ${sp.name}.` : `You have learned ${sp.name}!`, 'spell');
-      if (this.hotbarList().indexOf(id) < 0) this.log('Your hotbar is full; only the first 8 abilities are shown.', 'sys');
-      EB.audio.ding(); this.rebuildHotbar(); this.renderTrainer(); this.save();
+      this.log(isSpell(id) ? `You have finished scribing ${sp.name} into your spellbook.` : `You have learned ${sp.name}!`, 'spell');
+      if (isSpell(id)) { const g = pl.gems.indexOf(null); if (g >= 0) { pl.gems[g] = id; this.log(`${sp.name} has been memorized into spell gem ${g + 1}.`, 'spell'); } else this.log('Your spell gems are full. Open your spellbook (K) to memorize it.', 'help'); }
+      const hs = pl.hotbar.indexOf(null);
+      if (hs >= 0) pl.hotbar[hs] = id; else this.log('Your hotbar is full. Use the spellbook (K) to rearrange it.', 'sys');
+      EB.audio.ding(); this.rebuildHotbar(); this.renderGems(); this.renderTrainer(); this.save();
     }
 
-    // ---------- group / mercenaries ----------
+    // ---------- group / mercenaries / pets ----------
     groupMembers() { return [this.player, ...this.mercs.filter((m) => !m.dead)].filter((g) => g.alive); }
     groupFoe() {
       const pl = this.player, t = this.target;
-      if (t && t.kind === 'mob' && t.alive && (pl.autoAttack || t.state === 'chase' || pl.casting) && t.pos.distanceTo(pl.pos) < 40) return t;
+      if (t && t.kind === 'mob' && t.alive && (pl.autoAttack || t.state === 'chase' || pl.casting) && t.pos.distanceTo(pl.pos) < 40 && !this.isMezzed(t)) return t;
       let best = null, bd = 35;
       for (const m of this.mobs) {
-        if (!m.alive || m.state !== 'chase' || !m.target) continue;
+        if (!m.alive || m.state !== 'chase' || !m.target || this.isMezzed(m)) continue;
         if (m.target !== pl && m.target.kind !== 'merc') continue;
         const d = m.pos.distanceTo(pl.pos);
         if (d < bd) { bd = d; best = m; }
       }
       return best;
+    }
+    isMezzed(m) { return this.time < (m.mezUntil || 0); }
+    // stance-aware target selection for a merc / pet
+    mercFoe(merc) {
+      if (merc.stance === 'passive') return null;
+      const foe = this.groupFoe();
+      if (foe || merc.stance !== 'aggressive') return foe;
+      const pl = this.player; let best = null, bd = 16;
+      for (const m of this.mobs) {
+        if (!m.alive || !m.def.aggressive || this.isMezzed(m)) continue;
+        const c = m.con(this); if (c === 'grey' || c === 'green') continue;
+        const d = m.pos.distanceTo(pl.pos);
+        if (d < bd && Math.abs(m.pos.y - pl.pos.y) < 6) { bd = d; best = m; }
+      }
+      return best;
+    }
+    groupInCombat() {
+      const grp = this.groupMembers();
+      return this.mobs.some((m) => m.alive && (m.state === 'chase' || m.state === 'flee') && grp.some((g) => m.hate.has(g)));
     }
     healAggro(src, amt) {
       if (amt <= 0) return;
@@ -3389,49 +3784,81 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     addMerc(role, saved, silent) {
       const m = new EB.Merc(role, this, saved);
       const pl = this.player;
-      m.pos.set(pl.pos.x + (this.mercs.length ? -1.3 : 1.3), pl.pos.y + 0.2, pl.pos.z + 1.2);
-      m.addTo(this.scene); m.syncModel();
+      m.pos.set(pl.pos.x + (this.mercs.length % 2 ? -1.3 : 1.3), pl.pos.y + 0.2, pl.pos.z + 1.2);
+      if (!m.dead) { m.addTo(this.scene); m.syncModel(); }
       this.mercs.push(m);
       if (!silent) {
         this.log(`${m.name} has joined your group.`, 'loot');
-        setTimeout(() => this.log(`${m.name} says, '${role === 'healer' ? `Lead on, ${pl.name}. I'll keep you breathing.` : `Aye, ${pl.name}! Show me who needs a beating.`}'`, 'say'), 500);
+        if (!m.isPet) setTimeout(() => this.log(`${m.name} says, '${role === 'healer' ? `Lead on, ${pl.name}. I'll keep you breathing.` : `Aye, ${pl.name}! Show me who needs a beating.`}'`, 'say'), 500);
       }
       this.renderGroup();
       return m;
     }
+    summonPet(petLvl) {
+      const old = this.mercs.find((m) => m.isPet);
+      if (old) { this.log(`${old.name} crumbles to dust.`, 'spell'); this.removeMercModel(old); }
+      const pet = this.addMerc('pet', { petLvl }, true);
+      this.log(`You summon ${pet.name}, a level ${petLvl} servant, from the grave.`, 'spell');
+      this.log(`${pet.name} says, 'Master, I await your command.'`, 'say');
+      return pet;
+    }
     hireMerc(role) {
-      const pl = this.player, c = mercCost(role, pl.level);
-      if (this.mercs.some((m) => m.role === role)) { this.log('That mercenary is already in your group.', 'sys'); return; }
+      const pl = this.player, c = mercCost(role, pl.level), ex = this.mercs.find((m) => m.role === role);
+      if (ex) { this.log(ex.dead ? `${ex.name} is dead. Revive them instead.` : 'That mercenary is already in your group.', 'sys'); return; }
       if (pl.coins < c) { this.log("You can't afford that mercenary.", 'sys'); return; }
       pl.coins -= c;
       this.log(`You pay ${U.coinStr(c)} to Liaison Brenna.`, 'loot');
       this.addMerc(role);
       this.renderMercWin(); this.save();
     }
+    reviveCost(m) { return Math.floor(mercCost(m.role, this.player.level) * 0.6); }
+    reviveMerc(m) {
+      const pl = this.player, c = this.reviveCost(m);
+      if (!m.dead) return;
+      if (this.groupInCombat()) { this.log('You cannot revive a mercenary while you are in combat.', 'sys'); return; }
+      if (pl.coins < c) { this.log(`You need ${U.coinStr(c)} to revive ${m.name}.`, 'sys'); return; }
+      pl.coins -= c;
+      m.dead = false; m.hp = Math.ceil(m.maxHp * 0.5); m.mana = Math.ceil(m.maxMana * 0.3); m.casting = null; m.buffs = []; m.nav.reset();
+      m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.2, pl.pos.z + 1.2);
+      this.scene.add(m.model.group); this.scene.add(m.plate); m.syncModel();
+      this.log(`You pay ${U.coinStr(c)}. ${m.name} has been revived!`, 'loot');
+      this.log(`${m.name} says, 'Thank you, ${pl.name}. I won't fall so easily again.'`, 'say');
+      EB.audio.heal(); this.renderGroup(); if (this.windows.has('mercWin')) this.renderMercWin(); this.save();
+    }
     removeMercModel(m) {
       m.removeFrom(this.scene);
-      this.mercs.splice(this.mercs.indexOf(m), 1);
+      const i = this.mercs.indexOf(m); if (i >= 0) this.mercs.splice(i, 1);
       for (const mob of this.mobs) mob.hate.delete(m);
       if (this.target === m) this.setTarget(null);
+      if (this.cfgMerc === m) this.closeWin('mercCfgWin');
       this.renderGroup();
     }
-    dismissMerc(m) { this.log(`${m.name} has left the group.`, 'sys'); this.removeMercModel(m); this.save(); }
-    mercDie(m, killer) {
-      m.dead = true; m.hp = 0;
-      this.log(`${m.name} has been slain by ${killer ? killer.name : 'something'}!`, 'death');
-      this.log(`${m.name} has left the group. (Mercenaries can be re-hired from Liaison Brenna in Everblock Keep.)`, 'sys');
+    dismissMerc(m) {
+      if (!m.isPet) for (const sl in m.equip) { if (!this.addItem(m.equip[sl].id, 1, true)) this.log(`${ITEMS[m.equip[sl].id].name} was lost (inventory full).`, 'sys'); }
+      this.log(m.isPet ? `${m.name} crumbles to dust.` : `${m.name} has left the group.${Object.keys(m.equip).length ? ' They return the gear you gave them.' : ''}`, 'sys');
       this.removeMercModel(m); this.save();
+    }
+    mercDie(m, killer) {
+      m.hp = 0; m.casting = null;
+      this.log(`${m.name} has been slain by ${killer ? killer.name : 'something'}!`, 'death');
+      for (const mob of this.mobs) mob.hate.delete(m);
+      if (m.isPet) { m.dead = true; this.removeMercModel(m); this.save(); return; }
+      m.dead = true;
+      this.scene.remove(m.model.group); this.scene.remove(m.plate);
+      if (this.target === m) this.setTarget(null);
+      this.log(`You can revive ${m.name} for ${U.coinStr(this.reviveCost(m))} from the group window once combat ends.`, 'help');
+      this.renderGroup(); this.save();
     }
     renderMercWin() {
       const pl = this.player, list = $('mercList');
-      list.innerHTML = `<div class="sub">Mercenaries match your level and follow you between zones. Your coin: ${U.coinStr(pl.coins)}</div>`;
+      list.innerHTML = `<div class="sub">Mercenaries match your level and follow you between zones. Click ⚙ in the group window to set their stance and give them gear. Your coin: ${U.coinStr(pl.coins)}</div>`;
       for (const role of Object.keys(MERCS)) {
-        const M = MERCS[role], c = mercCost(role, pl.level), hired = this.mercs.some((m) => m.role === role);
+        const M = MERCS[role], c = mercCost(role, pl.level), ex = this.mercs.find((m) => m.role === role);
         const row = document.createElement('div'); row.className = 'row';
-        row.innerHTML = `<span class="n"><b>${M.name}</b> - Level ${pl.level} ${CLASSES[M.cls].name}<br><span style="color:#b0a080">${M.desc}</span></span><span>${U.coinShort(c)}</span>`;
+        row.innerHTML = `<span class="n"><b>${M.name}</b> - Level ${pl.level} ${CLASSES[M.cls].name}<br><span style="color:#b0a080">${M.desc}</span></span><span>${U.coinShort(ex && ex.dead ? this.reviveCost(ex) : c)}</span>`;
         const b = document.createElement('button'); b.className = 'small';
-        b.textContent = hired ? 'In group' : 'Hire'; b.disabled = hired || pl.coins < c;
-        b.onclick = () => this.hireMerc(role);
+        if (ex && ex.dead) { b.textContent = 'Revive'; b.disabled = pl.coins < this.reviveCost(ex); b.onclick = () => this.reviveMerc(ex); }
+        else { b.textContent = ex ? 'In group' : 'Hire'; b.disabled = !!ex || pl.coins < c; b.onclick = () => this.hireMerc(role); }
         row.appendChild(b); list.appendChild(row);
       }
     }
@@ -3441,17 +3868,25 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       gw.classList.remove('hidden');
       gw.innerHTML = '<div class="wtitle" style="margin-bottom:2px">Group</div>';
       this.mercs.forEach((m, i) => {
-        const row = document.createElement('div'); row.className = 'gmem';
-        row.innerHTML = `<div class="gname"><span class="fk">F${i + 2}</span> ${m.name} <span class="gx" title="Dismiss">✕</span></div><div class="bar hp"><div class="fill"></div><span></span></div>` + (m.role === 'healer' ? '<div class="bar mana"><div class="fill"></div><span></span></div>' : '');
-        row.onclick = (e) => { if (e.target.classList.contains('gx')) this.dismissMerc(m); else this.setTarget(m); };
+        const row = document.createElement('div'); row.className = 'gmem' + (m.dead ? ' dead' : '');
+        const head = `<div class="gname"><span class="fk">F${i + 2}</span> ${m.name}${m.isPet ? ' <span class="gpet">pet</span>' : ''} <span class="gcfg" title="Settings / give gear">⚙</span><span class="gx" title="Dismiss">✕</span></div>`;
+        if (m.dead) row.innerHTML = head + `<div class="gdead">DEAD <button class="small grev">Revive ${U.coinShort(this.reviveCost(m))}</button></div>`;
+        else row.innerHTML = head + `<div class="bar hp"><div class="fill"></div><span></span></div>` + (m.role === 'healer' ? '<div class="bar mana"><div class="fill"></div><span></span></div>' : '') + `<div class="gstance">${m.stance}${m.role === 'healer' ? ` · heal &lt;${Math.round(m.healAt * 100)}%` : ''}</div>`;
+        row.onclick = (e) => {
+          const c = e.target.classList;
+          if (c.contains('gx')) this.dismissMerc(m);
+          else if (c.contains('gcfg')) this.openMercCfg(m);
+          else if (c.contains('grev')) this.reviveMerc(m);
+          else if (!m.dead) this.setTarget(m);
+        };
         gw.appendChild(row);
         m.gRow = row;
       });
     }
     updateGroupBars() {
       for (const m of this.mercs) {
-        if (!m.gRow) continue;
-        const bars = m.gRow.querySelectorAll('.bar');
+        if (!m.gRow || m.dead) continue;
+        const bars = m.gRow.querySelectorAll('.bar'); if (!bars.length) continue;
         const hp = U.clamp(m.hp / m.maxHp, 0, 1);
         bars[0].firstChild.style.width = hp * 100 + '%'; bars[0].lastChild.textContent = `${Math.ceil(m.hp)} / ${m.maxHp}`;
         if (bars[1]) { bars[1].firstChild.style.width = U.clamp(m.mana / m.maxMana, 0, 1) * 100 + '%'; bars[1].lastChild.textContent = `${Math.floor(m.mana)} / ${m.maxMana}`; }
@@ -3459,47 +3894,251 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         m.gRow.querySelector('.gname').style.color = m.casting ? '#c89aff' : '';
       }
     }
+    // ---- merc settings & trade ----
+    openMercCfg(m) { this.cfgMerc = m; this.openWin('mercCfgWin'); }
+    renderMercCfg() {
+      const m = this.cfgMerc, pl = this.player; if (!m) return;
+      $('mcfgTitle').firstChild.textContent = `${m.name} `;
+      const box = $('mcfgBody');
+      let h = `<div class="sub">Level ${m.level} ${m.isPet ? 'pet' : CLASSES[m.cls].name} &nbsp; HP ${Math.ceil(m.hp)}/${m.maxHp}${m.maxMana ? ` &nbsp; Mana ${Math.floor(m.mana)}/${m.maxMana}` : ''} &nbsp; AC ${m.ac}${m.dead ? ' &nbsp; <b style="color:#ff6050">DEAD</b>' : ''}</div>`;
+      h += '<h4>Stance</h4><div class="stanceRow">' + EB.Merc.STANCES.map((s) => `<button class="small stance${m.stance === s ? ' sel' : ''}" data-st="${s}">${U.cap(s)}</button>`).join('') + '</div>';
+      h += '<div class="sub">Passive: follow only' + (m.role === 'healer' ? ' (still heals)' : '') + '. Balanced: assist when you engage or the group is attacked. Aggressive: also attack nearby hostile creatures on sight.</div>';
+      if (m.role === 'healer') h += `<h4>Heal threshold: <span id="healAtV">${Math.round(m.healAt * 100)}%</span></h4><input type="range" id="healAt" min="20" max="95" step="5" value="${Math.round(m.healAt * 100)}" style="width:100%">`;
+      if (!m.isPet) {
+        h += '<h4>Equipment (click to take back)</h4><div id="mcfgEquip" class="mequip"></div>';
+        h += '<h4>Give from your bags</h4><div id="mcfgGive" class="mgive"></div>';
+      }
+      box.innerHTML = h;
+      box.querySelectorAll('.stance').forEach((b) => (b.onclick = () => { m.stance = b.dataset.st; this.log(`${m.name} is now ${m.stance}.`, 'sys'); m.nav.reset(); this.renderMercCfg(); this.renderGroup(); this.save(); }));
+      const r = $('healAt');
+      if (r) { r.oninput = () => { m.healAt = +r.value / 100; $('healAtV').textContent = r.value + '%'; }; r.onchange = () => { this.renderGroup(); this.save(); }; }
+      if (m.isPet) return;
+      const eq = $('mcfgEquip');
+      for (const sl of EQUIP_SLOTS) {
+        const it = m.equip[sl], el = document.createElement('div');
+        el.className = 'islot' + (it && ITEMS[it.id].rare ? ' rare' : '');
+        el.innerHTML = ui.slotHTML(it, sl);
+        if (it) { el.onclick = () => this.takeFromMerc(m, sl); ui.tooltipFor(el, () => ui.itemTip(it.id)); }
+        eq.appendChild(el);
+      }
+      const gv = $('mcfgGive'); let any = false;
+      pl.inv.forEach((item, i) => {
+        if (!item || !ITEMS[item.id].slot) return; any = true;
+        const el = document.createElement('div'); el.className = 'row';
+        const I = ITEMS[item.id];
+        el.innerHTML = `<span>${I.icon}</span><span class="n">${I.name} <span style="color:#b0a080">(${I.slot})</span></span>`;
+        const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Give'; b.disabled = m.dead;
+        b.onclick = () => this.giveToMerc(m, i);
+        el.appendChild(b); ui.tooltipFor(el, () => ui.itemTip(item.id)); gv.appendChild(el);
+      });
+      if (!any) gv.innerHTML = '<div class="sub">You have no equippable items in your bags.</div>';
+    }
+    giveToMerc(m, i) {
+      const pl = this.player, item = pl.inv[i]; if (!item || m.dead) return;
+      const I = ITEMS[item.id]; if (!I.slot) return;
+      const hpPct = m.hp / m.maxHp, old = m.equip[I.slot];
+      m.equip[I.slot] = { id: item.id };
+      item.count--; if (item.count <= 0) pl.inv[i] = null;
+      if (old) this.addItem(old.id, 1, true);
+      m.hp = Math.ceil(m.maxHp * hpPct); m.mana = Math.min(m.mana, m.maxMana);
+      this.log(`You give ${I.name} to ${m.name}.${old ? ` ${m.name} hands back the ${ITEMS[old.id].name}.` : ''}`, 'loot');
+      this.log(`${m.name} says, 'My thanks, ${pl.name}. This will serve me well.'`, 'say');
+      EB.audio.loot(); ui.hideTip(); this.renderMercCfg(); if (this.windows.has('invWin')) this.renderInv(); this.save();
+    }
+    takeFromMerc(m, sl) {
+      const it = m.equip[sl]; if (!it) return;
+      if (!this.addItem(it.id, 1)) return;
+      const hpPct = m.hp / m.maxHp;
+      delete m.equip[sl];
+      m.hp = Math.min(m.maxHp, Math.ceil(m.maxHp * hpPct)); m.mana = Math.min(m.mana, m.maxMana);
+      this.log(`${m.name} hands you the ${ITEMS[it.id].name}.`, 'loot');
+      ui.hideTip(); this.renderMercCfg(); this.save();
+    }
 
-    // ---------- quests ----------
-    questFor(npc) { for (const id in QUESTS) if (QUESTS[id].giver === npc.name) return id; return null; }
+    // ---------- quests (single hand-ins and multi-step chains) ----------
+    questStep(id) { return this.questSteps[id] || 0; }
+    questGiver(id) { const q = QUESTS[id]; if (!q.chain) return q.giver; const st = this.quests[id]; return q.steps[st === 'done' ? q.steps.length - 1 : this.questStep(id)].giver; }
+    questNeeds(id) { const q = QUESTS[id]; return q.chain ? q.steps[this.questStep(id)].items : [[q.item, q.count]]; }
+    questHasAll(id) { return this.questNeeds(id).every(([it, n]) => this.countItem(it) >= n); }
+    questsFor(npc) { return Object.keys(QUESTS).filter((id) => this.questGiver(id) === npc.name && !(QUESTS[id].chain && this.quests[id] === 'done')); }
+    questFor(npc) {
+      const ids = this.questsFor(npc);
+      return ids.find((id) => this.quests[id] === 'active' && this.questHasAll(id)) || ids.find((id) => this.quests[id] === 'active') || ids.find((id) => !this.quests[id]) || ids[0] || null;
+    }
     countItem(id) { let n = 0; for (const s of this.player.inv) if (s && s.id === id) n += s.count; return n; }
     removeItems(id, n) {
       const inv = this.player.inv;
       for (let i = 0; i < inv.length && n > 0; i++) { const s = inv[i]; if (!s || s.id !== id) continue; const k = Math.min(n, s.count); s.count -= k; n -= k; if (s.count <= 0) inv[i] = null; }
     }
+    needStr(id) { return this.questNeeds(id).map(([it, n]) => `${ITEMS[it].name} ${Math.min(this.countItem(it), n)}/${n}`).join(', '); }
     openDialog(npc) {
-      const id = this.questFor(npc); if (!id) return;
-      const q = QUESTS[id], st = this.quests[id], have = this.countItem(q.item);
+      const ids = this.questsFor(npc); if (!ids.length) return;
       $('dlgTitle').firstChild.textContent = `${npc.name} `;
       const btns = $('dlgBtns'); btns.innerHTML = '';
       const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; btns.appendChild(b); };
-      let text;
-      if (!st) { text = q.offer; btn('Accept', () => { this.quests[id] = 'active'; this.log(`You have accepted the quest: ${q.name}.`, 'ding'); this.closeWin('dialogWin'); this.renderQuests(); this.save(); }); }
-      else if (st === 'active' && have >= q.count) { text = `Ah, you have the ${ITEMS[q.item].name}s? (${have}/${q.count})`; btn(`Hand in ${q.count} ${ITEMS[q.item].name}`, () => this.turnIn(id, npc)); }
-      else if (st === 'active') text = `${q.offer}<br><br><i>Progress: ${ITEMS[q.item].name} ${have}/${q.count}</i>`;
-      else text = 'Thank you again for your help, friend.';
+      let html = '', said = '';
+      for (const id of ids) {
+        const q = QUESTS[id], st = this.quests[id], step = q.chain ? q.steps[this.questStep(id)] : q;
+        const title = q.chain ? `${q.name} <span class="qstep">(part ${this.questStep(id) + 1} of ${q.steps.length})</span>` : q.name;
+        let text;
+        if (!st) { text = step.offer; said = said || step.offer; btn(`Accept: ${q.name}`, () => this.acceptQuest(id)); }
+        else if (st === 'active' && this.questHasAll(id)) {
+          text = `${step.offer}<br><br><i>You have everything: ${this.needStr(id)}</i>`; said = said || 'You have what I asked for?';
+          btn(`Hand in: ${this.questNeeds(id).map(([it, n]) => `${n} ${ITEMS[it].name}`).join(' + ')}`, () => this.turnIn(id, npc));
+        } else if (st === 'active') { text = `${step.offer}<br><br><i>Progress: ${this.needStr(id)}</i>`; said = said || 'Still working on it?'; }
+        else { text = 'Thank you again for your help, friend.'; said = said || text; }
+        html += `<div class="qblock"><b>${title}</b><br>${text}</div>`;
+      }
       btn('Close', () => this.closeWin('dialogWin'));
-      $('dlgText').innerHTML = `<b>${q.name}</b><br>${text}`;
-      this.log(`${npc.name} says, '${(st ? (st === 'done' ? 'Thank you again for your help, friend.' : have >= q.count ? 'You have what I asked for?' : 'Still working on it?') : q.offer)}'`, 'say');
+      $('dlgText').innerHTML = html;
+      this.log(`${npc.name} says, '${said}'`, 'say');
       this.openWin('dialogWin');
+    }
+    acceptQuest(id) {
+      const q = QUESTS[id];
+      this.quests[id] = 'active'; if (q.chain) this.questSteps[id] = 0;
+      this.log(`You have accepted the quest: ${q.name}.`, 'ding');
+      this.closeWin('dialogWin'); this.renderQuests(); this.save();
     }
     turnIn(id, npc) {
       const q = QUESTS[id], pl = this.player;
-      if (this.countItem(q.item) < q.count) return;
-      this.removeItems(q.item, q.count);
+      if (!this.questHasAll(id)) return;
+      for (const [it, n] of this.questNeeds(id)) this.removeItems(it, n);
+      if (q.chain) {
+        const si = this.questStep(id), step = q.steps[si];
+        this.log(`${npc.name} says, '${step.done}'`, 'say');
+        if (si < q.steps.length - 1) {
+          if (step.give) { this.addItem(step.give, 1, true); this.log(`You receive ${ITEMS[step.give].name}.`, 'loot'); }
+          this.questSteps[id] = si + 1;
+          this.gainXP(Math.floor(400 * (si + 1) * (1 + pl.level / 10)));
+          this.log(`Quest updated: ${q.name}. Next: ${q.steps[si + 1].hint}.`, 'ding');
+          EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
+          return;
+        }
+      } else this.log(`${npc.name} says, '${q.done}'`, 'say');
       this.quests[id] = 'done';
-      this.log(`${npc.name} says, '${q.done}'`, 'say');
       pl.coins += q.coins; this.log(`You receive ${U.coinStr(q.coins)}.`, 'loot');
-      if (q.reward) { this.addItem(q.reward, q.rewardCount || 1, true); this.log(`You receive ${q.rewardCount > 1 ? q.rewardCount + 'x ' : 'a '}${ITEMS[q.reward].name}.`, 'loot'); }
+      if (q.reward) { this.addItem(q.reward, q.rewardCount || 1, true); this.log(`You receive ${q.rewardCount > 1 ? q.rewardCount + 'x ' : 'a '}${ITEMS[q.reward].name}.`, ITEMS[q.reward].rare ? 'ding' : 'loot'); }
+      if (q.title) { pl.title = q.title; this.log(`You have earned the title: ${q.title}!`, 'ding'); ui.center(q.title, `${pl.name}, ${q.title}`, 4); }
       this.log(`You have completed the quest: ${q.name}!`, 'ding');
       this.gainXP(Math.floor(q.xp * (1 + pl.level / 10)));
       EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
     }
     renderQuests() {
-      const qw = $('questWin'), act = Object.keys(this.quests).filter((id) => this.quests[id] === 'active');
+      const qw = $('questWin'), act = Object.keys(this.quests).filter((id) => this.quests[id] === 'active' && QUESTS[id]);
       if (!act.length) { qw.classList.add('hidden'); return; }
       qw.classList.remove('hidden');
-      qw.innerHTML = '<div class="wtitle" style="margin-bottom:2px">Quests</div>' + act.map((id) => { const q = QUESTS[id], n = Math.min(this.countItem(q.item), q.count); return `<div class="${n >= q.count ? 'qdone' : ''}">${q.name}<br><span>${ITEMS[q.item].name}: ${n}/${q.count}${n >= q.count ? ` - return to ${q.giver}` : ''}</span></div>`; }).join('');
+      qw.innerHTML = '<div class="wtitle" style="margin-bottom:2px">Quests</div>' + act.map((id) => {
+        const q = QUESTS[id], all = this.questHasAll(id);
+        if (q.chain) { const s = q.steps[this.questStep(id)]; return `<div class="${all ? 'qdone' : ''}">${q.name} (${this.questStep(id) + 1}/${q.steps.length})<br><span>${s.hint}<br>${this.needStr(id)}${all ? ` - return to ${s.giver}` : ''}</span></div>`; }
+        return `<div class="${all ? 'qdone' : ''}">${q.name}<br><span>${this.needStr(id)}${all ? ` - return to ${q.giver}` : ''}</span></div>`;
+      }).join('');
+    }
+
+    // ---------- spell gems, spellbook, hotbar ----------
+    isSpell(id) { return isSpell(id); }
+    renderGems() {
+      const gb = $('gemBar'), pl = this.player; gb.innerHTML = '';
+      if (!pl.spells.some(isSpell)) { gb.classList.add('hidden'); this.gemEls = []; return; }
+      gb.classList.remove('hidden');
+      this.gemEls = [];
+      for (let i = 0; i < 8; i++) {
+        const id = pl.gems[i], el = document.createElement('div');
+        el.className = 'gem' + (id ? '' : ' empty');
+        el.dataset.gem = i;
+        el.innerHTML = (id ? EB.icons.img(id) : '') + '<div class="cd"></div><div class="mem"></div>';
+        el.title = id ? SPELLS[id].name : 'Empty spell gem';
+        el.onclick = () => this.clickGem(i);
+        el.oncontextmenu = (e) => { e.preventDefault(); if (pl.gems[i]) { this.log(`You forget ${SPELLS[pl.gems[i]].name}.`, 'spell'); pl.gems[i] = null; this.renderGems(); this.rebuildHotbar(); this.save(); } };
+        if (id) { el.draggable = true; el.ondragstart = (e) => e.dataTransfer.setData('text/plain', id); ui.tooltipFor(el, () => this.spellTip(id) + '<div style="color:#b0a080">Click to cast · right-click to forget</div>'); }
+        this.dropTarget(el, (sid) => this.memorize(sid, i));
+        gb.appendChild(el);
+        this.gemEls.push({ el, id, cd: el.querySelector('.cd'), mem: el.querySelector('.mem') });
+      }
+      const bk = document.createElement('div'); bk.className = 'gem book'; bk.title = 'Spellbook (K)'; bk.textContent = '📖';
+      bk.onclick = () => this.toggleWin('bookWin'); gb.appendChild(bk);
+    }
+    clickGem(i) {
+      const pl = this.player;
+      if (this.bookSel) { const s = this.bookSel; this.bookSel = null; this.memorize(s, i); return; }
+      if (pl.gems[i]) this.useAbility(pl.gems[i]);
+      else this.toggleWin('bookWin');
+    }
+    dropTarget(el, fn) {
+      el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop'); });
+      el.addEventListener('dragleave', () => el.classList.remove('drop'));
+      el.addEventListener('drop', (e) => { e.preventDefault(); el.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (id && SPELLS[id]) fn(id); });
+    }
+    spellTip(id) {
+      const sp = SPELLS[id], L = sp.classes[this.player.cls];
+      return `<div class="tn">${sp.name}</div>${sp.desc}<br>${L ? `Level ${L} &nbsp; ` : ''}${sp.mana ? `Mana: ${sp.mana} &nbsp; ` : ''}Cast: ${sp.cast ? sp.cast + 's' : 'Instant'} &nbsp; Recast: ${sp.recast}s`;
+    }
+    memTime(id) { return Math.min(6, 2 + (SPELLS[id].classes[this.player.cls] || 1) * 0.25); }
+    memorize(id, gem, instant) {
+      const pl = this.player;
+      if (!isSpell(id)) { this.log('Only spells can be memorized. Place abilities on your hotbar instead.', 'sys'); return; }
+      if (!pl.spells.includes(id)) { this.log('You have not scribed that spell.', 'sys'); return; }
+      if (pl.casting) { this.log('You cannot memorize while casting.', 'sys'); return; }
+      if (!pl.alive) return;
+      for (let i = 0; i < 8; i++) if (pl.gems[i] === id) pl.gems[i] = null;
+      if (instant) { pl.gems[gem] = id; this.renderGems(); this.rebuildHotbar(); return; }
+      pl.gems[gem] = null;
+      this.sit();
+      pl.memorizing = { id, gem, t: 0, total: this.memTime(id) };
+      this.log(`Beginning to memorize ${SPELLS[id].name}...`, 'spell');
+      $('castBar').classList.remove('hidden'); $('castName').textContent = `Memorizing ${SPELLS[id].name}`; $('castFill').style.width = '0%';
+      this.renderGems(); this.rebuildHotbar();
+      if (this.windows.has('bookWin')) this.renderBook();
+    }
+    updateMemorize(dt, moving) {
+      const pl = this.player, m = pl.memorizing; if (!m) return;
+      if (moving || !pl.sitting) { this.interruptMemorize(); return; }
+      m.t += dt;
+      $('castFill').style.width = Math.min(100, (m.t / m.total) * 100) + '%';
+      if (m.t >= m.total) {
+        pl.memorizing = null; pl.gems[m.gem] = m.id; $('castBar').classList.add('hidden');
+        this.log(`You have finished memorizing ${SPELLS[m.id].name}.`, 'spell'); EB.audio.click();
+        this.renderGems(); this.rebuildHotbar(); if (this.windows.has('bookWin')) this.renderBook(); this.save();
+      }
+    }
+    interruptMemorize() {
+      const pl = this.player; if (!pl.memorizing) return;
+      pl.memorizing = null; $('castBar').classList.add('hidden');
+      this.log('Your memorization was interrupted.', 'spell'); this.renderGems();
+    }
+    assignHotbar(slot, id) {
+      const pl = this.player;
+      if (id && !pl.spells.includes(id)) return;
+      for (let i = 0; i < 8; i++) if (pl.hotbar[i] === id) pl.hotbar[i] = null;
+      pl.hotbar[slot] = id;
+      if (id) this.log(`${SPELLS[id].name} placed on hotbar slot ${slot + 1}.${isSpell(id) && !pl.gems.includes(id) ? ' (Memorize it in a spell gem to cast it.)' : ''}`, 'sys');
+      this.rebuildHotbar(); this.save();
+    }
+    renderBook() {
+      const pl = this.player, box = $('bookList'); box.innerHTML = '';
+      const sortL = (a, b) => (SPELLS[a].classes[pl.cls] || 0) - (SPELLS[b].classes[pl.cls] || 0);
+      const known = pl.spells.filter((id) => SPELLS[id]).sort(sortL);
+      const sect = (title, ids) => {
+        if (!ids.length) return;
+        const h = document.createElement('h4'); h.textContent = title; box.appendChild(h);
+        const grid = document.createElement('div'); grid.className = 'bookGrid';
+        for (const id of ids) {
+          const sp = SPELLS[id], el = document.createElement('div');
+          const gi = pl.gems.indexOf(id);
+          el.className = 'bspell' + (this.bookSel === id ? ' sel' : '') + (gi >= 0 ? ' memd' : '');
+          el.innerHTML = `${EB.icons.img(id)}<div><b>${sp.name}</b><br><span>L${sp.classes[pl.cls] || '?'}${sp.mana ? ` · ${sp.mana} mana` : ''}${gi >= 0 ? ` · gem ${gi + 1}` : ''}</span></div>`;
+          el.draggable = true; el.dataset.id = id;
+          el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', id); this.bookSel = null; };
+          el.onclick = () => { this.bookSel = this.bookSel === id ? null : id; this.renderBook(); if (this.bookSel) this.log(`Selected ${sp.name}: click a ${isSpell(id) ? 'spell gem or ' : ''}hotbar slot to place it.`, 'help'); };
+          el.ondblclick = () => { if (!isSpell(id)) return; let g = pl.gems.indexOf(null); if (g < 0) g = 7; this.bookSel = null; this.memorize(id, g); };
+          ui.tooltipFor(el, () => this.spellTip(id));
+          grid.appendChild(el);
+        }
+        box.appendChild(grid);
+      };
+      sect('Spells (drag or click, then click a gem to memorize; double-click to memorize)', known.filter(isSpell));
+      sect('Abilities (drag or click, then click a hotbar slot)', known.filter((id) => !isSpell(id)));
+      $('bookHint').textContent = pl.memorizing ? `Memorizing ${SPELLS[pl.memorizing.id].name}...` : this.bookSel ? `Selected: ${SPELLS[this.bookSel].name}` : `Gems: ${pl.gems.filter(Boolean).length}/8 memorized. Memorizing takes a few seconds and makes you sit.`;
     }
 
     // ---------- minimap ----------
@@ -3578,16 +4217,19 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       switch (cmd) {
         case 'save': this.save(true); break;
         case 'loc': this.log(`Your Location is ${pl.pos.x.toFixed(1)}, ${pl.pos.y.toFixed(1)}, ${pl.pos.z.toFixed(1)}`, 'sys'); break;
-        case 'who': this.log('Players on Everblock:', 'sys'); this.mercs.forEach((m) => this.log(`[${m.level} ${m.role === 'healer' ? 'Cleric' : 'Warrior'}] ${m.name} (Mercenary) - in your group`, 'sys')); this.log(`[${pl.level} ${CLASSES[pl.cls].name}] ${pl.name} (${RACES[pl.race].name}) ZONE: ${this.lastZone}`, 'sys'); this.log('There is 1 player in Everblock.', 'sys'); break;
+        case 'who': this.log('Players on Everblock:', 'sys'); this.mercs.forEach((m) => this.log(`[${m.level} ${m.isPet ? 'Pet' : m.role === 'healer' ? 'Cleric' : 'Warrior'}] ${m.name} (${m.isPet ? 'Pet' : 'Mercenary'})${m.dead ? ' - DEAD' : ''} - in your group`, 'sys')); this.log(`[${pl.level} ${CLASSES[pl.cls].name}] ${pl.name}${pl.title ? `, ${pl.title}` : ''} (${RACES[pl.race].name}) ZONE: ${this.lastZone}`, 'sys'); this.log('There is 1 player in Everblock.', 'sys'); break;
         case 'played': this.log(`You have played ${Math.floor(pl.played / 3600)}h ${Math.floor(pl.played / 60) % 60}m.`, 'sys'); break;
         case 'time': { const h = Math.floor(this.dayT * 24); this.log(`It is ${((h + 11) % 12) + 1}:00 ${h < 12 ? 'AM' : 'PM'} in Everblock.`, 'sys'); break; }
         case 'corpse': this.otherCorpses.forEach((c) => this.log(`You have a corpse in ${EB.WORLD.ZONES[c.zone || 'everblock'].name}.`, 'sys')); if (!this.pcorpses.length && !this.otherCorpses.length) this.log('You have no corpses.', 'sys'); else this.pcorpses.forEach((c) => this.log(`Your corpse lies at ${c.pos.x.toFixed(0)}, ${c.pos.y.toFixed(0)}, ${c.pos.z.toFixed(0)} (${c.pos.distanceTo(pl.pos).toFixed(0)} away).`, 'sys')); break;
         case 'sit': this.sit(); break;
         case 'stand': this.stand(); break;
-        case 'quests': { const q = Object.keys(this.quests); if (!q.length) this.log('You have no quests. Hail townsfolk to find work.', 'sys'); else q.forEach((id) => this.log(`${QUESTS[id].name}: ${this.quests[id] === 'done' ? 'Completed' : `${ITEMS[QUESTS[id].item].name} ${Math.min(this.countItem(QUESTS[id].item), QUESTS[id].count)}/${QUESTS[id].count} (return to ${QUESTS[id].giver})`}`, 'sys')); break; }
+        case 'quests': { const q = Object.keys(this.quests).filter((id) => QUESTS[id]); if (!q.length) this.log('You have no quests. Hail townsfolk to find work.', 'sys'); else q.forEach((id) => this.log(`${QUESTS[id].name}: ${this.quests[id] === 'done' ? 'Completed' : `${this.needStr(id)} (return to ${this.questGiver(id)})`}`, 'sys')); break; }
+        case 'lights': { const on = !this.lightsOn; this.lightsPref = on ? '1' : '0'; localStorage.setItem('everblock_lights', this.lightsPref); this.setLights(on, on ? 'Dynamic lantern lights ON.' : 'Dynamic lantern lights OFF.'); break; }
+        case 'music': this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); break;
+        case 'book': case 'spellbook': this.openWin('bookWin'); break;
         case 'dismiss': { const m = this.mercs[this.mercs.length - 1]; if (m) this.dismissMerc(m); else this.log('You have no mercenaries.', 'sys'); break; }
         case 'zone': this.log(`You are in ${this.world.zoneName}.`, 'sys'); break;
-        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand. Press ? for key bindings.', 'help'); break;
+        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand /music /book /lights. Press ? for key bindings.', 'help'); break;
         default: this.log('That is not a valid command. Try /help.', 'sys');
       }
     }
@@ -3614,11 +4256,20 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         return;
       }
       this.hotbarList().forEach((id, i) => {
+        const el = document.createElement('div');
+        this.dropTarget(el, (sid) => this.assignHotbar(i, sid));
+        if (!id) {
+          el.className = 'slot empty'; el.innerHTML = `<span class="k">${i + 1}</span>`;
+          el.onclick = () => this.hotkey(i);
+          hb.appendChild(el); return;
+        }
         const sp = SPELLS[id];
-        const el = document.createElement('div'); el.className = 'slot' + (sp.mana ? ' spell' : '');
-        el.innerHTML = `<span class="k">${i + 1}</span><span class="ic">${sp.mana ? '✦' : '⚔'}</span>${sp.name}<div class="cd"></div>`;
-        el.onclick = () => this.useAbility(id);
-        ui.tooltipFor(el, () => `<div class="tn">${sp.name}</div>${sp.desc}<br>${sp.mana ? `Mana: ${sp.mana} &nbsp; ` : ''}Cast: ${sp.cast ? sp.cast + 's' : 'Instant'} &nbsp; Recast: ${sp.recast}s`);
+        el.className = 'slot' + (isSpell(id) ? ' spell' : '');
+        el.innerHTML = `<span class="k">${i + 1}</span>${EB.icons.img(id, 'sic hic')}<span class="hn">${sp.name}</span><div class="cd"></div>`;
+        el.onclick = () => this.hotkey(i);
+        el.oncontextmenu = (e) => { e.preventDefault(); this.assignHotbar(i, null); };
+        el.draggable = true; el.ondragstart = (e) => e.dataTransfer.setData('text/plain', id);
+        ui.tooltipFor(el, () => this.spellTip(id) + (isSpell(id) && !this.player.gems.includes(id) ? '<div style="color:#ff9070">Not memorized</div>' : '') + '<div style="color:#b0a080">Right-click to clear</div>');
         hb.appendChild(el);
         this.hotbarEls.push({ el, id, cd: el.querySelector('.cd') });
       });
@@ -3629,7 +4280,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     }
     updateHUD() {
       const pl = this.player;
-      $('pName').textContent = pl.name;
+      $('pName').textContent = pl.title ? `${pl.name}, ${pl.title}` : pl.name;
       $('pLvl').textContent = `${pl.level} ${RACES[pl.race].name} ${CLASSES[pl.cls].name}`;
       ui.bar('pHp', 'pHpT', Math.max(0, pl.hp), pl.maxHp, `HP ${Math.max(0, Math.ceil(pl.hp))} / ${pl.maxHp}`);
       if (pl.maxMana) ui.bar('pMana', 'pManaT', pl.mana, pl.maxMana, `Mana ${Math.floor(pl.mana)} / ${pl.maxMana}`); else $('pManaBar').classList.add('hidden');
@@ -3643,7 +4294,15 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         const sp = SPELLS[h.id], left = (pl.cooldowns[h.id] || 0) - this.time;
         h.cd.style.height = left > 0 ? Math.min(100, (left / sp.recast) * 100) + '%' : '0%';
         h.el.classList.toggle('nomana', sp.mana > pl.mana);
+        h.el.classList.toggle('unmem', isSpell(h.id) && !pl.gems.includes(h.id));
         h.el.classList.toggle('active', !!(pl.casting && pl.casting.id === h.id));
+      }
+      for (const g of this.gemEls || []) {
+        if (!g.id) { g.mem.style.height = pl.memorizing && pl.memorizing.gem === +g.el.dataset.gem ? Math.min(100, (pl.memorizing.t / pl.memorizing.total) * 100) + '%' : '0%'; continue; }
+        const sp = SPELLS[g.id], left = (pl.cooldowns[g.id] || 0) - this.time;
+        g.cd.style.height = left > 0 ? Math.min(100, (left / sp.recast) * 100) + '%' : '0%';
+        g.el.classList.toggle('nomana', sp.mana > pl.mana);
+        g.el.classList.toggle('active', !!(pl.casting && pl.casting.id === g.id));
       }
       const bw = $('buffWin');
       if (pl.buffs.length) {
@@ -3665,11 +4324,62 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       $('zoneName').textContent = this.lastZone;
     }
 
+    tickDots(dt) {
+      for (const m of this.mobs) {
+        if (!m.alive || !m.dots || !m.dots.length) continue;
+        for (const d of m.dots.slice()) {
+          d.next -= dt;
+          if (d.next > 0) continue;
+          d.next += 3; d.left -= 3;
+          if (d.src === this.player && this.player.pos.distanceTo(m.pos) < 60) this.log(`${U.cap(m.name)} has taken ${d.dmg} damage from your ${d.name}.`, 'nonmelee');
+          this.damageMob(m, d.dmg, d.src);
+          if (!m.alive) break;
+          if (d.left <= 0) m.dots.splice(m.dots.indexOf(d), 1);
+        }
+      }
+    }
+    updateLights() {
+      const pl = this.player, w = this.world, lights = this.lampLights; if (!lights || !w.lanterns || !this.lightsOn) { this.litCount = 0; return; }
+      const night = this.nightF != null ? this.nightF : 0.5;
+      const underground = this.lastZone === 'The Sunken Crypt' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
+      const near = [];
+      for (const p of w.lanterns.values()) {
+        const dx = p.x + 0.5 - pl.pos.x, dz = p.z + 0.5 - pl.pos.z, dy = p.y - pl.pos.y;
+        const d2 = dx * dx + dz * dz + dy * dy * 2;
+        if (d2 < 22 * 22) near.push([d2, p]);
+      }
+      near.sort((a, b) => a[0] - b[0]);
+      const lampI = underground ? 1.6 : 0.3 + night * 1.9;
+      for (let i = 0; i < 3; i++) {
+        const L = lights[i], n = near[i];
+        if (n) { L.position.set(n[1].x + 0.5, n[1].y + 0.5, n[1].z + 0.5); L.intensity = lampI * (0.92 + Math.sin(this.time * 7 + i) * 0.08); }
+        else L.intensity = 0;
+      }
+      const torch = lights[3], torchOn = underground || night > 0.55;
+      torch.intensity = torchOn ? (underground ? 1.3 : 1.15 * night) * (0.9 + Math.sin(this.time * 11) * 0.06) : 0;
+      torch.position.set(pl.pos.x + Math.sin(pl.yaw) * 0.6, pl.pos.y + pl.h * 0.9, pl.pos.z + Math.cos(pl.yaw) * 0.6);
+      this.litCount = lights.filter((l) => l.intensity > 0.05).length;
+    }
+
     // ---------- main loop ----------
+    setLights(on, msg) {
+      this.lightsOn = on;
+      for (const L of this.lampLights) { if (on && !L.parent) this.scene.add(L); else if (!on && L.parent) this.scene.remove(L); }
+      if (msg) this.log(msg, 'sys');
+    }
     frame(now) {
       requestAnimationFrame((t) => this.frame(t));
       let dt = (now - this.last) / 1000; this.last = now;
       if (!(dt > 0)) dt = 0.016;
+      // auto quality: software renderers can't afford per-pixel point lights; turn them off unless the player forced them on
+      if (this.player && this.lightsPref == null && !this.perf.gaveUp) {
+        const P = this.perf; P.t += Math.min(dt, 1); P.n++;
+        if (P.t > 2.5) {
+          const fps = P.n / P.t; P.t = 0; P.n = 0;
+          if (!this.lightsOn && fps >= 50) this.setLights(true);
+          else if (this.lightsOn && fps < 30) { this.setLights(false); this.perf.gaveUp = true; this.log('Dynamic lantern lights were turned off to keep the frame rate up (type /lights to force them on).', 'sys'); }
+        }
+      }
       dt = Math.min(dt, 0.05);
       this.step(dt);
       this.renderer.render(this.scene, this.camera);
@@ -3697,7 +4407,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         const f = pl.forward(), r = new THREE.Vector3(-Math.cos(pl.yaw), 0, Math.sin(pl.yaw));
         let mx = f.x * fz + r.x * fx, mz = f.z * fz + r.z * fx;
         const l = Math.hypot(mx, mz);
-        const speed = fz < 0 && !fx ? 3.2 : 5.6;
+        const speed = (fz < 0 && !fx ? 3.2 : 5.6) * (1 + pl.buffSum('speed'));
         if (l > 0) { mx = (mx / l) * speed; mz = (mz / l) * speed; }
         pl.vel.x = mx; pl.vel.z = mz;
         if (this.keys.Space && !typing) {
@@ -3709,6 +4419,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         const res = physicsMove(world, pl, dt, true);
         if (res.stepped) this.eyeOffset = (this.eyeOffset || 0) - (pl.pos.y - oy);
         this.updateCasting(dt, !!(fx || fz));
+        this.updateMemorize(dt, !!(fx || fz));
         this.playerMelee(dt);
         if (!this.zoning) for (const zl of world.zoneLines) if (pl.pos.x >= zl.x0 && pl.pos.x <= zl.x1 && pl.pos.z >= zl.z0 && pl.pos.z <= zl.z1) { this.changeZone(zl); break; }
       } else {
@@ -3731,13 +4442,14 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           for (const m of this.mercs) {
             const ooc = !this.mobs.some((mb) => mb.alive && mb.target === m);
             m.hp = Math.min(m.maxHp, m.hp + (2 + Math.floor(m.level / 2)) * (ooc ? 3 : 1));
-            if (m.maxMana) m.mana = Math.min(m.maxMana, m.mana + (3 + Math.floor(m.level / 2)) * (ooc ? 2 : 1));
+            if (m.dead) continue;
+            if (m.maxMana) m.mana = Math.min(m.maxMana, m.mana + (3 + Math.floor(m.level / 2)) * (ooc ? 2 : 1) + m.buffSum('manaRegen'));
           }
           if (pl.maxMana) {
             const ms = pl.castStat();
             let mR = 1 + Math.floor(pl.level / 5);
             if (pl.sitting) mR = 4 + Math.floor(pl.level / 2) + Math.floor(ms / 40);
-            pl.mana = Math.min(pl.maxMana, pl.mana + mR);
+            pl.mana = Math.min(pl.maxMana, pl.mana + mR + pl.buffSum('manaRegen'));
           }
         }
       }
@@ -3754,9 +4466,10 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       }
       for (const n of this.npcs) n.update(dt, this);
       for (const m of this.mercs.slice()) m.update(dt, this);
+      this.tickDots(dt);
       this.separate();
       for (const c of this.pcorpses) c.update(dt, this);
-      if (this.fx) this.fx = this.fx.filter((f) => { f.life -= dt; f.m.scale.multiplyScalar(1 + dt * 3); f.m.material.opacity = Math.max(0, f.life * 1.6); if (f.life <= 0) { this.scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose(); return false; } return true; });
+      if (this.fx) this.fx = this.fx.filter((f) => { f.life -= dt; if (f.arrow) f.m.position.lerpVectors(f.to, f.from, Math.max(0, f.life / 0.35)); else f.m.scale.multiplyScalar(1 + dt * 3); f.m.material.opacity = Math.max(0, f.life * 1.6); if (f.life <= 0) { this.scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose(); return false; } return true; });
       this.updatePlayerModel(dt, moving);
       this.updateCamera();
       this.updateSky(dt);
@@ -3774,7 +4487,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         this.updateHUD();
         this.updateGroupBars();
         this.drawMinimap();
-        if ((this.questT = (this.questT || 0) + 1) % 10 === 0) this.renderQuests();
+        if (this.questDirty || (this.questT = (this.questT || 0) + 1) % 10 === 0) { this.questDirty = false; this.renderQuests(); }
+        this.updateLights();
+        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
         const z = this.world.zoneAt(pl.pos.x, pl.pos.y, pl.pos.z);
         if (z !== this.lastZone) { if (this.lastZone) { this.log(`You have entered ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
       }
@@ -3813,7 +4528,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.dayT = (this.dayT + dt / DAY_LEN) % 1;
       const ang = (this.dayT - 0.25) * Math.PI * 2;
       const elev = Math.sin(ang);
-      const day = U.smoothstep(-0.12, 0.25, elev);
+      const day = U.smoothstep(-0.12, 0.25, elev); this.nightF = 1 - day;
       const dusk = Math.max(0, 1 - Math.abs(elev) / 0.3) * 0.8;
       const sunDir = new THREE.Vector3(Math.cos(ang), elev, 0.35).normalize();
       const cam = this.camera.position;

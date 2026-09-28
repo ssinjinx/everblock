@@ -5,6 +5,7 @@
   const D = EB.data;
   const { B, BLOCKS, RACES, CLASSES, ITEMS, SPELLS, EQUIP_SLOTS, STAT_NAMES, conColor, CON_HEX, CON_XP, CON_MSG, MERCS, QUESTS, mercCost } = D;
   const { Mob, NPC, PlayerCorpse, buildModel, animateModel, physicsMove, collides } = EB.ent;
+  const isSpell = (id) => !!SPELLS[id] && !SPELLS[id].skill && SPELLS[id].kind !== 'skill';
 
   const SAVE_KEY = 'everblock_save_v1';
   EB.SAVE_KEY = SAVE_KEY;
@@ -27,7 +28,15 @@
       this.coins = c.coins != null ? c.coins : 150;
       this.inv = c.inv || new Array(24).fill(null);
       this.equip = c.equip || {};
-      this.spells = c.spells || Object.keys(SPELLS).filter((s) => SPELLS[s].classes[c.cls] === 1);
+      this.spells = (c.spells || Object.keys(SPELLS).filter((s) => SPELLS[s].classes[c.cls] === 1)).filter((s) => SPELLS[s]);
+      // v3: spell gems + configurable hotbar (migrates v1/v2 saves)
+      const key = (id) => (SPELLS[id].classes[c.cls] || 99) + (id === 'bind_wound' ? 0.5 : 0);
+      const known = this.spells.slice().sort((a, b) => key(a) - key(b));
+      const pad = (a) => { a = (a || []).slice(0, 8).map((x) => (x && SPELLS[x] && this.spells.includes(x) ? x : null)); while (a.length < 8) a.push(null); return a; };
+      this.gems = pad(c.gems || known.filter(isSpell));
+      this.hotbar = pad(c.hotbar || known);
+      this.title = c.title || '';
+      this.memorizing = null;
       this.buffs = (c.buffs || []).filter((b) => b.left > 0);
       this.bind = c.bind || null;
       this.played = c.played || 0;
@@ -52,7 +61,7 @@
     buffSum(field) { let t = 0; for (const b of this.buffs) if (b.buff[field]) t += b.buff[field]; return t; }
     get maxHp() { return calc.maxHp(this.cls, this.level, this.stats().STA) + this.itemSum('hp') + this.buffSum('hp'); }
     get maxMana() { const m = calc.maxMana(this.cls, this.level, this.statArr()); return m ? m + this.itemSum('mana') : 0; }
-    get ac() { return this.itemSum('ac') + this.buffSum('ac') + Math.floor(this.stats().AGI / 8) + this.level * (this.cls === 'warrior' ? 3 : this.cls === 'rogue' ? 2 : 1); }
+    get ac() { return this.itemSum('ac') + this.buffSum('ac') + Math.floor(this.stats().AGI / 8) + this.level * ({ warrior: 3, paladin: 3, rogue: 2, ranger: 2, shaman: 1.5 }[this.cls] || 1); }
     weapon() { return this.equip.primary ? ITEMS[this.equip.primary.id] : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
     castStat() { const ms = CLASSES[this.cls].manaStat; return ms != null ? this.statArr()[ms] : 75; }
     modelOpts() {
@@ -62,7 +71,7 @@
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
       return { name: this.name, race: this.race, cls: this.cls, level: this.level, xp: this.xp, stats: this.base, coins: this.coins, inv: this.inv, equip: this.equip,
-        spells: this.spells, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
+        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
     }
   }
 
@@ -73,7 +82,7 @@
       this.mobs = []; this.npcs = []; this.pcorpses = []; this.slots = [];
       this.camDist = 5.5; this.buildMode = false; this.buildSel = 0; this.lastZone = ''; this.hudT = 0; this.tickT = TICK; this.spawnT = 0;
       this.msgThrottle = {}; this.dayT = 0.3; this.saveT = 30; this.deathT = 0;
-      this.mercs = []; this.otherCorpses = []; this.zoneEdits = {}; this.quests = {}; this.zoneMeshes = []; this.pathBudget = 6; this.showMap = true;
+      this.mercs = []; this.otherCorpses = []; this.zoneEdits = {}; this.quests = {}; this.zoneMeshes = []; this.pathBudget = 6; this.showMap = true; this.questSteps = {}; this.lightT = 0;
     }
     initThree() {
       const r = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: true });
@@ -100,6 +109,12 @@
       this.ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.72, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false }));
       this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; this.scene.add(this.ring);
       this.raycaster = new THREE.Raycaster();
+      // v3: a fixed pool of point lights reassigned to the nearest lanterns (+1 player torch) so shaders never recompile
+      this.lampLights = [];
+      for (let i = 0; i < 4; i++) { const L = new THREE.PointLight(i === 3 ? 0xffb060 : 0xffc070, 0, i === 3 ? 11 : 13, 1.6); this.lampLights.push(L); }
+      this.lightsPref = localStorage.getItem('everblock_lights'); // '1' forced on, '0' forced off, null = auto
+      this.setLights(this.lightsPref === '1'); // auto mode starts off and switches on only if the frame rate can afford it
+      this.perf = { t: 0, n: 0 };
       window.addEventListener('resize', () => { this.camera.aspect = window.innerWidth / window.innerHeight; this.camera.updateProjectionMatrix(); r.setSize(window.innerWidth, window.innerHeight); });
     }
 
@@ -122,6 +137,7 @@
         this.zoneEdits = save.zoneEdits || { everblock: save.edits || {} };
         this.otherCorpses = (save.corpses || []).map((c) => Object.assign({ zone: 'everblock' }, c));
         this.quests = save.quests || {};
+        this.questSteps = save.questSteps || {};
         this.dayT = save.dayT || 0.3;
       }
       if (newChar) {
@@ -150,12 +166,14 @@
       this.bindInput();
       this.buildCompass();
       this.rebuildHotbar();
+      this.renderGems();
       this.renderGroup();
+      this.renderQuests();
       $('loading').classList.add('hidden');
       $('hud').classList.remove('hidden');
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`MOTD: Greetings, ${pl.name}. Mercenaries can now be hired from Liaison Brenna by the fountain. Beyond the northern pass lie the Frostfang Highlands. Press ? for help.`, 'help');
+      ui.log(`MOTD: Greetings, ${pl.name}. New in v3: Rangers, Paladins, Shamans, Necromancers and Enchanters; a spellbook (K) with spell gems; mercenary stances and gear; and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guildmaster Aldric says, 'Welcome, young ${RACES[pl.race].name.toLowerCase()}. Hunt the rats and snakes outside the walls to start. Return to me as you grow in power.'`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
       this.last = performance.now();
@@ -230,8 +248,8 @@
       if (!this.player || !this.world) return;
       const zoneEdits = Object.assign({}, this.zoneEdits, { [this.world.zoneId]: this.world.edits });
       let n = 0; for (const k in zoneEdits) n += Object.keys(zoneEdits[k]).length;
-      const data = { v: 2, seed: this.seed, zone: this.world.zoneId, char: this.player.toSave(), zoneEdits: n < 20000 ? zoneEdits : {},
-        corpses: this.pcorpses.map((c) => c.toSave()).concat(this.otherCorpses), mercs: this.mercs.filter((m) => !m.dead).map((m) => m.toSave()), quests: this.quests, dayT: this.dayT };
+      const data = { v: 3, seed: this.seed, zone: this.world.zoneId, char: this.player.toSave(), zoneEdits: n < 20000 ? zoneEdits : {},
+        corpses: this.pcorpses.map((c) => c.toSave()).concat(this.otherCorpses), mercs: this.mercs.map((m) => m.toSave()), quests: this.quests, questSteps: this.questSteps, dayT: this.dayT };
       if (!this.player.alive) data.char.hp = 0;
       try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); if (manual) ui.log('Your character has been saved.', 'sys'); }
       catch (e) { ui.log('Save failed: ' + e.message, 'death'); }
@@ -302,7 +320,7 @@
       if ($('hud').classList.contains('hidden')) return;
       if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
       const k = e.code;
-      if (k === 'Tab' || k === 'F1' || k === 'F2' || k === 'F3' || k === 'F10' || k === 'Space') e.preventDefault();
+      if (k === 'Tab' || /^F([1-5]|10)$/.test(k) || k === 'Space') e.preventDefault();
       this.keys[k] = down;
       if (!down || e.repeat) return;
       EB.audio.unlock();
@@ -310,10 +328,12 @@
       if (k === 'Escape') { if (this.windows.size) this.closeAll(); else this.setTarget(null); return; }
       if ((k === 'Slash' && e.shiftKey) || k === 'F10') { this.toggleWin('helpWin'); return; }
       if (k === 'F1') { e.preventDefault(); this.setTarget(null); this.log('You target yourself.', 'sys'); return; }
-      if (k === 'F2' || k === 'F3') { e.preventDefault(); const m = this.mercs[k === 'F2' ? 0 : 1]; if (m) this.setTarget(m); return; }
+      if (/^F[2-5]$/.test(k)) { e.preventDefault(); const m = this.mercs[+k.slice(1) - 2]; if (m && !m.dead) this.setTarget(m); return; }
+      if (k === 'KeyK') { this.toggleWin('bookWin'); return; }
       if (k === 'KeyN') { this.showMap = !this.showMap; $('minimap').classList.toggle('hidden', !this.showMap); return; }
       if (k === 'Enter' || k === 'Slash') { const ci = $('chatInput'); ci.classList.remove('hidden'); if (k === 'Slash') ci.value = '/'; setTimeout(() => ci.focus(), 0); if (this.locked()) document.exitPointerLock(); e.preventDefault(); return; }
       if (k === 'KeyI') { this.toggleWin('invWin'); return; }
+      if (k === 'KeyM' && e.shiftKey) { this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); return; }
       if (k === 'KeyM') { this.log(EB.audio.toggle() ? 'Sound on.' : 'Sound off.', 'sys'); return; }
       if (!pl.alive) return;
       if (k === 'Tab') this.tabTarget(e.shiftKey);
@@ -388,6 +408,8 @@
       else if (id === 'merchantWin') this.renderMerchant();
       else if (id === 'trainerWin') this.renderTrainer();
       else if (id === 'mercWin') this.renderMercWin();
+      else if (id === 'bookWin') this.renderBook();
+      else if (id === 'mercCfgWin') this.renderMercCfg();
     }
 
     // ---------- targeting ----------
@@ -418,10 +440,11 @@
       const t = this.target, pl = this.player;
       if (!t) { this.log("You say, 'Hail'", 'say'); return; }
       this.log(`You say, 'Hail, ${t.name}'`, 'say');
-      if (t.kind === 'merc') { setTimeout(() => this.log(`${t.name} says, '${t.role === 'healer' ? 'I will keep you standing, ' + pl.name + '.' : 'Point me at something to hit!'}'`, 'say'), 400); return; }
+      if (t.kind === 'merc') { setTimeout(() => this.log(`${t.name} says, '${t.isPet ? 'Yes, master?' : t.role === 'healer' ? 'I will keep you standing, ' + pl.name + '.' : 'Point me at something to hit!'}'`, 'say'), 400); return; }
       if (t.kind !== 'npc' || t.pos.distanceTo(pl.pos) > 20) return;
       if (this.questFor(t)) { setTimeout(() => this.openDialog(t), 300); return; }
       const lines = {
+        quest: `Well met, ${pl.name}.`,
         liaison: `Looking for a sword arm or a healer, ${pl.name}? My mercenaries will follow you anywhere, for a price. (Press E to hire)`,
         merchant: `Welcome, ${pl.name}! Browse my wares? I buy anything you dig out of those critters, too. (Press E to trade)`,
         trainer: pl.level < 5 ? `Ah, ${pl.name}. Rats, snakes and fire beetles roam outside our walls. Hunt them, and return to me when you have grown. (Press E to train)` : `You have grown strong, ${pl.name}. The Darkpaw gnolls to the west and the Forsaken Graveyard to the south will test you. The Sunken Crypt to the northeast... only the bravest return. (Press E to train)`,
@@ -497,6 +520,7 @@
     damageMob(m, dmg, src) {
       if (!m.alive) return;
       m.hp -= dmg;
+      if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} has been awakened by ${src === this.player ? 'you' : src.name}.`, 'spell'); }
       if (src === this.player || (src && src.kind === 'merc')) m.grpDamage += dmg;
       if (m.state !== 'chase' && m.state !== 'flee') m.aggroOn(src, this);
       m.addHate(src, dmg + 1);
@@ -512,7 +536,7 @@
       if (byPlayer && pl.alive) {
         const c = conColor(pl.level, m.level);
         let xp = Math.floor(calc.xpForKill(m.level) * CON_XP[c] * (m.def.named ? 2 : 1));
-        const grp = this.groupMembers();
+        const grp = this.groupMembers().filter((g) => !g.isPet);
         if (grp.length > 1 && xp > 0) { // EQ-style split: group bonus, then shares weighted by level
           const total = xp * (1 + 0.15 * (grp.length - 1)), sumL = grp.reduce((a, g) => a + g.level, 0);
           xp = Math.floor(total * pl.level / sumL);
@@ -599,7 +623,7 @@
     }
     playerDie(src) {
       const pl = this.player;
-      pl.hp = 0; pl.alive = false; pl.autoAttack = false; pl.casting = null; pl.sitting = false;
+      pl.hp = 0; pl.alive = false; pl.autoAttack = false; pl.casting = null; pl.sitting = false; pl.memorizing = null;
       $('castBar').classList.add('hidden');
       this.log(`You have been slain by ${src ? src.name : 'something'}!`, 'death');
       EB.audio.death();
@@ -612,7 +636,7 @@
         pl.inv = new Array(24).fill(null); pl.equip = {}; pl.coins = 0;
       }
       for (const m of this.mobs) if (m.alive && (m.state === 'chase' || m.state === 'flee') && (m.hate.has(pl) || this.mercs.some((mc) => m.hate.has(mc)))) m.goHome();
-      for (const mc of this.mercs) { mc.casting = null; mc.hp = mc.maxHp; }
+      for (const mc of this.mercs) { mc.casting = null; if (!mc.dead) mc.hp = mc.maxHp; }
       this.closeAll();
       if (this.locked()) document.exitPointerLock();
       $('deathScreen').classList.remove('hidden');
@@ -642,36 +666,37 @@
       pl.sitting = true; pl.autoAttack = false;
       this.log('You sit down.', 'sys');
     }
-    stand() { if (this.player.sitting) { this.player.sitting = false; this.log('You stand up.', 'sys'); } }
+    stand() { if (this.player.sitting) { this.player.sitting = false; this.log('You stand up.', 'sys'); if (this.player.memorizing) this.interruptMemorize(); } }
 
     // ---------- abilities & spells ----------
-    hotbarList() {
-      const c = this.player.cls;
-      const key = (id) => SPELLS[id].classes[c] + (id === 'bind_wound' ? 0.5 : 0);
-      return this.player.spells.slice().sort((a, b) => key(a) - key(b)).slice(0, 8);
-    }
+    hotbarList() { return this.player.hotbar; }
     hotkey(i) {
       if (this.buildMode) { if (i < D.BUILDABLE.length) { this.buildSel = i; this.rebuildHotbar(); } return; }
       const list = this.hotbarList();
+      if (this.bookSel) { const s = this.bookSel; this.bookSel = null; if (i < 8) this.assignHotbar(i, s); if (this.windows.has('bookWin')) this.renderBook(); return; }
       if (list[i]) this.useAbility(list[i]);
     }
     useAbility(id) {
       const pl = this.player, sp = SPELLS[id];
       if (!pl.alive) return;
       if (pl.casting) { this.log('You are already casting a spell!', 'sys'); return; }
+      if (pl.memorizing) { this.log('You are busy memorizing a spell.', 'sys'); return; }
+      if (isSpell(id) && !pl.gems.includes(id)) { this.log(`You do not have ${sp.name} memorized. Open your spellbook (K) and memorize it into a spell gem.`, 'sys'); return; }
       const cd = (pl.cooldowns[id] || 0) - this.time;
       if (cd > 0) { this.log(`You can use ${sp.name} again in ${Math.ceil(cd)} seconds.`, 'sys'); return; }
       if (sp.mana > pl.mana) { this.log('Insufficient Mana to cast this spell!', 'sys'); return; }
       const t = this.target;
-      const needsTarget = sp.kind === 'nuke' || sp.kind === 'root' || sp.kind === 'skill';
+      const needsTarget = ['nuke', 'root', 'skill', 'dot', 'snare', 'slow', 'mez', 'stun'].includes(sp.kind);
       if (needsTarget) {
         if (!t || t.kind !== 'mob' || !t.alive) { this.log('You must first select a target for this spell!', 'sys'); return; }
-        const range = sp.kind === 'skill' ? this.meleeReach(t) : 32;
-        if (pl.pos.distanceTo(t.pos) > range) { this.log(sp.kind === 'skill' ? 'Your target is too far away, get closer!' : 'Your target is out of range, get closer!', 'sys'); return; }
-        if (sp.kind !== 'skill' && !this.lineOfSight(pl, t)) { this.log('You cannot see your target.', 'sys'); return; }
+        const melee = sp.kind === 'skill' && !sp.range;
+        const range = melee ? this.meleeReach(t) : sp.range || 32;
+        if (pl.pos.distanceTo(t.pos) > range) { this.log(melee ? 'Your target is too far away, get closer!' : 'Your target is out of range, get closer!', 'sys'); return; }
+        if (!melee && !this.lineOfSight(pl, t)) { this.log('You cannot see your target.', 'sys'); return; }
       }
       let ft = needsTarget ? t : null;
       if (sp.friendly) { ft = t && t.kind === 'merc' && !t.dead && t.pos.distanceTo(pl.pos) < 32 ? t : pl; }
+      if (sp.kind === 'pet' && this.mercs.filter((m) => !m.isPet).length >= 2 && !this.mercs.some((m) => m.isPet)) { /* group of 4 max: player + 2 mercs + pet is fine */ }
       this.stand();
       if (sp.cast > 0) {
         pl.casting = { id, t: 0, total: sp.cast, target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
@@ -719,7 +744,7 @@
           const before = tg.hp; tg.hp = Math.min(tg.maxHp, tg.hp + amt);
           const got = Math.round(tg.hp - before);
           if (tg !== pl) this.log(`${tg.name} feels much better. (+${got} HP)`, 'spell');
-          else this.log(sp.skill ? `You bandage your wounds. (+${got} HP)` : `You feel much better. (+${got} HP)`, 'spell');
+          else this.log(id === 'bind_wound' ? `You bandage your wounds. (+${got} HP)` : sp.skill ? `Divine power washes over you. (+${got} HP)` : `You feel much better. (+${got} HP)`, 'spell');
           this.healAggro(pl, got);
           EB.audio.heal();
           break;
@@ -738,12 +763,55 @@
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
-          const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power' }[sp.school] || 'is struck';
+          const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
           this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
           EB.audio.spell();
           this.spellFx(t, sp.school);
           this.damageMob(t, dmg, pl);
+          if (sp.lifetap) { const before = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + dmg); this.log(`You feel invigorated. (+${Math.round(pl.hp - before)} HP)`, 'spell'); }
+          break;
+        }
+        case 'dot': {
+          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          const per = U.randInt(sp.tick[0], sp.tick[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          t.dots = (t.dots || []).filter((d) => d.id !== id);
+          t.dots.push({ id, name: sp.name, src: pl, dmg: per, left: sp.dur, next: 3, school: sp.school });
+          this.log(`${U.cap(t.name)} ${sp.school === 'fire' ? 'is covered in flames' : 'begins to sicken'}. (${sp.name})`, 'spell');
+          this.spellFx(t, sp.school); EB.audio.spell();
+          this.damageMob(t, 0, pl); t.addHate(pl, per * 2);
+          break;
+        }
+        case 'snare': case 'slow': {
+          if (Math.random() < 0.08 + Math.max(0, t.level - L) * 0.05) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (sp.kind === 'snare') { t.snaredUntil = this.time + sp.dur; this.log(`${U.cap(t.name)} is ensnared.`, 'spell'); }
+          else { t.slowedUntil = this.time + sp.dur; this.log(`${U.cap(t.name)} yawns. (slowed)`, 'spell'); }
+          this.spellFx(t, 'magic'); EB.audio.spell();
+          this.damageMob(t, 0, pl); t.addHate(pl, 10);
+          break;
+        }
+        case 'mez': {
+          if (t.def.named || t.level > sp.maxLvl) { this.log(`Your target is immune to changes in its attack speed... er, too powerful to be mesmerized.`, 'spell'); pl.cooldowns[id] = this.time + 1; break; }
+          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this, true);
+          t.addHate(pl, 20); t.casting = null;
+          t.mezUntil = this.time + sp.dur;
+          this.log(`${U.cap(t.name)} has been mesmerized.`, 'spell');
+          this.spellFx(t, 'magic'); EB.audio.spell();
+          if (this.target === t && pl.autoAttack) { pl.autoAttack = false; this.log('Auto attack is off (your target is mesmerized).', 'sys'); }
+          break;
+        }
+        case 'stun': {
+          const dmg = U.randInt(sp.dmg[0], sp.dmg[1]);
+          this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
+          this.damageMob(t, dmg, pl);
+          if (t.alive && !t.def.named) { t.stunUntil = this.time + sp.dur; t.casting = null; this.log(`${U.cap(t.name)} is stunned.`, 'spell'); }
+          else if (t.alive) this.log(`${U.cap(t.name)} is unaffected by the stun.`, 'spell');
+          this.spellFx(t, 'magic'); EB.audio.hit();
+          break;
+        }
+        case 'pet': {
+          this.summonPet(sp.petLvl); EB.audio.spell();
           break;
         }
         case 'buff': {
@@ -780,7 +848,8 @@
             EB.audio.hit(); this.pAttackAnim = 0.01;
             this.damageMob(t, dmg, pl);
           } else {
-            if (Math.random() < 0.15) { this.log(`You try to ${sp.verb} ${t.name}, but miss!`, 'miss'); this.damageMob(t, 0, pl); break; }
+            if (Math.random() < (sp.archery ? 0.2 : 0.15)) { this.log(`You try to ${sp.verb} ${t.name}, but miss!`, 'miss'); this.damageMob(t, 0, pl); break; }
+            if (sp.archery) this.arrowFx(t);
             const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
             this.log(`You ${sp.verb} ${t.name} for ${dmg} points of damage.`, 'melee');
             EB.audio.hit(); this.pAttackAnim = 0.01;
@@ -791,8 +860,14 @@
       }
       if (pl.hp > pl.maxHp) pl.hp = pl.maxHp;
     }
+    arrowFx(t) {
+      const pl = this.player, a = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.9), new THREE.MeshBasicMaterial({ color: 0xd8c090, transparent: true, depthWrite: false }));
+      a.position.set(pl.pos.x, pl.pos.y + pl.h * 0.75, pl.pos.z); a.lookAt(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z);
+      this.scene.add(a); this.fx = this.fx || [];
+      this.fx.push({ m: a, life: 0.35, from: a.position.clone(), to: new THREE.Vector3(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z), arrow: true });
+    }
     spellFx(t, school) {
-      const color = { cold: 0x80d0ff, fire: 0xff7020, magic: 0xfff080 }[school] || 0xffffff;
+      const color = { cold: 0x80d0ff, fire: 0xff7020, magic: 0xfff080, disease: 0x90d040, life: 0xff4070 }[school] || 0xffffff;
       const g = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false }));
       g.position.set(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z);
       this.scene.add(g);
@@ -830,7 +905,8 @@
       if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says, 'Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}'`, 'say'); this.openWin('merchantWin'); }
       else if (t.npcKind === 'trainer') this.openWin('trainerWin');
       else if (t.npcKind === 'liaison') this.openWin('mercWin');
-      else if (t.npcKind === 'guard' && this.questFor(t)) this.openDialog(t);
+      else if ((t.npcKind === 'guard' || t.npcKind === 'quest') && this.questFor(t)) this.openDialog(t);
+      else if (t.npcKind === 'quest') this.hail();
       else if (t.npcKind === 'binder') {
         pl.bind = { zone: this.world.zoneId, x: pl.pos.x, y: pl.pos.y, z: pl.pos.z };
         this.log(`${t.name} says, 'Binding your soul. You will return here when you die.'`, 'say');
@@ -891,10 +967,11 @@
     addItem(id, count, silent) {
       const pl = this.player, it = ITEMS[id];
       count = count || 1;
-      if (it.stack) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; return true; } }
+      if (it.stack) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; this.questDirty = true; return true; } }
       const i = pl.inv.indexOf(null);
       if (i < 0) { if (!silent) this.log('Your inventory is full!', 'sys'); return false; }
       pl.inv[i] = { id, count };
+      this.questDirty = true;
       return true;
     }
     renderInv() {
@@ -1002,24 +1079,45 @@
       const pl = this.player, sp = SPELLS[id], c = this.trainCost(sp.classes[pl.cls]);
       if (pl.coins < c) return;
       pl.coins -= c; pl.spells.push(id);
-      this.log(sp.mana ? `You have finished scribing ${sp.name}.` : `You have learned ${sp.name}!`, 'spell');
-      if (this.hotbarList().indexOf(id) < 0) this.log('Your hotbar is full; only the first 8 abilities are shown.', 'sys');
-      EB.audio.ding(); this.rebuildHotbar(); this.renderTrainer(); this.save();
+      this.log(isSpell(id) ? `You have finished scribing ${sp.name} into your spellbook.` : `You have learned ${sp.name}!`, 'spell');
+      if (isSpell(id)) { const g = pl.gems.indexOf(null); if (g >= 0) { pl.gems[g] = id; this.log(`${sp.name} has been memorized into spell gem ${g + 1}.`, 'spell'); } else this.log('Your spell gems are full. Open your spellbook (K) to memorize it.', 'help'); }
+      const hs = pl.hotbar.indexOf(null);
+      if (hs >= 0) pl.hotbar[hs] = id; else this.log('Your hotbar is full. Use the spellbook (K) to rearrange it.', 'sys');
+      EB.audio.ding(); this.rebuildHotbar(); this.renderGems(); this.renderTrainer(); this.save();
     }
 
-    // ---------- group / mercenaries ----------
+    // ---------- group / mercenaries / pets ----------
     groupMembers() { return [this.player, ...this.mercs.filter((m) => !m.dead)].filter((g) => g.alive); }
     groupFoe() {
       const pl = this.player, t = this.target;
-      if (t && t.kind === 'mob' && t.alive && (pl.autoAttack || t.state === 'chase' || pl.casting) && t.pos.distanceTo(pl.pos) < 40) return t;
+      if (t && t.kind === 'mob' && t.alive && (pl.autoAttack || t.state === 'chase' || pl.casting) && t.pos.distanceTo(pl.pos) < 40 && !this.isMezzed(t)) return t;
       let best = null, bd = 35;
       for (const m of this.mobs) {
-        if (!m.alive || m.state !== 'chase' || !m.target) continue;
+        if (!m.alive || m.state !== 'chase' || !m.target || this.isMezzed(m)) continue;
         if (m.target !== pl && m.target.kind !== 'merc') continue;
         const d = m.pos.distanceTo(pl.pos);
         if (d < bd) { bd = d; best = m; }
       }
       return best;
+    }
+    isMezzed(m) { return this.time < (m.mezUntil || 0); }
+    // stance-aware target selection for a merc / pet
+    mercFoe(merc) {
+      if (merc.stance === 'passive') return null;
+      const foe = this.groupFoe();
+      if (foe || merc.stance !== 'aggressive') return foe;
+      const pl = this.player; let best = null, bd = 16;
+      for (const m of this.mobs) {
+        if (!m.alive || !m.def.aggressive || this.isMezzed(m)) continue;
+        const c = m.con(this); if (c === 'grey' || c === 'green') continue;
+        const d = m.pos.distanceTo(pl.pos);
+        if (d < bd && Math.abs(m.pos.y - pl.pos.y) < 6) { bd = d; best = m; }
+      }
+      return best;
+    }
+    groupInCombat() {
+      const grp = this.groupMembers();
+      return this.mobs.some((m) => m.alive && (m.state === 'chase' || m.state === 'flee') && grp.some((g) => m.hate.has(g)));
     }
     healAggro(src, amt) {
       if (amt <= 0) return;
@@ -1029,49 +1127,81 @@
     addMerc(role, saved, silent) {
       const m = new EB.Merc(role, this, saved);
       const pl = this.player;
-      m.pos.set(pl.pos.x + (this.mercs.length ? -1.3 : 1.3), pl.pos.y + 0.2, pl.pos.z + 1.2);
-      m.addTo(this.scene); m.syncModel();
+      m.pos.set(pl.pos.x + (this.mercs.length % 2 ? -1.3 : 1.3), pl.pos.y + 0.2, pl.pos.z + 1.2);
+      if (!m.dead) { m.addTo(this.scene); m.syncModel(); }
       this.mercs.push(m);
       if (!silent) {
         this.log(`${m.name} has joined your group.`, 'loot');
-        setTimeout(() => this.log(`${m.name} says, '${role === 'healer' ? `Lead on, ${pl.name}. I'll keep you breathing.` : `Aye, ${pl.name}! Show me who needs a beating.`}'`, 'say'), 500);
+        if (!m.isPet) setTimeout(() => this.log(`${m.name} says, '${role === 'healer' ? `Lead on, ${pl.name}. I'll keep you breathing.` : `Aye, ${pl.name}! Show me who needs a beating.`}'`, 'say'), 500);
       }
       this.renderGroup();
       return m;
     }
+    summonPet(petLvl) {
+      const old = this.mercs.find((m) => m.isPet);
+      if (old) { this.log(`${old.name} crumbles to dust.`, 'spell'); this.removeMercModel(old); }
+      const pet = this.addMerc('pet', { petLvl }, true);
+      this.log(`You summon ${pet.name}, a level ${petLvl} servant, from the grave.`, 'spell');
+      this.log(`${pet.name} says, 'Master, I await your command.'`, 'say');
+      return pet;
+    }
     hireMerc(role) {
-      const pl = this.player, c = mercCost(role, pl.level);
-      if (this.mercs.some((m) => m.role === role)) { this.log('That mercenary is already in your group.', 'sys'); return; }
+      const pl = this.player, c = mercCost(role, pl.level), ex = this.mercs.find((m) => m.role === role);
+      if (ex) { this.log(ex.dead ? `${ex.name} is dead. Revive them instead.` : 'That mercenary is already in your group.', 'sys'); return; }
       if (pl.coins < c) { this.log("You can't afford that mercenary.", 'sys'); return; }
       pl.coins -= c;
       this.log(`You pay ${U.coinStr(c)} to Liaison Brenna.`, 'loot');
       this.addMerc(role);
       this.renderMercWin(); this.save();
     }
+    reviveCost(m) { return Math.floor(mercCost(m.role, this.player.level) * 0.6); }
+    reviveMerc(m) {
+      const pl = this.player, c = this.reviveCost(m);
+      if (!m.dead) return;
+      if (this.groupInCombat()) { this.log('You cannot revive a mercenary while you are in combat.', 'sys'); return; }
+      if (pl.coins < c) { this.log(`You need ${U.coinStr(c)} to revive ${m.name}.`, 'sys'); return; }
+      pl.coins -= c;
+      m.dead = false; m.hp = Math.ceil(m.maxHp * 0.5); m.mana = Math.ceil(m.maxMana * 0.3); m.casting = null; m.buffs = []; m.nav.reset();
+      m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.2, pl.pos.z + 1.2);
+      this.scene.add(m.model.group); this.scene.add(m.plate); m.syncModel();
+      this.log(`You pay ${U.coinStr(c)}. ${m.name} has been revived!`, 'loot');
+      this.log(`${m.name} says, 'Thank you, ${pl.name}. I won't fall so easily again.'`, 'say');
+      EB.audio.heal(); this.renderGroup(); if (this.windows.has('mercWin')) this.renderMercWin(); this.save();
+    }
     removeMercModel(m) {
       m.removeFrom(this.scene);
-      this.mercs.splice(this.mercs.indexOf(m), 1);
+      const i = this.mercs.indexOf(m); if (i >= 0) this.mercs.splice(i, 1);
       for (const mob of this.mobs) mob.hate.delete(m);
       if (this.target === m) this.setTarget(null);
+      if (this.cfgMerc === m) this.closeWin('mercCfgWin');
       this.renderGroup();
     }
-    dismissMerc(m) { this.log(`${m.name} has left the group.`, 'sys'); this.removeMercModel(m); this.save(); }
-    mercDie(m, killer) {
-      m.dead = true; m.hp = 0;
-      this.log(`${m.name} has been slain by ${killer ? killer.name : 'something'}!`, 'death');
-      this.log(`${m.name} has left the group. (Mercenaries can be re-hired from Liaison Brenna in Everblock Keep.)`, 'sys');
+    dismissMerc(m) {
+      if (!m.isPet) for (const sl in m.equip) { if (!this.addItem(m.equip[sl].id, 1, true)) this.log(`${ITEMS[m.equip[sl].id].name} was lost (inventory full).`, 'sys'); }
+      this.log(m.isPet ? `${m.name} crumbles to dust.` : `${m.name} has left the group.${Object.keys(m.equip).length ? ' They return the gear you gave them.' : ''}`, 'sys');
       this.removeMercModel(m); this.save();
+    }
+    mercDie(m, killer) {
+      m.hp = 0; m.casting = null;
+      this.log(`${m.name} has been slain by ${killer ? killer.name : 'something'}!`, 'death');
+      for (const mob of this.mobs) mob.hate.delete(m);
+      if (m.isPet) { m.dead = true; this.removeMercModel(m); this.save(); return; }
+      m.dead = true;
+      this.scene.remove(m.model.group); this.scene.remove(m.plate);
+      if (this.target === m) this.setTarget(null);
+      this.log(`You can revive ${m.name} for ${U.coinStr(this.reviveCost(m))} from the group window once combat ends.`, 'help');
+      this.renderGroup(); this.save();
     }
     renderMercWin() {
       const pl = this.player, list = $('mercList');
-      list.innerHTML = `<div class="sub">Mercenaries match your level and follow you between zones. Your coin: ${U.coinStr(pl.coins)}</div>`;
+      list.innerHTML = `<div class="sub">Mercenaries match your level and follow you between zones. Click ⚙ in the group window to set their stance and give them gear. Your coin: ${U.coinStr(pl.coins)}</div>`;
       for (const role of Object.keys(MERCS)) {
-        const M = MERCS[role], c = mercCost(role, pl.level), hired = this.mercs.some((m) => m.role === role);
+        const M = MERCS[role], c = mercCost(role, pl.level), ex = this.mercs.find((m) => m.role === role);
         const row = document.createElement('div'); row.className = 'row';
-        row.innerHTML = `<span class="n"><b>${M.name}</b> - Level ${pl.level} ${CLASSES[M.cls].name}<br><span style="color:#b0a080">${M.desc}</span></span><span>${U.coinShort(c)}</span>`;
+        row.innerHTML = `<span class="n"><b>${M.name}</b> - Level ${pl.level} ${CLASSES[M.cls].name}<br><span style="color:#b0a080">${M.desc}</span></span><span>${U.coinShort(ex && ex.dead ? this.reviveCost(ex) : c)}</span>`;
         const b = document.createElement('button'); b.className = 'small';
-        b.textContent = hired ? 'In group' : 'Hire'; b.disabled = hired || pl.coins < c;
-        b.onclick = () => this.hireMerc(role);
+        if (ex && ex.dead) { b.textContent = 'Revive'; b.disabled = pl.coins < this.reviveCost(ex); b.onclick = () => this.reviveMerc(ex); }
+        else { b.textContent = ex ? 'In group' : 'Hire'; b.disabled = !!ex || pl.coins < c; b.onclick = () => this.hireMerc(role); }
         row.appendChild(b); list.appendChild(row);
       }
     }
@@ -1081,17 +1211,25 @@
       gw.classList.remove('hidden');
       gw.innerHTML = '<div class="wtitle" style="margin-bottom:2px">Group</div>';
       this.mercs.forEach((m, i) => {
-        const row = document.createElement('div'); row.className = 'gmem';
-        row.innerHTML = `<div class="gname"><span class="fk">F${i + 2}</span> ${m.name} <span class="gx" title="Dismiss">✕</span></div><div class="bar hp"><div class="fill"></div><span></span></div>` + (m.role === 'healer' ? '<div class="bar mana"><div class="fill"></div><span></span></div>' : '');
-        row.onclick = (e) => { if (e.target.classList.contains('gx')) this.dismissMerc(m); else this.setTarget(m); };
+        const row = document.createElement('div'); row.className = 'gmem' + (m.dead ? ' dead' : '');
+        const head = `<div class="gname"><span class="fk">F${i + 2}</span> ${m.name}${m.isPet ? ' <span class="gpet">pet</span>' : ''} <span class="gcfg" title="Settings / give gear">⚙</span><span class="gx" title="Dismiss">✕</span></div>`;
+        if (m.dead) row.innerHTML = head + `<div class="gdead">DEAD <button class="small grev">Revive ${U.coinShort(this.reviveCost(m))}</button></div>`;
+        else row.innerHTML = head + `<div class="bar hp"><div class="fill"></div><span></span></div>` + (m.role === 'healer' ? '<div class="bar mana"><div class="fill"></div><span></span></div>' : '') + `<div class="gstance">${m.stance}${m.role === 'healer' ? ` · heal &lt;${Math.round(m.healAt * 100)}%` : ''}</div>`;
+        row.onclick = (e) => {
+          const c = e.target.classList;
+          if (c.contains('gx')) this.dismissMerc(m);
+          else if (c.contains('gcfg')) this.openMercCfg(m);
+          else if (c.contains('grev')) this.reviveMerc(m);
+          else if (!m.dead) this.setTarget(m);
+        };
         gw.appendChild(row);
         m.gRow = row;
       });
     }
     updateGroupBars() {
       for (const m of this.mercs) {
-        if (!m.gRow) continue;
-        const bars = m.gRow.querySelectorAll('.bar');
+        if (!m.gRow || m.dead) continue;
+        const bars = m.gRow.querySelectorAll('.bar'); if (!bars.length) continue;
         const hp = U.clamp(m.hp / m.maxHp, 0, 1);
         bars[0].firstChild.style.width = hp * 100 + '%'; bars[0].lastChild.textContent = `${Math.ceil(m.hp)} / ${m.maxHp}`;
         if (bars[1]) { bars[1].firstChild.style.width = U.clamp(m.mana / m.maxMana, 0, 1) * 100 + '%'; bars[1].lastChild.textContent = `${Math.floor(m.mana)} / ${m.maxMana}`; }
@@ -1099,47 +1237,251 @@
         m.gRow.querySelector('.gname').style.color = m.casting ? '#c89aff' : '';
       }
     }
+    // ---- merc settings & trade ----
+    openMercCfg(m) { this.cfgMerc = m; this.openWin('mercCfgWin'); }
+    renderMercCfg() {
+      const m = this.cfgMerc, pl = this.player; if (!m) return;
+      $('mcfgTitle').firstChild.textContent = `${m.name} `;
+      const box = $('mcfgBody');
+      let h = `<div class="sub">Level ${m.level} ${m.isPet ? 'pet' : CLASSES[m.cls].name} &nbsp; HP ${Math.ceil(m.hp)}/${m.maxHp}${m.maxMana ? ` &nbsp; Mana ${Math.floor(m.mana)}/${m.maxMana}` : ''} &nbsp; AC ${m.ac}${m.dead ? ' &nbsp; <b style="color:#ff6050">DEAD</b>' : ''}</div>`;
+      h += '<h4>Stance</h4><div class="stanceRow">' + EB.Merc.STANCES.map((s) => `<button class="small stance${m.stance === s ? ' sel' : ''}" data-st="${s}">${U.cap(s)}</button>`).join('') + '</div>';
+      h += '<div class="sub">Passive: follow only' + (m.role === 'healer' ? ' (still heals)' : '') + '. Balanced: assist when you engage or the group is attacked. Aggressive: also attack nearby hostile creatures on sight.</div>';
+      if (m.role === 'healer') h += `<h4>Heal threshold: <span id="healAtV">${Math.round(m.healAt * 100)}%</span></h4><input type="range" id="healAt" min="20" max="95" step="5" value="${Math.round(m.healAt * 100)}" style="width:100%">`;
+      if (!m.isPet) {
+        h += '<h4>Equipment (click to take back)</h4><div id="mcfgEquip" class="mequip"></div>';
+        h += '<h4>Give from your bags</h4><div id="mcfgGive" class="mgive"></div>';
+      }
+      box.innerHTML = h;
+      box.querySelectorAll('.stance').forEach((b) => (b.onclick = () => { m.stance = b.dataset.st; this.log(`${m.name} is now ${m.stance}.`, 'sys'); m.nav.reset(); this.renderMercCfg(); this.renderGroup(); this.save(); }));
+      const r = $('healAt');
+      if (r) { r.oninput = () => { m.healAt = +r.value / 100; $('healAtV').textContent = r.value + '%'; }; r.onchange = () => { this.renderGroup(); this.save(); }; }
+      if (m.isPet) return;
+      const eq = $('mcfgEquip');
+      for (const sl of EQUIP_SLOTS) {
+        const it = m.equip[sl], el = document.createElement('div');
+        el.className = 'islot' + (it && ITEMS[it.id].rare ? ' rare' : '');
+        el.innerHTML = ui.slotHTML(it, sl);
+        if (it) { el.onclick = () => this.takeFromMerc(m, sl); ui.tooltipFor(el, () => ui.itemTip(it.id)); }
+        eq.appendChild(el);
+      }
+      const gv = $('mcfgGive'); let any = false;
+      pl.inv.forEach((item, i) => {
+        if (!item || !ITEMS[item.id].slot) return; any = true;
+        const el = document.createElement('div'); el.className = 'row';
+        const I = ITEMS[item.id];
+        el.innerHTML = `<span>${I.icon}</span><span class="n">${I.name} <span style="color:#b0a080">(${I.slot})</span></span>`;
+        const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Give'; b.disabled = m.dead;
+        b.onclick = () => this.giveToMerc(m, i);
+        el.appendChild(b); ui.tooltipFor(el, () => ui.itemTip(item.id)); gv.appendChild(el);
+      });
+      if (!any) gv.innerHTML = '<div class="sub">You have no equippable items in your bags.</div>';
+    }
+    giveToMerc(m, i) {
+      const pl = this.player, item = pl.inv[i]; if (!item || m.dead) return;
+      const I = ITEMS[item.id]; if (!I.slot) return;
+      const hpPct = m.hp / m.maxHp, old = m.equip[I.slot];
+      m.equip[I.slot] = { id: item.id };
+      item.count--; if (item.count <= 0) pl.inv[i] = null;
+      if (old) this.addItem(old.id, 1, true);
+      m.hp = Math.ceil(m.maxHp * hpPct); m.mana = Math.min(m.mana, m.maxMana);
+      this.log(`You give ${I.name} to ${m.name}.${old ? ` ${m.name} hands back the ${ITEMS[old.id].name}.` : ''}`, 'loot');
+      this.log(`${m.name} says, 'My thanks, ${pl.name}. This will serve me well.'`, 'say');
+      EB.audio.loot(); ui.hideTip(); this.renderMercCfg(); if (this.windows.has('invWin')) this.renderInv(); this.save();
+    }
+    takeFromMerc(m, sl) {
+      const it = m.equip[sl]; if (!it) return;
+      if (!this.addItem(it.id, 1)) return;
+      const hpPct = m.hp / m.maxHp;
+      delete m.equip[sl];
+      m.hp = Math.min(m.maxHp, Math.ceil(m.maxHp * hpPct)); m.mana = Math.min(m.mana, m.maxMana);
+      this.log(`${m.name} hands you the ${ITEMS[it.id].name}.`, 'loot');
+      ui.hideTip(); this.renderMercCfg(); this.save();
+    }
 
-    // ---------- quests ----------
-    questFor(npc) { for (const id in QUESTS) if (QUESTS[id].giver === npc.name) return id; return null; }
+    // ---------- quests (single hand-ins and multi-step chains) ----------
+    questStep(id) { return this.questSteps[id] || 0; }
+    questGiver(id) { const q = QUESTS[id]; if (!q.chain) return q.giver; const st = this.quests[id]; return q.steps[st === 'done' ? q.steps.length - 1 : this.questStep(id)].giver; }
+    questNeeds(id) { const q = QUESTS[id]; return q.chain ? q.steps[this.questStep(id)].items : [[q.item, q.count]]; }
+    questHasAll(id) { return this.questNeeds(id).every(([it, n]) => this.countItem(it) >= n); }
+    questsFor(npc) { return Object.keys(QUESTS).filter((id) => this.questGiver(id) === npc.name && !(QUESTS[id].chain && this.quests[id] === 'done')); }
+    questFor(npc) {
+      const ids = this.questsFor(npc);
+      return ids.find((id) => this.quests[id] === 'active' && this.questHasAll(id)) || ids.find((id) => this.quests[id] === 'active') || ids.find((id) => !this.quests[id]) || ids[0] || null;
+    }
     countItem(id) { let n = 0; for (const s of this.player.inv) if (s && s.id === id) n += s.count; return n; }
     removeItems(id, n) {
       const inv = this.player.inv;
       for (let i = 0; i < inv.length && n > 0; i++) { const s = inv[i]; if (!s || s.id !== id) continue; const k = Math.min(n, s.count); s.count -= k; n -= k; if (s.count <= 0) inv[i] = null; }
     }
+    needStr(id) { return this.questNeeds(id).map(([it, n]) => `${ITEMS[it].name} ${Math.min(this.countItem(it), n)}/${n}`).join(', '); }
     openDialog(npc) {
-      const id = this.questFor(npc); if (!id) return;
-      const q = QUESTS[id], st = this.quests[id], have = this.countItem(q.item);
+      const ids = this.questsFor(npc); if (!ids.length) return;
       $('dlgTitle').firstChild.textContent = `${npc.name} `;
       const btns = $('dlgBtns'); btns.innerHTML = '';
       const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; btns.appendChild(b); };
-      let text;
-      if (!st) { text = q.offer; btn('Accept', () => { this.quests[id] = 'active'; this.log(`You have accepted the quest: ${q.name}.`, 'ding'); this.closeWin('dialogWin'); this.renderQuests(); this.save(); }); }
-      else if (st === 'active' && have >= q.count) { text = `Ah, you have the ${ITEMS[q.item].name}s? (${have}/${q.count})`; btn(`Hand in ${q.count} ${ITEMS[q.item].name}`, () => this.turnIn(id, npc)); }
-      else if (st === 'active') text = `${q.offer}<br><br><i>Progress: ${ITEMS[q.item].name} ${have}/${q.count}</i>`;
-      else text = 'Thank you again for your help, friend.';
+      let html = '', said = '';
+      for (const id of ids) {
+        const q = QUESTS[id], st = this.quests[id], step = q.chain ? q.steps[this.questStep(id)] : q;
+        const title = q.chain ? `${q.name} <span class="qstep">(part ${this.questStep(id) + 1} of ${q.steps.length})</span>` : q.name;
+        let text;
+        if (!st) { text = step.offer; said = said || step.offer; btn(`Accept: ${q.name}`, () => this.acceptQuest(id)); }
+        else if (st === 'active' && this.questHasAll(id)) {
+          text = `${step.offer}<br><br><i>You have everything: ${this.needStr(id)}</i>`; said = said || 'You have what I asked for?';
+          btn(`Hand in: ${this.questNeeds(id).map(([it, n]) => `${n} ${ITEMS[it].name}`).join(' + ')}`, () => this.turnIn(id, npc));
+        } else if (st === 'active') { text = `${step.offer}<br><br><i>Progress: ${this.needStr(id)}</i>`; said = said || 'Still working on it?'; }
+        else { text = 'Thank you again for your help, friend.'; said = said || text; }
+        html += `<div class="qblock"><b>${title}</b><br>${text}</div>`;
+      }
       btn('Close', () => this.closeWin('dialogWin'));
-      $('dlgText').innerHTML = `<b>${q.name}</b><br>${text}`;
-      this.log(`${npc.name} says, '${(st ? (st === 'done' ? 'Thank you again for your help, friend.' : have >= q.count ? 'You have what I asked for?' : 'Still working on it?') : q.offer)}'`, 'say');
+      $('dlgText').innerHTML = html;
+      this.log(`${npc.name} says, '${said}'`, 'say');
       this.openWin('dialogWin');
+    }
+    acceptQuest(id) {
+      const q = QUESTS[id];
+      this.quests[id] = 'active'; if (q.chain) this.questSteps[id] = 0;
+      this.log(`You have accepted the quest: ${q.name}.`, 'ding');
+      this.closeWin('dialogWin'); this.renderQuests(); this.save();
     }
     turnIn(id, npc) {
       const q = QUESTS[id], pl = this.player;
-      if (this.countItem(q.item) < q.count) return;
-      this.removeItems(q.item, q.count);
+      if (!this.questHasAll(id)) return;
+      for (const [it, n] of this.questNeeds(id)) this.removeItems(it, n);
+      if (q.chain) {
+        const si = this.questStep(id), step = q.steps[si];
+        this.log(`${npc.name} says, '${step.done}'`, 'say');
+        if (si < q.steps.length - 1) {
+          if (step.give) { this.addItem(step.give, 1, true); this.log(`You receive ${ITEMS[step.give].name}.`, 'loot'); }
+          this.questSteps[id] = si + 1;
+          this.gainXP(Math.floor(400 * (si + 1) * (1 + pl.level / 10)));
+          this.log(`Quest updated: ${q.name}. Next: ${q.steps[si + 1].hint}.`, 'ding');
+          EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
+          return;
+        }
+      } else this.log(`${npc.name} says, '${q.done}'`, 'say');
       this.quests[id] = 'done';
-      this.log(`${npc.name} says, '${q.done}'`, 'say');
       pl.coins += q.coins; this.log(`You receive ${U.coinStr(q.coins)}.`, 'loot');
-      if (q.reward) { this.addItem(q.reward, q.rewardCount || 1, true); this.log(`You receive ${q.rewardCount > 1 ? q.rewardCount + 'x ' : 'a '}${ITEMS[q.reward].name}.`, 'loot'); }
+      if (q.reward) { this.addItem(q.reward, q.rewardCount || 1, true); this.log(`You receive ${q.rewardCount > 1 ? q.rewardCount + 'x ' : 'a '}${ITEMS[q.reward].name}.`, ITEMS[q.reward].rare ? 'ding' : 'loot'); }
+      if (q.title) { pl.title = q.title; this.log(`You have earned the title: ${q.title}!`, 'ding'); ui.center(q.title, `${pl.name}, ${q.title}`, 4); }
       this.log(`You have completed the quest: ${q.name}!`, 'ding');
       this.gainXP(Math.floor(q.xp * (1 + pl.level / 10)));
       EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
     }
     renderQuests() {
-      const qw = $('questWin'), act = Object.keys(this.quests).filter((id) => this.quests[id] === 'active');
+      const qw = $('questWin'), act = Object.keys(this.quests).filter((id) => this.quests[id] === 'active' && QUESTS[id]);
       if (!act.length) { qw.classList.add('hidden'); return; }
       qw.classList.remove('hidden');
-      qw.innerHTML = '<div class="wtitle" style="margin-bottom:2px">Quests</div>' + act.map((id) => { const q = QUESTS[id], n = Math.min(this.countItem(q.item), q.count); return `<div class="${n >= q.count ? 'qdone' : ''}">${q.name}<br><span>${ITEMS[q.item].name}: ${n}/${q.count}${n >= q.count ? ` - return to ${q.giver}` : ''}</span></div>`; }).join('');
+      qw.innerHTML = '<div class="wtitle" style="margin-bottom:2px">Quests</div>' + act.map((id) => {
+        const q = QUESTS[id], all = this.questHasAll(id);
+        if (q.chain) { const s = q.steps[this.questStep(id)]; return `<div class="${all ? 'qdone' : ''}">${q.name} (${this.questStep(id) + 1}/${q.steps.length})<br><span>${s.hint}<br>${this.needStr(id)}${all ? ` - return to ${s.giver}` : ''}</span></div>`; }
+        return `<div class="${all ? 'qdone' : ''}">${q.name}<br><span>${this.needStr(id)}${all ? ` - return to ${q.giver}` : ''}</span></div>`;
+      }).join('');
+    }
+
+    // ---------- spell gems, spellbook, hotbar ----------
+    isSpell(id) { return isSpell(id); }
+    renderGems() {
+      const gb = $('gemBar'), pl = this.player; gb.innerHTML = '';
+      if (!pl.spells.some(isSpell)) { gb.classList.add('hidden'); this.gemEls = []; return; }
+      gb.classList.remove('hidden');
+      this.gemEls = [];
+      for (let i = 0; i < 8; i++) {
+        const id = pl.gems[i], el = document.createElement('div');
+        el.className = 'gem' + (id ? '' : ' empty');
+        el.dataset.gem = i;
+        el.innerHTML = (id ? EB.icons.img(id) : '') + '<div class="cd"></div><div class="mem"></div>';
+        el.title = id ? SPELLS[id].name : 'Empty spell gem';
+        el.onclick = () => this.clickGem(i);
+        el.oncontextmenu = (e) => { e.preventDefault(); if (pl.gems[i]) { this.log(`You forget ${SPELLS[pl.gems[i]].name}.`, 'spell'); pl.gems[i] = null; this.renderGems(); this.rebuildHotbar(); this.save(); } };
+        if (id) { el.draggable = true; el.ondragstart = (e) => e.dataTransfer.setData('text/plain', id); ui.tooltipFor(el, () => this.spellTip(id) + '<div style="color:#b0a080">Click to cast · right-click to forget</div>'); }
+        this.dropTarget(el, (sid) => this.memorize(sid, i));
+        gb.appendChild(el);
+        this.gemEls.push({ el, id, cd: el.querySelector('.cd'), mem: el.querySelector('.mem') });
+      }
+      const bk = document.createElement('div'); bk.className = 'gem book'; bk.title = 'Spellbook (K)'; bk.textContent = '📖';
+      bk.onclick = () => this.toggleWin('bookWin'); gb.appendChild(bk);
+    }
+    clickGem(i) {
+      const pl = this.player;
+      if (this.bookSel) { const s = this.bookSel; this.bookSel = null; this.memorize(s, i); return; }
+      if (pl.gems[i]) this.useAbility(pl.gems[i]);
+      else this.toggleWin('bookWin');
+    }
+    dropTarget(el, fn) {
+      el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop'); });
+      el.addEventListener('dragleave', () => el.classList.remove('drop'));
+      el.addEventListener('drop', (e) => { e.preventDefault(); el.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (id && SPELLS[id]) fn(id); });
+    }
+    spellTip(id) {
+      const sp = SPELLS[id], L = sp.classes[this.player.cls];
+      return `<div class="tn">${sp.name}</div>${sp.desc}<br>${L ? `Level ${L} &nbsp; ` : ''}${sp.mana ? `Mana: ${sp.mana} &nbsp; ` : ''}Cast: ${sp.cast ? sp.cast + 's' : 'Instant'} &nbsp; Recast: ${sp.recast}s`;
+    }
+    memTime(id) { return Math.min(6, 2 + (SPELLS[id].classes[this.player.cls] || 1) * 0.25); }
+    memorize(id, gem, instant) {
+      const pl = this.player;
+      if (!isSpell(id)) { this.log('Only spells can be memorized. Place abilities on your hotbar instead.', 'sys'); return; }
+      if (!pl.spells.includes(id)) { this.log('You have not scribed that spell.', 'sys'); return; }
+      if (pl.casting) { this.log('You cannot memorize while casting.', 'sys'); return; }
+      if (!pl.alive) return;
+      for (let i = 0; i < 8; i++) if (pl.gems[i] === id) pl.gems[i] = null;
+      if (instant) { pl.gems[gem] = id; this.renderGems(); this.rebuildHotbar(); return; }
+      pl.gems[gem] = null;
+      this.sit();
+      pl.memorizing = { id, gem, t: 0, total: this.memTime(id) };
+      this.log(`Beginning to memorize ${SPELLS[id].name}...`, 'spell');
+      $('castBar').classList.remove('hidden'); $('castName').textContent = `Memorizing ${SPELLS[id].name}`; $('castFill').style.width = '0%';
+      this.renderGems(); this.rebuildHotbar();
+      if (this.windows.has('bookWin')) this.renderBook();
+    }
+    updateMemorize(dt, moving) {
+      const pl = this.player, m = pl.memorizing; if (!m) return;
+      if (moving || !pl.sitting) { this.interruptMemorize(); return; }
+      m.t += dt;
+      $('castFill').style.width = Math.min(100, (m.t / m.total) * 100) + '%';
+      if (m.t >= m.total) {
+        pl.memorizing = null; pl.gems[m.gem] = m.id; $('castBar').classList.add('hidden');
+        this.log(`You have finished memorizing ${SPELLS[m.id].name}.`, 'spell'); EB.audio.click();
+        this.renderGems(); this.rebuildHotbar(); if (this.windows.has('bookWin')) this.renderBook(); this.save();
+      }
+    }
+    interruptMemorize() {
+      const pl = this.player; if (!pl.memorizing) return;
+      pl.memorizing = null; $('castBar').classList.add('hidden');
+      this.log('Your memorization was interrupted.', 'spell'); this.renderGems();
+    }
+    assignHotbar(slot, id) {
+      const pl = this.player;
+      if (id && !pl.spells.includes(id)) return;
+      for (let i = 0; i < 8; i++) if (pl.hotbar[i] === id) pl.hotbar[i] = null;
+      pl.hotbar[slot] = id;
+      if (id) this.log(`${SPELLS[id].name} placed on hotbar slot ${slot + 1}.${isSpell(id) && !pl.gems.includes(id) ? ' (Memorize it in a spell gem to cast it.)' : ''}`, 'sys');
+      this.rebuildHotbar(); this.save();
+    }
+    renderBook() {
+      const pl = this.player, box = $('bookList'); box.innerHTML = '';
+      const sortL = (a, b) => (SPELLS[a].classes[pl.cls] || 0) - (SPELLS[b].classes[pl.cls] || 0);
+      const known = pl.spells.filter((id) => SPELLS[id]).sort(sortL);
+      const sect = (title, ids) => {
+        if (!ids.length) return;
+        const h = document.createElement('h4'); h.textContent = title; box.appendChild(h);
+        const grid = document.createElement('div'); grid.className = 'bookGrid';
+        for (const id of ids) {
+          const sp = SPELLS[id], el = document.createElement('div');
+          const gi = pl.gems.indexOf(id);
+          el.className = 'bspell' + (this.bookSel === id ? ' sel' : '') + (gi >= 0 ? ' memd' : '');
+          el.innerHTML = `${EB.icons.img(id)}<div><b>${sp.name}</b><br><span>L${sp.classes[pl.cls] || '?'}${sp.mana ? ` · ${sp.mana} mana` : ''}${gi >= 0 ? ` · gem ${gi + 1}` : ''}</span></div>`;
+          el.draggable = true; el.dataset.id = id;
+          el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', id); this.bookSel = null; };
+          el.onclick = () => { this.bookSel = this.bookSel === id ? null : id; this.renderBook(); if (this.bookSel) this.log(`Selected ${sp.name}: click a ${isSpell(id) ? 'spell gem or ' : ''}hotbar slot to place it.`, 'help'); };
+          el.ondblclick = () => { if (!isSpell(id)) return; let g = pl.gems.indexOf(null); if (g < 0) g = 7; this.bookSel = null; this.memorize(id, g); };
+          ui.tooltipFor(el, () => this.spellTip(id));
+          grid.appendChild(el);
+        }
+        box.appendChild(grid);
+      };
+      sect('Spells (drag or click, then click a gem to memorize; double-click to memorize)', known.filter(isSpell));
+      sect('Abilities (drag or click, then click a hotbar slot)', known.filter((id) => !isSpell(id)));
+      $('bookHint').textContent = pl.memorizing ? `Memorizing ${SPELLS[pl.memorizing.id].name}...` : this.bookSel ? `Selected: ${SPELLS[this.bookSel].name}` : `Gems: ${pl.gems.filter(Boolean).length}/8 memorized. Memorizing takes a few seconds and makes you sit.`;
     }
 
     // ---------- minimap ----------
@@ -1218,16 +1560,19 @@
       switch (cmd) {
         case 'save': this.save(true); break;
         case 'loc': this.log(`Your Location is ${pl.pos.x.toFixed(1)}, ${pl.pos.y.toFixed(1)}, ${pl.pos.z.toFixed(1)}`, 'sys'); break;
-        case 'who': this.log('Players on Everblock:', 'sys'); this.mercs.forEach((m) => this.log(`[${m.level} ${m.role === 'healer' ? 'Cleric' : 'Warrior'}] ${m.name} (Mercenary) - in your group`, 'sys')); this.log(`[${pl.level} ${CLASSES[pl.cls].name}] ${pl.name} (${RACES[pl.race].name}) ZONE: ${this.lastZone}`, 'sys'); this.log('There is 1 player in Everblock.', 'sys'); break;
+        case 'who': this.log('Players on Everblock:', 'sys'); this.mercs.forEach((m) => this.log(`[${m.level} ${m.isPet ? 'Pet' : m.role === 'healer' ? 'Cleric' : 'Warrior'}] ${m.name} (${m.isPet ? 'Pet' : 'Mercenary'})${m.dead ? ' - DEAD' : ''} - in your group`, 'sys')); this.log(`[${pl.level} ${CLASSES[pl.cls].name}] ${pl.name}${pl.title ? `, ${pl.title}` : ''} (${RACES[pl.race].name}) ZONE: ${this.lastZone}`, 'sys'); this.log('There is 1 player in Everblock.', 'sys'); break;
         case 'played': this.log(`You have played ${Math.floor(pl.played / 3600)}h ${Math.floor(pl.played / 60) % 60}m.`, 'sys'); break;
         case 'time': { const h = Math.floor(this.dayT * 24); this.log(`It is ${((h + 11) % 12) + 1}:00 ${h < 12 ? 'AM' : 'PM'} in Everblock.`, 'sys'); break; }
         case 'corpse': this.otherCorpses.forEach((c) => this.log(`You have a corpse in ${EB.WORLD.ZONES[c.zone || 'everblock'].name}.`, 'sys')); if (!this.pcorpses.length && !this.otherCorpses.length) this.log('You have no corpses.', 'sys'); else this.pcorpses.forEach((c) => this.log(`Your corpse lies at ${c.pos.x.toFixed(0)}, ${c.pos.y.toFixed(0)}, ${c.pos.z.toFixed(0)} (${c.pos.distanceTo(pl.pos).toFixed(0)} away).`, 'sys')); break;
         case 'sit': this.sit(); break;
         case 'stand': this.stand(); break;
-        case 'quests': { const q = Object.keys(this.quests); if (!q.length) this.log('You have no quests. Hail townsfolk to find work.', 'sys'); else q.forEach((id) => this.log(`${QUESTS[id].name}: ${this.quests[id] === 'done' ? 'Completed' : `${ITEMS[QUESTS[id].item].name} ${Math.min(this.countItem(QUESTS[id].item), QUESTS[id].count)}/${QUESTS[id].count} (return to ${QUESTS[id].giver})`}`, 'sys')); break; }
+        case 'quests': { const q = Object.keys(this.quests).filter((id) => QUESTS[id]); if (!q.length) this.log('You have no quests. Hail townsfolk to find work.', 'sys'); else q.forEach((id) => this.log(`${QUESTS[id].name}: ${this.quests[id] === 'done' ? 'Completed' : `${this.needStr(id)} (return to ${this.questGiver(id)})`}`, 'sys')); break; }
+        case 'lights': { const on = !this.lightsOn; this.lightsPref = on ? '1' : '0'; localStorage.setItem('everblock_lights', this.lightsPref); this.setLights(on, on ? 'Dynamic lantern lights ON.' : 'Dynamic lantern lights OFF.'); break; }
+        case 'music': this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); break;
+        case 'book': case 'spellbook': this.openWin('bookWin'); break;
         case 'dismiss': { const m = this.mercs[this.mercs.length - 1]; if (m) this.dismissMerc(m); else this.log('You have no mercenaries.', 'sys'); break; }
         case 'zone': this.log(`You are in ${this.world.zoneName}.`, 'sys'); break;
-        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand. Press ? for key bindings.', 'help'); break;
+        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand /music /book /lights. Press ? for key bindings.', 'help'); break;
         default: this.log('That is not a valid command. Try /help.', 'sys');
       }
     }
@@ -1254,11 +1599,20 @@
         return;
       }
       this.hotbarList().forEach((id, i) => {
+        const el = document.createElement('div');
+        this.dropTarget(el, (sid) => this.assignHotbar(i, sid));
+        if (!id) {
+          el.className = 'slot empty'; el.innerHTML = `<span class="k">${i + 1}</span>`;
+          el.onclick = () => this.hotkey(i);
+          hb.appendChild(el); return;
+        }
         const sp = SPELLS[id];
-        const el = document.createElement('div'); el.className = 'slot' + (sp.mana ? ' spell' : '');
-        el.innerHTML = `<span class="k">${i + 1}</span><span class="ic">${sp.mana ? '✦' : '⚔'}</span>${sp.name}<div class="cd"></div>`;
-        el.onclick = () => this.useAbility(id);
-        ui.tooltipFor(el, () => `<div class="tn">${sp.name}</div>${sp.desc}<br>${sp.mana ? `Mana: ${sp.mana} &nbsp; ` : ''}Cast: ${sp.cast ? sp.cast + 's' : 'Instant'} &nbsp; Recast: ${sp.recast}s`);
+        el.className = 'slot' + (isSpell(id) ? ' spell' : '');
+        el.innerHTML = `<span class="k">${i + 1}</span>${EB.icons.img(id, 'sic hic')}<span class="hn">${sp.name}</span><div class="cd"></div>`;
+        el.onclick = () => this.hotkey(i);
+        el.oncontextmenu = (e) => { e.preventDefault(); this.assignHotbar(i, null); };
+        el.draggable = true; el.ondragstart = (e) => e.dataTransfer.setData('text/plain', id);
+        ui.tooltipFor(el, () => this.spellTip(id) + (isSpell(id) && !this.player.gems.includes(id) ? '<div style="color:#ff9070">Not memorized</div>' : '') + '<div style="color:#b0a080">Right-click to clear</div>');
         hb.appendChild(el);
         this.hotbarEls.push({ el, id, cd: el.querySelector('.cd') });
       });
@@ -1269,7 +1623,7 @@
     }
     updateHUD() {
       const pl = this.player;
-      $('pName').textContent = pl.name;
+      $('pName').textContent = pl.title ? `${pl.name}, ${pl.title}` : pl.name;
       $('pLvl').textContent = `${pl.level} ${RACES[pl.race].name} ${CLASSES[pl.cls].name}`;
       ui.bar('pHp', 'pHpT', Math.max(0, pl.hp), pl.maxHp, `HP ${Math.max(0, Math.ceil(pl.hp))} / ${pl.maxHp}`);
       if (pl.maxMana) ui.bar('pMana', 'pManaT', pl.mana, pl.maxMana, `Mana ${Math.floor(pl.mana)} / ${pl.maxMana}`); else $('pManaBar').classList.add('hidden');
@@ -1283,7 +1637,15 @@
         const sp = SPELLS[h.id], left = (pl.cooldowns[h.id] || 0) - this.time;
         h.cd.style.height = left > 0 ? Math.min(100, (left / sp.recast) * 100) + '%' : '0%';
         h.el.classList.toggle('nomana', sp.mana > pl.mana);
+        h.el.classList.toggle('unmem', isSpell(h.id) && !pl.gems.includes(h.id));
         h.el.classList.toggle('active', !!(pl.casting && pl.casting.id === h.id));
+      }
+      for (const g of this.gemEls || []) {
+        if (!g.id) { g.mem.style.height = pl.memorizing && pl.memorizing.gem === +g.el.dataset.gem ? Math.min(100, (pl.memorizing.t / pl.memorizing.total) * 100) + '%' : '0%'; continue; }
+        const sp = SPELLS[g.id], left = (pl.cooldowns[g.id] || 0) - this.time;
+        g.cd.style.height = left > 0 ? Math.min(100, (left / sp.recast) * 100) + '%' : '0%';
+        g.el.classList.toggle('nomana', sp.mana > pl.mana);
+        g.el.classList.toggle('active', !!(pl.casting && pl.casting.id === g.id));
       }
       const bw = $('buffWin');
       if (pl.buffs.length) {
@@ -1305,11 +1667,62 @@
       $('zoneName').textContent = this.lastZone;
     }
 
+    tickDots(dt) {
+      for (const m of this.mobs) {
+        if (!m.alive || !m.dots || !m.dots.length) continue;
+        for (const d of m.dots.slice()) {
+          d.next -= dt;
+          if (d.next > 0) continue;
+          d.next += 3; d.left -= 3;
+          if (d.src === this.player && this.player.pos.distanceTo(m.pos) < 60) this.log(`${U.cap(m.name)} has taken ${d.dmg} damage from your ${d.name}.`, 'nonmelee');
+          this.damageMob(m, d.dmg, d.src);
+          if (!m.alive) break;
+          if (d.left <= 0) m.dots.splice(m.dots.indexOf(d), 1);
+        }
+      }
+    }
+    updateLights() {
+      const pl = this.player, w = this.world, lights = this.lampLights; if (!lights || !w.lanterns || !this.lightsOn) { this.litCount = 0; return; }
+      const night = this.nightF != null ? this.nightF : 0.5;
+      const underground = this.lastZone === 'The Sunken Crypt' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
+      const near = [];
+      for (const p of w.lanterns.values()) {
+        const dx = p.x + 0.5 - pl.pos.x, dz = p.z + 0.5 - pl.pos.z, dy = p.y - pl.pos.y;
+        const d2 = dx * dx + dz * dz + dy * dy * 2;
+        if (d2 < 22 * 22) near.push([d2, p]);
+      }
+      near.sort((a, b) => a[0] - b[0]);
+      const lampI = underground ? 1.6 : 0.3 + night * 1.9;
+      for (let i = 0; i < 3; i++) {
+        const L = lights[i], n = near[i];
+        if (n) { L.position.set(n[1].x + 0.5, n[1].y + 0.5, n[1].z + 0.5); L.intensity = lampI * (0.92 + Math.sin(this.time * 7 + i) * 0.08); }
+        else L.intensity = 0;
+      }
+      const torch = lights[3], torchOn = underground || night > 0.55;
+      torch.intensity = torchOn ? (underground ? 1.3 : 1.15 * night) * (0.9 + Math.sin(this.time * 11) * 0.06) : 0;
+      torch.position.set(pl.pos.x + Math.sin(pl.yaw) * 0.6, pl.pos.y + pl.h * 0.9, pl.pos.z + Math.cos(pl.yaw) * 0.6);
+      this.litCount = lights.filter((l) => l.intensity > 0.05).length;
+    }
+
     // ---------- main loop ----------
+    setLights(on, msg) {
+      this.lightsOn = on;
+      for (const L of this.lampLights) { if (on && !L.parent) this.scene.add(L); else if (!on && L.parent) this.scene.remove(L); }
+      if (msg) this.log(msg, 'sys');
+    }
     frame(now) {
       requestAnimationFrame((t) => this.frame(t));
       let dt = (now - this.last) / 1000; this.last = now;
       if (!(dt > 0)) dt = 0.016;
+      // auto quality: software renderers can't afford per-pixel point lights; turn them off unless the player forced them on
+      if (this.player && this.lightsPref == null && !this.perf.gaveUp) {
+        const P = this.perf; P.t += Math.min(dt, 1); P.n++;
+        if (P.t > 2.5) {
+          const fps = P.n / P.t; P.t = 0; P.n = 0;
+          if (!this.lightsOn && fps >= 50) this.setLights(true);
+          else if (this.lightsOn && fps < 30) { this.setLights(false); this.perf.gaveUp = true; this.log('Dynamic lantern lights were turned off to keep the frame rate up (type /lights to force them on).', 'sys'); }
+        }
+      }
       dt = Math.min(dt, 0.05);
       this.step(dt);
       this.renderer.render(this.scene, this.camera);
@@ -1337,7 +1750,7 @@
         const f = pl.forward(), r = new THREE.Vector3(-Math.cos(pl.yaw), 0, Math.sin(pl.yaw));
         let mx = f.x * fz + r.x * fx, mz = f.z * fz + r.z * fx;
         const l = Math.hypot(mx, mz);
-        const speed = fz < 0 && !fx ? 3.2 : 5.6;
+        const speed = (fz < 0 && !fx ? 3.2 : 5.6) * (1 + pl.buffSum('speed'));
         if (l > 0) { mx = (mx / l) * speed; mz = (mz / l) * speed; }
         pl.vel.x = mx; pl.vel.z = mz;
         if (this.keys.Space && !typing) {
@@ -1349,6 +1762,7 @@
         const res = physicsMove(world, pl, dt, true);
         if (res.stepped) this.eyeOffset = (this.eyeOffset || 0) - (pl.pos.y - oy);
         this.updateCasting(dt, !!(fx || fz));
+        this.updateMemorize(dt, !!(fx || fz));
         this.playerMelee(dt);
         if (!this.zoning) for (const zl of world.zoneLines) if (pl.pos.x >= zl.x0 && pl.pos.x <= zl.x1 && pl.pos.z >= zl.z0 && pl.pos.z <= zl.z1) { this.changeZone(zl); break; }
       } else {
@@ -1371,13 +1785,14 @@
           for (const m of this.mercs) {
             const ooc = !this.mobs.some((mb) => mb.alive && mb.target === m);
             m.hp = Math.min(m.maxHp, m.hp + (2 + Math.floor(m.level / 2)) * (ooc ? 3 : 1));
-            if (m.maxMana) m.mana = Math.min(m.maxMana, m.mana + (3 + Math.floor(m.level / 2)) * (ooc ? 2 : 1));
+            if (m.dead) continue;
+            if (m.maxMana) m.mana = Math.min(m.maxMana, m.mana + (3 + Math.floor(m.level / 2)) * (ooc ? 2 : 1) + m.buffSum('manaRegen'));
           }
           if (pl.maxMana) {
             const ms = pl.castStat();
             let mR = 1 + Math.floor(pl.level / 5);
             if (pl.sitting) mR = 4 + Math.floor(pl.level / 2) + Math.floor(ms / 40);
-            pl.mana = Math.min(pl.maxMana, pl.mana + mR);
+            pl.mana = Math.min(pl.maxMana, pl.mana + mR + pl.buffSum('manaRegen'));
           }
         }
       }
@@ -1394,9 +1809,10 @@
       }
       for (const n of this.npcs) n.update(dt, this);
       for (const m of this.mercs.slice()) m.update(dt, this);
+      this.tickDots(dt);
       this.separate();
       for (const c of this.pcorpses) c.update(dt, this);
-      if (this.fx) this.fx = this.fx.filter((f) => { f.life -= dt; f.m.scale.multiplyScalar(1 + dt * 3); f.m.material.opacity = Math.max(0, f.life * 1.6); if (f.life <= 0) { this.scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose(); return false; } return true; });
+      if (this.fx) this.fx = this.fx.filter((f) => { f.life -= dt; if (f.arrow) f.m.position.lerpVectors(f.to, f.from, Math.max(0, f.life / 0.35)); else f.m.scale.multiplyScalar(1 + dt * 3); f.m.material.opacity = Math.max(0, f.life * 1.6); if (f.life <= 0) { this.scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose(); return false; } return true; });
       this.updatePlayerModel(dt, moving);
       this.updateCamera();
       this.updateSky(dt);
@@ -1414,7 +1830,9 @@
         this.updateHUD();
         this.updateGroupBars();
         this.drawMinimap();
-        if ((this.questT = (this.questT || 0) + 1) % 10 === 0) this.renderQuests();
+        if (this.questDirty || (this.questT = (this.questT || 0) + 1) % 10 === 0) { this.questDirty = false; this.renderQuests(); }
+        this.updateLights();
+        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
         const z = this.world.zoneAt(pl.pos.x, pl.pos.y, pl.pos.z);
         if (z !== this.lastZone) { if (this.lastZone) { this.log(`You have entered ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
       }
@@ -1453,7 +1871,7 @@
       this.dayT = (this.dayT + dt / DAY_LEN) % 1;
       const ang = (this.dayT - 0.25) * Math.PI * 2;
       const elev = Math.sin(ang);
-      const day = U.smoothstep(-0.12, 0.25, elev);
+      const day = U.smoothstep(-0.12, 0.25, elev); this.nightF = 1 - day;
       const dusk = Math.max(0, 1 - Math.abs(elev) / 0.3) * 0.8;
       const sunDir = new THREE.Vector3(Math.cos(ang), elev, 0.35).normalize();
       const cam = this.camera.position;

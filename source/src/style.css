@@ -151,3 +151,49 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
 #zoneFade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.35s; z-index: 90; display: flex; align-items: center; justify-content: center; }
 #zoneFade.on { opacity: 1; pointer-events: auto; }
 #zoneFade div { color: #c8b890; font-size: 22px; letter-spacing: 2px; text-shadow: 2px 2px 0 #000; }
+
+/* ---------- v3: icons, gems, spellbook, merc settings ---------- */
+.sic { width: 32px; height: 32px; image-rendering: auto; border: 1px solid #000; border-radius: 3px; display: block; }
+#hotbar .slot { padding-top: 2px; }
+#hotbar .slot .hic { width: 30px; height: 30px; margin: 10px auto 1px; }
+#hotbar .slot .hn { display: block; line-height: 1.05; font-size: 9px; }
+#hotbar .slot.empty { opacity: 0.55; border-style: dashed; }
+#hotbar .slot.unmem .hic { filter: grayscale(1) brightness(0.6); }
+#hotbar .slot.unmem { border-color: #5a4a3a; }
+.drop { outline: 2px solid #ffe060 !important; box-shadow: 0 0 10px #ffd040 !important; }
+#gemBar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 3px; pointer-events: auto; }
+#gemBar .gem { position: relative; width: 38px; height: 38px; background: rgba(18,14,10,0.85); border: 2px solid #8a5ac0; border-radius: 50% 50% 6px 6px; overflow: hidden; cursor: pointer; }
+#gemBar .gem .sic { width: 34px; height: 34px; border: 0; border-radius: 0; }
+#gemBar .gem.empty { border-color: #4a3a5a; border-style: dashed; }
+#gemBar .gem.book { border-color: #b08840; border-radius: 4px; font-size: 20px; text-align: center; line-height: 34px; }
+#gemBar .gem.nomana { opacity: 0.5; }
+#gemBar .gem.active { border-color: #ffe090; box-shadow: 0 0 8px #ffd060; }
+#gemBar .gem .cd, #gemBar .gem .mem { position: absolute; left: 0; right: 0; bottom: 0; height: 0; }
+#gemBar .gem .cd { background: rgba(0,0,0,0.65); }
+#gemBar .gem .mem { background: rgba(160,110,255,0.55); }
+#bookWin { width: 560px; max-height: 76vh; overflow-y: auto; }
+#bookWin h4 { margin: 8px 0 4px; color: #f3c85a; font-size: 12px; }
+.bookGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.bspell { display: flex; gap: 6px; align-items: center; padding: 3px; background: rgba(40,30,20,0.8); border: 1px solid #5a4a30; border-radius: 3px; cursor: grab; font-size: 11px; }
+.bspell span { color: #b0a080; font-size: 10px; }
+.bspell.memd { border-color: #8a5ac0; }
+.bspell.sel { border-color: #ffe060; box-shadow: 0 0 6px #ffd040; background: rgba(80,60,20,0.9); }
+#mercCfgWin { width: 380px; max-height: 78vh; overflow-y: auto; }
+#mercCfgWin h4 { margin: 8px 0 4px; color: #f3c85a; font-size: 12px; }
+.stanceRow { display: flex; gap: 4px; }
+.stanceRow .stance { flex: 1; }
+.stance.sel { background: #6a4a18; border-color: #ffd060; color: #fff; }
+.mequip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+.mgive .row { display: flex; align-items: center; gap: 6px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.mgive .row .n { flex: 1; font-size: 11px; }
+.gmem.dead { opacity: 0.85; }
+.gmem.dead .gname { color: #a08070; text-decoration: line-through; }
+.gdead { color: #ff6050; font-size: 10px; display: flex; align-items: center; justify-content: space-between; }
+.gcfg { cursor: pointer; margin-left: 4px; color: #d0c090; }
+.gcfg:hover { color: #fff; }
+.gstance { font-size: 9px; color: #b0a080; text-transform: capitalize; }
+.gpet { font-size: 9px; color: #90d0a0; }
+.fk { font-size: 9px; color: #f3c85a; }
+.grev { font-size: 9px !important; padding: 1px 4px !important; }
+.qblock { margin-bottom: 8px; padding: 4px 6px; background: rgba(40,30,20,0.6); border-left: 3px solid #b08840; }
+.qstep { color: #b0a080; font-weight: normal; font-size: 11px; }

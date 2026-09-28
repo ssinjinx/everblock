@@ -219,6 +219,9 @@
     }
     finish() {
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.computeHeightColumn(x, z);
+      // lantern positions for dynamic point lights
+      this.lanterns = new Map();
+      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN) this.lanterns.set(i, this.idxPos(i));
       this.buildMapColors();
       this.renderMap();
     }
@@ -374,6 +377,7 @@
       this.rawSet(O.x, g + 1, O.z, B.COBBLE); this.rawSet(O.x, g + 2, O.z, B.LANTERN);
       for (const [x, z] of [[O.x - 6, O.z - 6], [O.x + 6, O.z - 6], [O.x - 6, O.z + 6], [O.x + 6, O.z + 6]]) this.lanternPost(x, g + 1, z);
       this.npcs.push({ kind: 'binder', name: 'Scout Hollis', x: O.x - 2.5, y: g + 1, z: O.z - 2.5, color: 0x3a6a3a, sub: '<Ranger Outpost>' });
+      this.npcs.push({ kind: 'quest', name: 'Trapper Gunnar', x: O.x + 4.5, y: g + 1, z: O.z - 3.5, color: 0x7a5a3a, sub: '<Trapper>' });
       this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 3.5 };
       this.zones.push({ name: 'Hollis Outpost', x0: O.x - 7, x1: O.x + 7, z0: O.z - 7, z1: O.z + 7 });
     }
@@ -750,9 +754,11 @@
         if (nx >= 0 && nz >= 0 && nx < NCX && nz < NCZ) this.dirty.add(nx + nz * NCX);
       }
     }
+    idxPos(i) { const x = i % W, z = Math.floor(i / W) % D, y = Math.floor(i / (W * D)); return { x, y, z }; }
     setBlock(x, y, z, b, record = true) {
       if (!this.inBounds(x, y, z)) return false;
       this.data[this.idx(x, y, z)] = b;
+      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
       if (record) this.edits[this.idx(x, y, z)] = b;
       const oldH = this.height[x + z * W];
       this.computeHeightColumn(x, z);

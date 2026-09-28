@@ -66,7 +66,7 @@ const check = (name, ok, info) => { results.push({ name, ok }); console.log((ok 
   });
   console.log('setup', JSON.stringify(setup));
   let shot = false, fightInfo = null, sawHeal = false, sawTank = false;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 200; i++) {
     await page.waitForTimeout(400);
     const st = await page.evaluate(() => { const g = EB.game, t = g.target, p = g.player;
       if (t && t.kind === 'mob' && t.alive) { p.yaw = Math.atan2(t.pos.x - p.pos.x, t.pos.z - p.pos.z) - 0.5; if (p.pos.distanceTo(t.pos) > 2.6) { p.pos.x += (t.pos.x - p.pos.x) * 0.3; p.pos.z += (t.pos.z - p.pos.z) * 0.3; p.pos.y = g.world.surfaceY(p.pos.x, p.pos.z); } if (!p.autoAttack) g.toggleAuto(true); }

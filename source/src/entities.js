@@ -247,6 +247,17 @@
         return;
       }
       let dir = null, speed = this.def.speed;
+      // crowd control: mesmerize / stun freeze the mob completely
+      if (game.time < (this.mezUntil || 0) || game.time < (this.stunUntil || 0)) {
+        this.casting = null; this.vel.x = this.vel.z = 0;
+        physicsMove(world, this, dt, true);
+        animateModel(this.model, this.walkPhase, false, 0, false);
+        this.model.group.rotation.z = game.time < (this.mezUntil || 0) ? Math.sin(game.time * 2) * 0.06 : 0;
+        this.syncModel();
+        return;
+      }
+      this.model.group.rotation.z = 0;
+      if (game.time < (this.snaredUntil || 0)) speed *= 0.5;
       if (this.state === 'idle' && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.03 * dt);
       this.aggroCheck -= dt;
       if (this.aggroCheck <= 0) {
@@ -288,7 +299,7 @@
             if (!dir) this.faceTo(t.pos.x, t.pos.z);
             this.swing -= dt;
             if (d <= reach + 0.4 && this.swing <= 0) {
-              this.swing = this.def.delay * (0.9 + Math.random() * 0.2);
+              this.swing = this.def.delay * (0.9 + Math.random() * 0.2) * (game.time < (this.slowedUntil || 0) ? 1.65 : 1);
               this.attackT = 0.01;
               game.mobAttack(this, t);
             }

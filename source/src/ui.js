@@ -8,7 +8,7 @@
   // ---------- formulas ----------
   const calc = {
     maxHp(cls, L, STA) { return 20 + L * CLASSES[cls].hpPer + Math.floor(STA * L / 12); },
-    maxMana(cls, L, stats) { const ms = CLASSES[cls].manaStat; if (ms == null) return 0; return 15 + L * 5 + Math.floor(stats[ms] * L / 6); },
+    maxMana(cls, L, stats) { const C = CLASSES[cls], ms = C.manaStat; if (ms == null) return 0; return Math.floor((15 + L * 5 + Math.floor(stats[ms] * L / 6)) * (C.manaMult || 1)); },
     xpForKill(mobL) { return mobL * mobL * 9 + mobL * 6 + 5; },
     fizzle(L, stat) { return U.clamp(20 - L * 1.5 - (stat - 75) / 8, 2, 25); },
   };

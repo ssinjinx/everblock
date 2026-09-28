@@ -36,11 +36,13 @@
   // ---------- Races ----------
   // stats: STR STA AGI DEX WIS INT CHA
   const RACES = {
-    human:    { name: 'Human',     stats: [75, 75, 75, 75, 75, 75, 75], scale: 1.0,  skin: 0xe0b08a, hair: 0x5a3a1a, classes: ['warrior', 'cleric', 'wizard', 'rogue'], desc: 'Versatile and adaptable, humans may pursue any calling.' },
-    barbarian:{ name: 'Barbarian', stats: [103, 95, 82, 70, 70, 60, 55], scale: 1.12, skin: 0xf0c8a0, hair: 0xd8b060, classes: ['warrior', 'rogue'], desc: 'Hardy northern folk. Strong and tough, but slow of wit.' },
-    darkelf:  { name: 'Dark Elf',  stats: [60, 65, 90, 75, 83, 99, 60], scale: 0.95, skin: 0x5a5a8a, hair: 0xeeeeee, classes: ['warrior', 'cleric', 'wizard', 'rogue'], desc: 'Cunning children of the underfoot. Sharp minds and ultravision.' },
-    dwarf:    { name: 'Dwarf',     stats: [90, 90, 70, 90, 83, 60, 45], scale: 0.78, skin: 0xd8a080, hair: 0x8a3a1a, classes: ['warrior', 'cleric', 'rogue'], desc: 'Stout, stubborn mountain folk with a strong faith.' },
-    ogre:     { name: 'Ogre',      stats: [130, 122, 70, 70, 67, 60, 37], scale: 1.35, skin: 0x8a9a6a, hair: 0x2a2a1a, classes: ['warrior'], desc: 'Massive and immensely strong. Not known for their intellect.' },
+    human:    { name: 'Human',     stats: [75, 75, 75, 75, 75, 75, 75], scale: 1.0,  skin: 0xe0b08a, hair: 0x5a3a1a, classes: ['warrior', 'cleric', 'paladin', 'ranger', 'rogue', 'necromancer', 'wizard', 'enchanter'], desc: 'Versatile and adaptable, humans may pursue almost any calling.' },
+    barbarian:{ name: 'Barbarian', stats: [103, 95, 82, 70, 70, 60, 55], scale: 1.12, skin: 0xf0c8a0, hair: 0xd8b060, classes: ['warrior', 'rogue', 'shaman'], desc: 'Hardy northern folk. Strong and tough, but slow of wit. Their shamans commune with the spirits of the frozen north.' },
+    woodelf:  { name: 'Wood Elf',  stats: [65, 65, 95, 80, 80, 75, 75], scale: 0.92, skin: 0xe8c49a, hair: 0x6a8a3a, classes: ['warrior', 'ranger', 'rogue'], desc: 'Agile forest dwellers from the treetop city of Kelethin. Natural rangers.' },
+    darkelf:  { name: 'Dark Elf',  stats: [60, 65, 90, 75, 83, 99, 60], scale: 0.95, skin: 0x5a5a8a, hair: 0xeeeeee, classes: ['warrior', 'cleric', 'rogue', 'necromancer', 'wizard', 'enchanter'], desc: 'Cunning children of the underfoot. Sharp minds and ultravision.' },
+    dwarf:    { name: 'Dwarf',     stats: [90, 90, 70, 90, 83, 60, 45], scale: 0.78, skin: 0xd8a080, hair: 0x8a3a1a, classes: ['warrior', 'cleric', 'paladin', 'rogue'], desc: 'Stout, stubborn mountain folk with a strong faith.' },
+    gnome:    { name: 'Gnome',     stats: [60, 70, 85, 85, 67, 98, 60], scale: 0.68, skin: 0xe8b890, hair: 0xa0a0a0, classes: ['warrior', 'cleric', 'rogue', 'necromancer', 'wizard', 'enchanter'], desc: 'Tiny tinkerers with brilliant minds and a knack for the arcane.' },
+    ogre:     { name: 'Ogre',      stats: [130, 122, 70, 70, 67, 60, 37], scale: 1.35, skin: 0x8a9a6a, hair: 0x2a2a1a, classes: ['warrior', 'shaman'], desc: 'Massive and immensely strong. Not known for their intellect.' },
   };
   const STAT_NAMES = ['STR', 'STA', 'AGI', 'DEX', 'WIS', 'INT', 'CHA'];
 
@@ -54,6 +56,16 @@
       startItems: ['worn_staff', 'cloth_robe'], desc: 'Arcane nukers. Frail, but deal devastating spell damage.' },
     rogue:   { name: 'Rogue', bonus: [0, 0, 5, 10, 0, 0, 0], hpPer: 17, manaStat: null, dmgMult: 1.05, color: 0x404040,
       startItems: ['rusty_dagger', 'cloth_shirt'], desc: 'Sneaky melee. Backstab from behind for massive damage.' },
+    ranger:  { name: 'Ranger', bonus: [5, 0, 5, 5, 5, 0, 0], hpPer: 18, manaStat: 4, manaMult: 0.6, dmgMult: 1.08, color: 0x3a7a3a,
+      startItems: ['rusty_short_sword', 'cloth_shirt'], desc: 'Woodland hybrid. Archery at range, snares and damage-over-time, and a little healing.' },
+    paladin: { name: 'Paladin', bonus: [5, 5, 0, 0, 5, 0, 5], hpPer: 20, manaStat: 4, manaMult: 0.6, dmgMult: 1.08, color: 0xd8c070,
+      startItems: ['rusty_short_sword', 'cloth_shirt'], desc: 'Holy knight. Heavy melee, Lay on Hands, stuns and minor healing.' },
+    shaman:  { name: 'Shaman', bonus: [5, 5, 0, 0, 10, 0, 0], hpPer: 15, manaStat: 4, dmgMult: 0.95, color: 0x4a8a8a,
+      startItems: ['rusty_mace', 'cloth_shirt'], desc: 'Spirit caller. Slows foes, heals, buffs, and rots enemies with disease.' },
+    necromancer: { name: 'Necromancer', bonus: [0, 0, 0, 5, 0, 10, 0], hpPer: 10, manaStat: 5, dmgMult: 0.8, color: 0x3a1a4a,
+      startItems: ['worn_staff', 'cloth_robe'], desc: 'Master of death. Raises undead pets, drains life and melts foes with DoTs.' },
+    enchanter: { name: 'Enchanter', bonus: [0, 0, 0, 0, 0, 10, 5], hpPer: 10, manaStat: 5, dmgMult: 0.75, color: 0xa040c0,
+      startItems: ['worn_staff', 'cloth_robe'], desc: 'Crowd controller. Mesmerizes enemies, stuns, and grants Clarity to the group.' },
   };
 
   // ---------- Items ----------
@@ -110,6 +122,13 @@
     frozen_heart:      { name: 'Heart of Vorgath', slot: 'ring', stats: { STR: 4, STA: 4, INT: 5, WIS: 5 }, hp: 40, mana: 40, value: 8000, icon: '💎', rare: true },
     militia_bracer:    { name: 'Everblock Militia Bracer', slot: 'hands', ac: 4, stats: { STR: 2, STA: 2 }, value: 200, icon: '🧤' },
     hollis_cloak:      { name: "Hollis's Ranger Cloak", slot: 'back', ac: 7, stats: { AGI: 3, DEX: 3 }, hp: 15, value: 1200, icon: '🧥' },
+    // v3 quest rewards & quest items
+    warden_signet:     { name: 'Signet of the Everblock Warden', slot: 'ring', ac: 5, stats: { STR: 5, STA: 5, AGI: 5, DEX: 5, WIS: 5, INT: 5, CHA: 5 }, hp: 50, mana: 50, value: 10000, icon: '💍', rare: true },
+    gunnar_boots:      { name: "Gunnar's Trapper Boots", slot: 'feet', ac: 6, stats: { AGI: 3, STA: 3 }, hp: 20, value: 1500, icon: '🥾' },
+    blessed_bone_amulet:{ name: 'Blessed Bone Amulet', slot: 'neck', stats: { WIS: 2, INT: 2 }, hp: 10, mana: 10, value: 250, icon: '📿' },
+    kerra_letter:      { name: "Kerra's Sealed Letter", value: 0, quest: true, icon: '✉' },
+    hollis_map:        { name: "Hollis's Warcamp Map", value: 0, quest: true, icon: '🗺' },
+    warden_shard:      { name: "Shard of the Warden's Signet", value: 0, quest: true, icon: '💠' },
     healing_potion:    { name: 'Minor Healing Potion', value: 30, stack: true, use: { heal: 45 }, icon: '🧪' },
     greater_potion:    { name: 'Healing Potion', value: 120, stack: true, use: { heal: 150 }, icon: '🧪' },
     bread:             { name: 'Loaf of Bread', value: 3, stack: true, use: { heal: 10 }, icon: '🍞' },
@@ -119,24 +138,49 @@
   // ---------- Spells / abilities ----------
   // kind: heal | nuke | buff | gate | root | skill
   const SPELLS = {
-    bind_wound:   { name: 'Bind Wound', classes: { warrior: 1, cleric: 1, wizard: 1, rogue: 1 }, mana: 0, cast: 4, recast: 25, kind: 'heal', amt: [5, 8], perLvl: 2, skill: true, desc: 'Bandage your wounds. Slow but free.' },
-    kick:         { name: 'Kick', classes: { warrior: 1 }, mana: 0, cast: 0, recast: 6, kind: 'skill', dmg: [2, 5], perLvl: 1, verb: 'kick', desc: 'A quick kick. Instant.' },
-    battle_fury:  { name: 'Battle Fury', classes: { warrior: 5 }, mana: 0, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 25 }, dur: 30, self: true, skill: true, desc: '+25% melee damage for 30s.' },
-    backstab:     { name: 'Backstab', classes: { rogue: 1 }, mana: 0, cast: 0, recast: 8, kind: 'skill', backstab: true, verb: 'backstab', desc: 'Must be behind target. Massive piercing damage.' },
-    evade:        { name: 'Evade', classes: { rogue: 3 }, mana: 0, cast: 0, recast: 30, kind: 'buff', buff: { dodge: 40 }, dur: 8, self: true, skill: true, desc: '+40% dodge for 8s.' },
-    minor_healing:{ name: 'Minor Healing', classes: { cleric: 1 }, mana: 10, cast: 1.5, recast: 2, kind: 'heal', amt: [12, 18], perLvl: 1, desc: 'Heals a small amount. Target a group member to heal them.', friendly: true },
+    bind_wound:   { name: 'Bind Wound', classes: { warrior: 1, cleric: 1, wizard: 1, rogue: 1, ranger: 1, paladin: 1, shaman: 1, necromancer: 1, enchanter: 1 }, ic: 'bandage', mana: 0, cast: 4, recast: 25, kind: 'heal', amt: [5, 8], perLvl: 2, skill: true, desc: 'Bandage your wounds. Slow but free.' },
+    kick:         { name: 'Kick', classes: { warrior: 1, ranger: 1 }, ic: 'boot', mana: 0, cast: 0, recast: 6, kind: 'skill', dmg: [2, 5], perLvl: 1, verb: 'kick', desc: 'A quick kick. Instant.' },
+    battle_fury:  { name: 'Battle Fury', classes: { warrior: 5 }, ic: 'fury', mana: 0, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 25 }, dur: 30, self: true, skill: true, desc: '+25% melee damage for 30s.' },
+    backstab:     { name: 'Backstab', classes: { rogue: 1 }, ic: 'dagger', mana: 0, cast: 0, recast: 8, kind: 'skill', backstab: true, verb: 'backstab', desc: 'Must be behind target. Massive piercing damage.' },
+    evade:        { name: 'Evade', classes: { rogue: 3 }, ic: 'evade', mana: 0, cast: 0, recast: 30, kind: 'buff', buff: { dodge: 40 }, dur: 8, self: true, skill: true, desc: '+40% dodge for 8s.' },
+    minor_healing:{ name: 'Minor Healing', classes: { cleric: 1, shaman: 1, paladin: 3 }, mana: 10, cast: 1.5, recast: 2, kind: 'heal', amt: [12, 18], perLvl: 1, desc: 'Heals a small amount. Target a group member to heal them.', friendly: true },
     strike:       { name: 'Strike', classes: { cleric: 1 }, mana: 12, cast: 1.5, recast: 4, kind: 'nuke', dmg: [6, 10], perLvl: 1, school: 'magic', desc: 'A divine strike against your foe.' },
-    courage:      { name: 'Courage', classes: { cleric: 1 }, mana: 15, cast: 2, recast: 3, kind: 'buff', buff: { ac: 4, hp: 10 }, dur: 900, friendly: true, desc: '+4 AC, +10 HP.' },
-    light_healing:{ name: 'Light Healing', classes: { cleric: 4 }, mana: 25, cast: 2, recast: 2, kind: 'heal', amt: [30, 45], perLvl: 2, desc: 'Heals a moderate amount.', friendly: true },
-    holy_armor:   { name: 'Holy Armor', classes: { cleric: 6 }, mana: 30, cast: 2.5, recast: 3, kind: 'buff', buff: { ac: 10 }, dur: 1200, friendly: true, desc: '+10 AC.' },
+    courage:      { name: 'Courage', classes: { cleric: 1, paladin: 1 }, mana: 15, cast: 2, recast: 3, kind: 'buff', buff: { ac: 4, hp: 10 }, dur: 900, friendly: true, desc: '+4 AC, +10 HP.' },
+    light_healing:{ name: 'Light Healing', classes: { cleric: 4, shaman: 9, paladin: 9, ranger: 9 }, mana: 25, cast: 2, recast: 2, kind: 'heal', amt: [30, 45], perLvl: 2, desc: 'Heals a moderate amount.', friendly: true },
+    holy_armor:   { name: 'Holy Armor', classes: { cleric: 6, paladin: 8 }, mana: 30, cast: 2.5, recast: 3, kind: 'buff', buff: { ac: 10 }, dur: 1200, friendly: true, desc: '+10 AC.' },
     furor:        { name: 'Furor', classes: { cleric: 8 }, mana: 35, cast: 2, recast: 6, kind: 'nuke', dmg: [28, 38], perLvl: 2, school: 'magic', desc: 'Holy wrath.' },
     word_of_health:{ name: 'Word of Health', classes: { cleric: 7 }, mana: 50, cast: 3, recast: 8, kind: 'groupheal', amt: [35, 50], perLvl: 2, desc: 'Heals you and your whole group.' },
     healing:      { name: 'Healing', classes: { cleric: 9 }, mana: 55, cast: 2.5, recast: 2, kind: 'heal', amt: [75, 95], perLvl: 3, desc: 'Heals a large amount.', friendly: true },
     blast_of_cold:{ name: 'Blast of Cold', classes: { wizard: 1 }, mana: 8, cast: 1.5, recast: 3, kind: 'nuke', dmg: [8, 12], perLvl: 1.5, school: 'cold', desc: 'A blast of frigid air.' },
-    minor_shielding:{ name: 'Minor Shielding', classes: { wizard: 1 }, mana: 10, cast: 2, recast: 3, kind: 'buff', buff: { ac: 3, hp: 8 }, dur: 900, self: true, desc: '+3 AC, +8 HP.' },
+    minor_shielding:{ name: 'Minor Shielding', classes: { wizard: 1, enchanter: 1, necromancer: 2 }, mana: 10, cast: 2, recast: 3, kind: 'buff', buff: { ac: 3, hp: 8 }, dur: 900, self: true, desc: '+3 AC, +8 HP.' },
     shock_of_fire:{ name: 'Shock of Fire', classes: { wizard: 4 }, mana: 20, cast: 2, recast: 5, kind: 'nuke', dmg: [20, 28], perLvl: 2, school: 'fire', desc: 'Scorches your foe.' },
     root:         { name: 'Root', classes: { wizard: 5 }, mana: 18, cast: 1.5, recast: 10, kind: 'root', dur: 18, desc: 'Roots the target in place.' },
-    gate:         { name: 'Gate', classes: { wizard: 4, cleric: 5 }, mana: 30, cast: 5, recast: 60, kind: 'gate', desc: 'Teleports you to your bind point.' },
+    gate:         { name: 'Gate', classes: { wizard: 4, cleric: 5, necromancer: 4, enchanter: 5, shaman: 6 }, mana: 30, cast: 5, recast: 60, kind: 'gate', desc: 'Teleports you to your bind point.' },
+    // ---- v3 classes ----
+    archery:      { name: 'Archery', classes: { ranger: 1 }, mana: 0, cast: 0, recast: 4, kind: 'skill', archery: true, range: 32, dmg: [5, 9], perLvl: 1.6, verb: 'shoot', ic: 'arrow', desc: 'Fire an arrow at your target from range (LOS required).' },
+    flame_lick:   { name: 'Flame Lick', classes: { ranger: 1 }, mana: 10, cast: 1.5, recast: 6, kind: 'dot', tick: [3, 4], perLvl: 0.6, dur: 18, school: 'fire', desc: 'Burns the target over 18 seconds.' },
+    snare:        { name: 'Snare', classes: { ranger: 3, necromancer: 7 }, mana: 12, cast: 1.5, recast: 6, kind: 'snare', dur: 36, desc: 'Slows the target\'s movement by half.' },
+    salve:        { name: 'Salve', classes: { ranger: 5 }, mana: 14, cast: 1.5, recast: 3, kind: 'heal', amt: [22, 32], perLvl: 1.5, friendly: true, ic: 'leaf', desc: 'A soothing woodland heal.' },
+    skin_like_wood:{ name: 'Skin like Wood', classes: { ranger: 7, shaman: 7 }, mana: 22, cast: 2.5, recast: 3, kind: 'buff', buff: { ac: 8, hp: 18 }, dur: 1200, friendly: true, ic: 'bark', desc: '+8 AC, +18 HP.' },
+    lay_hands:    { name: 'Lay on Hands', classes: { paladin: 1 }, mana: 0, cast: 0, recast: 300, kind: 'heal', amt: [60, 80], perLvl: 8, skill: true, friendly: true, ic: 'hand', desc: 'A massive instant heal on you or a group member. Long recast.' },
+    bash:         { name: 'Bash', classes: { paladin: 1 }, mana: 0, cast: 0, recast: 7, kind: 'skill', dmg: [3, 6], perLvl: 1, verb: 'bash', ic: 'shieldbash', desc: 'Slam your target. Instant.' },
+    yaulp:        { name: 'Yaulp', classes: { paladin: 4 }, mana: 12, cast: 0, recast: 45, kind: 'buff', buff: { dmgPct: 15 }, dur: 60, self: true, ic: 'fury', desc: '+15% melee damage for 60s. Instant.' },
+    stun:         { name: 'Stun', classes: { paladin: 6, enchanter: 3 }, mana: 20, cast: 1, recast: 12, kind: 'stun', dur: 3.5, dmg: [4, 8], desc: 'Stuns the target for a few seconds, interrupting spells.' },
+    sicken:       { name: 'Sicken', classes: { shaman: 1 }, mana: 10, cast: 1.5, recast: 6, kind: 'dot', tick: [2, 4], perLvl: 0.5, dur: 21, school: 'disease', desc: 'Disease eats at the target over 21 seconds.' },
+    inner_fire:   { name: 'Inner Fire', classes: { shaman: 1 }, mana: 12, cast: 2, recast: 3, kind: 'buff', buff: { ac: 5, hp: 10 }, dur: 900, friendly: true, ic: 'shield', desc: '+5 AC, +10 HP.' },
+    frost_rift:   { name: 'Frost Rift', classes: { shaman: 4 }, mana: 20, cast: 2, recast: 5, kind: 'nuke', dmg: [16, 22], perLvl: 1.5, school: 'cold', desc: 'Freezing spirit energy.' },
+    spirit_of_wolf:{ name: 'Spirit of Wolf', classes: { shaman: 6, ranger: 8 }, mana: 25, cast: 3, recast: 3, kind: 'buff', buff: { speed: 0.35 }, dur: 900, friendly: true, ic: 'paw', desc: '+35% run speed.' },
+    drowsy:       { name: 'Drowsy', classes: { shaman: 8 }, mana: 22, cast: 2, recast: 8, kind: 'slow', dur: 40, desc: 'Slows the target\'s attacks by 40%.' },
+    lifetap:      { name: 'Lifetap', classes: { necromancer: 1 }, mana: 10, cast: 1.5, recast: 3, kind: 'nuke', lifetap: true, dmg: [6, 9], perLvl: 1, school: 'life', ic: 'heart', desc: 'Drains life from the target to heal yourself.' },
+    disease_cloud:{ name: 'Disease Cloud', classes: { necromancer: 1 }, mana: 8, cast: 1.5, recast: 6, kind: 'dot', tick: [2, 3], perLvl: 0.5, dur: 18, school: 'disease', desc: 'A choking cloud of disease.' },
+    cavorting_bones:{ name: 'Cavorting Bones', classes: { necromancer: 1 }, mana: 20, cast: 5, recast: 10, kind: 'pet', petLvl: 3, desc: 'Raise a skeletal servant (level 3) to fight for you.' },
+    heat_blood:   { name: 'Heat Blood', classes: { necromancer: 4 }, mana: 20, cast: 2, recast: 6, kind: 'dot', tick: [5, 7], perLvl: 0.8, dur: 24, school: 'fire', desc: 'Boils the target\'s blood over 24 seconds.' },
+    bone_walk:    { name: 'Bone Walk', classes: { necromancer: 6 }, mana: 45, cast: 6, recast: 10, kind: 'pet', petLvl: 8, desc: 'Raise a skeletal warrior (level 8).' },
+    convoke_shadow:{ name: 'Convoke Shadow', classes: { necromancer: 10 }, mana: 80, cast: 7, recast: 10, kind: 'pet', petLvl: 13, desc: 'Raise a shadow knight (level 13).' },
+    mesmerize:    { name: 'Mesmerize', classes: { enchanter: 1 }, mana: 15, cast: 2, recast: 4, kind: 'mez', dur: 24, maxLvl: 16, ic: 'eye', desc: 'Puts the target into a trance (up to level 16). Any damage wakes it.' },
+    chaos_flux:   { name: 'Chaos Flux', classes: { enchanter: 2 }, mana: 14, cast: 1.5, recast: 4, kind: 'nuke', dmg: [10, 16], perLvl: 1.2, school: 'magic', desc: 'Raw chaotic energy.' },
+    breeze:       { name: 'Breeze', classes: { enchanter: 4 }, mana: 25, cast: 3, recast: 3, kind: 'buff', buff: { manaRegen: 2 }, dur: 1200, friendly: true, ic: 'drop', desc: '+2 mana per tick.' },
+    clarity:      { name: 'Clarity', classes: { enchanter: 8 }, mana: 45, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 5 }, dur: 1500, friendly: true, ic: 'drop', desc: '+5 mana per tick.' },
     shock_of_lightning:{ name: 'Shock of Lightning', classes: { wizard: 8 }, mana: 38, cast: 2.5, recast: 6, kind: 'nuke', dmg: [40, 55], perLvl: 2.5, school: 'magic', desc: 'Calls down lightning.' },
   };
 
@@ -177,7 +221,7 @@
     frost_giant: { name: 'a frost giant', lvl: [13, 15], model: 'biped', color: 0x8fb4d8, scale: 2.0, aggro: 14, aggressive: true, faction: 'giant', social: true, verb: 'crush', delay: 3.0, speed: 3.4, hpMult: 1.4,
       loot: [['giant_toe', 0.8], ['giant_helm', 0.08], ['greater_potion', 0.2]] },
     grimtusk: { name: 'Warlord Grimtusk', lvl: [13, 13], model: 'biped', color: 0x2f4a2a, scale: 1.4, snout: true, weapon: true, glow: 0xff5020, aggro: 16, aggressive: true, faction: 'orc', social: true, verb: 'slash', delay: 2.4, speed: 3.8, named: true, hpMult: 2.0, dmgMult: 1.2,
-      loot: [['tusk_necklace', 0.6], ['fang_warblade', 0.5], ['orc_chain', 0.4]] },
+      loot: [['warden_shard', 1.0], ['tusk_necklace', 0.6], ['fang_warblade', 0.5], ['orc_chain', 0.4]] },
     vorgath: { name: 'Vorgath the Frostbound', lvl: [15, 15], model: 'biped', color: 0x5a8ac8, scale: 2.3, weapon: true, glow: 0x80ffff, aggro: 16, aggressive: true, faction: 'giant', social: true, verb: 'crush', delay: 3.2, speed: 3.4, named: true, hpMult: 3.0, dmgMult: 1.3,
       caster: { name: 'Glacial Breath', dmg: [30, 50], cast: 3, cd: 16, range: 22 }, loot: [['frost_greatsword', 0.5], ['frozen_heart', 0.5], ['giant_helm', 0.5]] },
   };
@@ -186,6 +230,12 @@
   const MERCS = {
     healer: { name: 'Sister Maelin', cls: 'cleric', color: 0xeaeaff, skin: 0xe8c0a0, hair: 0xc89040, desc: 'A devoted cleric. Heals the group and buffs Courage.' },
     tank:   { name: 'Borin Stoutshield', cls: 'warrior', color: 0x8a8a9a, skin: 0xd8a080, hair: 0x8a3a1a, scale: 0.85, desc: 'A dwarven warrior. Taunts foes off you and holds aggro.' },
+  };
+  // Necromancer pets (summoned by spell; share the merc group logic)
+  const PETS = {
+    3: { name: 'Gabober', desc: 'A cavorting skeleton.', color: 0xe8e2c8 },
+    8: { name: 'Jobekab', desc: 'A skeletal warrior.', color: 0xd0c8b0 },
+    13: { name: 'Xabanek', desc: 'A shadow knight.', color: 0x3a3a4a },
   };
   function mercCost(role, L) { return (role === 'healer' ? 25 : 20) + L * L * 10; }
 
@@ -201,6 +251,36 @@
       offer: "The Frostfang orcs raid my outpost every night. Bring me 3 of their scalps and my old ranger cloak is yours.",
       done: "That'll give them pause. Take my cloak; it has kept me warm through many a Frostfang winter." },
   };
+
+  // New v3 single-step quests
+  Object.assign(QUESTS, {
+    restless_dead: { name: 'Bones of the Restless', giver: 'Guard Mossen', item: 'bone_chips', count: 6, coins: 150, reward: 'blessed_bone_amulet', rewardCount: 1, xp: 350,
+      offer: 'The skeletons in the Forsaken Graveyard to the south keep clawing their way back up. Bring me 6 Bone Chips and the temple will bless an amulet for you.',
+      done: 'Six more that will not rise again. Soulbinder Kerra blessed this amulet. Wear it well.' },
+    yeti_hunt: { name: 'Yeti Hunt', giver: 'Trapper Gunnar', item: 'yeti_fang', count: 3, coins: 2000, reward: 'gunnar_boots', rewardCount: 1, xp: 5000,
+      offer: "The mountain yetis east of here have been raiding my traplines. Bring me 3 Yeti Fangs and I'll give you my spare trapper boots. Best boots in the Highlands.",
+      done: 'Hah! Three fangs. Those boots are yours. Keep your toes warm, friend.' },
+  });
+  // Multi-step quest chain spanning both zones
+  QUESTS.warden_legacy = { name: "The Warden's Legacy", chain: true, coins: 5000, reward: 'warden_signet', rewardCount: 1, xp: 14000, title: 'Warden of Everblock',
+    steps: [
+      { giver: 'Soulbinder Kerra', items: [['ghoul_ichor', 2]], give: 'kerra_letter', zone: 'Everblock',
+        offer: 'Long ago the Wardens of Everblock held the Frostfang orcs beyond the North Pass. The last Warden fell, and his signet was lost. The dead of the Sunken Crypt stir with the same dark power. Bring me 2 vials of Crypt Ghoul Ichor and I will know the truth of it.',
+        done: 'Just as I feared: the ichor reeks of Frostfang sorcery. Take this sealed letter north through the pass to Scout Hollis. She served the last Warden.',
+        hint: 'Bring 2 Crypt Ghoul Ichor to Soulbinder Kerra (Everblock temple)' },
+      { giver: 'Scout Hollis', items: [['kerra_letter', 1]], zone: 'Frostfang',
+        offer: 'You have something for me? Kerra has not written in years...',
+        done: "Kerra's seal... So the old stories are true. Warlord Grimtusk wears a shard of the Warden's Signet on his belt. Before I send you into that warcamp, prove you can survive the Highlands.",
+        hint: "Deliver Kerra's Sealed Letter to Scout Hollis (Frostfang Highlands outpost)" },
+      { giver: 'Scout Hollis', items: [['frost_wolf_pelt', 4]], give: 'hollis_map', zone: 'Frostfang',
+        offer: 'Bring me 4 Frost Wolf Pelts. If you can hunt frost wolves, you might survive the orcs.',
+        done: 'Good pelts. Here, my map of the warcamp. Grimtusk keeps to the war banner in the center. Kill him, take the shard, and bring it and my map to Guildmaster Aldric in Everblock. He will know how to restore it.',
+        hint: 'Bring 4 Frost Wolf Pelts to Scout Hollis' },
+      { giver: 'Guildmaster Aldric', items: [['warden_shard', 1], ['hollis_map', 1]], zone: 'Everblock',
+        offer: 'Hollis sent you? Then you seek the Warden\'s Signet. Bring me the shard from Warlord Grimtusk and her map.',
+        done: 'The shard... and it still hums with the Warden\'s oath. I have reforged the signet. Wear it, Warden of Everblock. The Keep is in your debt.',
+        hint: "Slay Warlord Grimtusk (Frostfang Warcamp) and bring the Signet Shard and Hollis's Map to Guildmaster Aldric (Everblock)" },
+    ] };
 
   // Con colors: grey green lightblue blue white yellow red
   function conColor(plLvl, mobLvl) {
@@ -225,5 +305,5 @@
   function xpToNext(L) { return Math.floor(80 * L * L + 20 * L); }
   const MAX_LEVEL = 20;
 
-  EB.data = { MERCS, mercCost, QUESTS, B, BLOCKS, BUILDABLE, RACES, STAT_NAMES, CLASSES, ITEMS, EQUIP_SLOTS, SPELLS, MOBS, conColor, CON_HEX, CON_XP, CON_MSG, xpToNext, MAX_LEVEL };
+  EB.data = { PETS, MERCS, mercCost, QUESTS, B, BLOCKS, BUILDABLE, RACES, STAT_NAMES, CLASSES, ITEMS, EQUIP_SLOTS, SPELLS, MOBS, conColor, CON_HEX, CON_XP, CON_MSG, xpToNext, MAX_LEVEL };
 })();
