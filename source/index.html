@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Everblock</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%235a3a1a'/%3E%3Crect y='0' width='16' height='6' fill='%234caf50'/%3E%3Crect x='3' y='8' width='4' height='4' fill='%23f3c85a'/%3E%3Crect x='9' y='9' width='3' height='3' fill='%23806040'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<div id="game"></div>
+
+<!-- Title / character creation -->
+<div id="title">
+  <div class="titleInner">
+    <div class="logo">EVERBLOCK</div>
+    <div class="tagline">~ An Age of Blocks and Legends ~</div>
+    <div id="menuMain" class="menu">
+      <div id="continueBox" class="hidden">
+        <div id="continueInfo"></div>
+        <button id="btnContinue" class="big">Enter World</button>
+        <button id="btnDelete" class="small">Delete Character</button>
+      </div>
+      <button id="btnNew" class="big">Create New Character</button>
+      <div class="fine">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
+    </div>
+    <div id="menuCreate" class="menu hidden">
+      <div class="createGrid">
+        <div class="panel">
+          <h3>Race</h3><div id="raceList" class="choiceList"></div>
+          <h3>Class</h3><div id="classList" class="choiceList"></div>
+        </div>
+        <div class="panel">
+          <h3>Attributes</h3>
+          <div id="statTable"></div>
+          <div id="bonusLeft"></div>
+          <div id="derived"></div>
+        </div>
+        <div class="panel">
+          <h3>Description</h3>
+          <div id="descBox"></div>
+          <h3>Name</h3>
+          <input id="nameInput" maxlength="15" placeholder="Enter a name" autocomplete="off">
+          <div id="nameErr" class="err"></div>
+          <h3>World Seed</h3>
+          <input id="seedInput" maxlength="12" value="1999">
+          <div class="btnRow"><button id="btnBack">Back</button><button id="btnCreate" class="big">Enter Everblock</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="loading" class="hidden"><div>Loading, please wait...</div><div id="loadingSub"></div></div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="crosshair">+</div>
+  <div id="compass"><div id="compassStrip"></div><div id="compassMark"></div></div>
+  <div id="zoneName"></div>
+  <div id="playerWin" class="win">
+    <div class="wname"><span id="pName"></span> <span id="pLvl"></span></div>
+    <div class="bar hp"><div class="fill" id="pHp"></div><span id="pHpT"></span></div>
+    <div class="bar mana" id="pManaBar"><div class="fill" id="pMana"></div><span id="pManaT"></span></div>
+    <div class="bar xp"><div class="fill" id="pXp"></div><span id="pXpT"></span></div>
+    <div class="status"><span id="autoInd">AUTO ATTACK</span><span id="sitInd">SITTING</span><span id="buildInd">BUILD MODE</span></div>
+  </div>
+  <div id="targetWin" class="win hidden">
+    <div class="wname" id="tName"></div>
+    <div class="bar thp"><div class="fill" id="tHp"></div><span id="tHpT"></span></div>
+    <div id="tInfo"></div>
+  </div>
+  <div id="rightCol">
+    <canvas id="minimap" width="170" height="170" title="Minimap (N to toggle)"></canvas>
+    <div id="groupWin" class="win hidden"></div>
+    <div id="buffWin" class="win hidden"></div>
+    <div id="questWin" class="win hidden"></div>
+  </div>
+  <button id="helpBtn" title="Help (?)">?</button>
+  <div id="castBar" class="hidden"><div class="fill" id="castFill"></div><span id="castName"></span></div>
+  <div id="chatWin" class="win">
+    <div id="chatLog"></div>
+    <input id="chatInput" class="hidden" maxlength="120" autocomplete="off" placeholder="Type /help for commands">
+  </div>
+  <div id="hotbar"></div>
+  <div id="centerMsg"></div>
+  <div id="corpseArrow" class="hidden"></div>
+  <div id="clickToPlay" class="hidden">Click to resume &bull; ? for help</div>
+
+  <div id="invWin" class="win panelwin hidden">
+    <div class="wtitle">Inventory <span class="x" data-close="invWin">✕</span></div>
+    <div class="invCols">
+      <div><div id="equipGrid"></div></div>
+      <div><div id="statsBox"></div><div id="coinBox"></div></div>
+    </div>
+    <div class="sub">Bags (click to equip / use; right-click sells when a merchant is open)</div>
+    <div id="bagGrid"></div>
+  </div>
+  <div id="lootWin" class="win panelwin hidden">
+    <div class="wtitle" id="lootTitle">Loot <span class="x" data-close="lootWin">✕</span></div>
+    <div id="lootGrid"></div>
+    <div class="btnRow"><button id="btnLootAll">Loot All</button><button data-close="lootWin">Done</button></div>
+  </div>
+  <div id="merchantWin" class="win panelwin hidden">
+    <div class="wtitle" id="merchTitle">Merchant <span class="x" data-close="merchantWin">✕</span></div>
+    <div id="merchList"></div>
+    <div class="sub">Right-click items in your bags (I) to sell.</div>
+  </div>
+  <div id="trainerWin" class="win panelwin hidden">
+    <div class="wtitle">Guildmaster <span class="x" data-close="trainerWin">✕</span></div>
+    <div id="trainList"></div>
+  </div>
+  <div id="mercWin" class="win panelwin hidden">
+    <div class="wtitle">Mercenary Liaison <span class="x" data-close="mercWin">✕</span></div>
+    <div id="mercList"></div>
+  </div>
+  <div id="dialogWin" class="win panelwin hidden">
+    <div class="wtitle" id="dlgTitle">Quest <span class="x" data-close="dialogWin">✕</span></div>
+    <div id="dlgText"></div>
+    <div class="btnRow" id="dlgBtns"></div>
+  </div>
+  <div id="helpWin" class="win panelwin hidden">
+    <div class="wtitle">Everblock &mdash; Help <span class="x" data-close="helpWin">✕</span></div>
+    <div class="helpCols">
+      <div>
+        <h4>Movement</h4>
+        <p><b>W A S D</b> move &bull; <b>Space</b> jump/swim &bull; <b>Mouse</b> look<br><b>V</b> 1st/3rd person &bull; <b>Wheel</b> zoom</p>
+        <h4>Combat</h4>
+        <p><b>Left click</b> target &bull; <b>Tab</b> next target &bull; <b>Esc</b> clear target<br>
+        <b>Q</b> toggle auto attack &bull; <b>1-8</b> hotbar abilities/spells<br>
+        <b>C</b> consider target &bull; <b>X</b> sit / stand (faster regen)<br>
+        <b>F1</b> target yourself &bull; <b>F2 / F3</b> target group members (heals &amp; buffs land on your friendly target)</p>
+        <h4>Group</h4>
+        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Experience is split EQ-style. Click a name in the group window to target, ✕ to dismiss.</p>
+        <h4>Interaction</h4>
+        <p><b>E</b> loot corpse / talk to merchant, guildmaster, soulbinder<br><b>H</b> hail target (quest givers offer work) &bull; <b>I</b> inventory &bull; <b>Enter</b> chat/commands<br><b>N</b> toggle minimap &bull; <b>?</b> / <b>F10</b> this help</p>
+      </div>
+      <div>
+        <h4>Building</h4>
+        <p><b>B</b> toggle build mode: <b>Left click</b> break, <b>Right click</b> place, <b>1-9</b> pick block.</p>
+        <h4>Commands</h4>
+        <p>/save /loc /who /played /corpse /help /time /quests /dismiss /zone</p>
+        <h4>Tips</h4>
+        <p>Con colors: <span style="color:#36d436">green</span> &lt; <span style="color:#6fe0ff">light blue</span> &lt; <span style="color:#4f7bff">blue</span> &lt; <span style="color:#fff">white</span> &lt; <span style="color:#ffe23a">yellow</span> &lt; <span style="color:#ff3a3a">red</span>.
+        Creatures that con green or grey give little or no experience.<br>
+        When you die you return to your bind point without your gear. Run back and loot your corpse (a yellow arrow points the way).<br>
+        Train new spells and skills at Guildmaster Aldric as you level. The Sunken Crypt lies to the northeast. The North Pass leads to the <b>Frostfang Reaches</b> (levels 8-15) &mdash; walk through the shimmering zone line.<br>Quests: Merchant Tiloria, Guard Halric and Scout Hollis (Frostfang).</p>
+      </div>
+    </div>
+  </div>
+  <div id="deathScreen" class="hidden"><div class="big">You have been slain!</div><div id="deathSub">Returning to your bind point...</div></div>
+</div>
+<div id="tooltip" class="hidden"></div>
+<div id="zoneFade"><div>LOADING, PLEASE WAIT...</div></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="src/util.js"></script>
+<script src="src/data.js"></script>
+<script src="src/world.js"></script>
+<script src="src/path.js"></script>
+<script src="src/entities.js"></script>
+<script src="src/merc.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/game.js"></script>
+</body>
+</html>
