@@ -35,6 +35,7 @@
           <div id="statTable"></div>
           <div id="bonusLeft"></div>
           <div id="derived"></div>
+          <canvas id="charPreview" title="Drag to rotate"></canvas>
         </div>
         <div class="panel">
           <h3>Description</h3>
@@ -148,7 +149,9 @@
         <h4>Building</h4>
         <p><b>B</b> toggle build mode: <b>Left click</b> break, <b>Right click</b> place, <b>1-9</b> pick block.</p>
         <h4>Commands</h4>
-        <p>/save /loc /who /played /corpse /help /time /quests /dismiss /zone /music /book /lights</p>
+        <p>/save /loc /who /played /corpse /help /time /quests /dismiss /zone /music /book /lights /gfx</p>
+        <h4>Graphics</h4>
+        <p id="gfxBtns">Model quality: <button class="small" data-gfx="high">High</button> <button class="small" data-gfx="low">Low</button><br><span style="color:#b0a080">Low = flat-shaded models, no blob shadows, fewer particles (also <b>/gfx low</b>).</span></p>
         <h4>Tips</h4>
         <p>Con colors: <span style="color:#36d436">green</span> &lt; <span style="color:#6fe0ff">light blue</span> &lt; <span style="color:#4f7bff">blue</span> &lt; <span style="color:#fff">white</span> &lt; <span style="color:#ffe23a">yellow</span> &lt; <span style="color:#ff3a3a">red</span>.
         Creatures that con green or grey give little or no experience.<br>
@@ -166,6 +169,8 @@
 <script src="src/util.js"></script>
 <script src="src/data.js"></script>
 <script src="src/icons.js"></script>
+<script src="src/models.js"></script>
+<script src="src/fx.js"></script>
 <script src="src/world.js"></script>
 <script src="src/path.js"></script>
 <script src="src/entities.js"></script>

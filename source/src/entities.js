@@ -28,76 +28,9 @@
   }
 
   // Build a blocky model. Model faces +Z. Returns {group, parts, height, width}
-  function buildModel(o) {
-    const g = new THREE.Group();
-    const inner = new THREE.Group(); g.add(inner);
-    const parts = {};
-    const s = o.scale || 1;
-    let height = 1.95 * s, width = 0.6 * s;
-    if (o.model === 'biped') {
-      const t = o.thin ? 0.6 : 1;
-      const body = o.color, skin = o.skin != null ? o.skin : o.color, legs = o.legColor != null ? o.legColor : shade(o.color, 0.7);
-      parts.legL = limb(0.24 * t, 0.75, 0.24 * t, legs, -0.13, 0.75, 0); inner.add(parts.legL);
-      parts.legR = limb(0.24 * t, 0.75, 0.24 * t, legs, 0.13, 0.75, 0); inner.add(parts.legR);
-      parts.body = box(0.52 * (o.thin ? 0.7 : 1), 0.75, 0.3 * t, body); parts.body.position.y = 1.12; inner.add(parts.body);
-      parts.armL = limb(0.18 * t, 0.7, 0.18 * t, skin, -0.36 * (o.thin ? 0.8 : 1), 1.48, 0); inner.add(parts.armL);
-      parts.armR = limb(0.18 * t, 0.7, 0.18 * t, skin, 0.36 * (o.thin ? 0.8 : 1), 1.48, 0); inner.add(parts.armR);
-      parts.head = new THREE.Group(); parts.head.position.y = 1.5; inner.add(parts.head);
-      const head = box(0.44, 0.44, 0.44, skin, o.glow ? shade(o.glow, 0.15) : 0); head.position.y = 0.22; parts.head.add(head);
-      if (o.hair != null) { const hair = box(0.46, 0.12, 0.46, o.hair); hair.position.y = 0.44; parts.head.add(hair); const back = box(0.46, 0.3, 0.1, o.hair); back.position.set(0, 0.28, -0.2); parts.head.add(back); }
-      if (o.snout) { const sn = box(0.22, 0.18, 0.22, shade(skin, 0.8)); sn.position.set(0, 0.14, 0.3); parts.head.add(sn); const e1 = box(0.1, 0.16, 0.06, skin); e1.position.set(-0.16, 0.5, 0); parts.head.add(e1); const e2 = e1.clone(); e2.position.x = 0.16; parts.head.add(e2); }
-      const eyeC = o.glow || (o.thin ? 0x220000 : 0x111111);
-      const eye1 = box(0.08, 0.06, 0.02, eyeC, o.glow || 0); eye1.position.set(-0.1, 0.26, 0.225); parts.head.add(eye1);
-      const eye2 = eye1.clone(); eye2.position.x = 0.1; parts.head.add(eye2);
-      if (o.weapon) { const w = box(0.06, 0.08, 0.9, 0xb0b0c0); w.position.set(0, -0.62, 0.38); parts.armR.add(w); parts.weapon = w; }
-      if (o.helm) { const h = box(0.5, 0.2, 0.5, o.helm); h.position.y = 0.42; parts.head.add(h); }
-      if (o.shield) { const sh = box(0.08, 0.5, 0.4, o.shield); sh.position.set(-0.1, -0.4, 0.05); parts.armL.add(sh); }
-    } else if (o.model === 'quad') {
-      const c = o.color, dk = shade(c, 0.75);
-      parts.body = box(0.55, 0.45, 1.0, c); parts.body.position.set(0, 0.62, 0); inner.add(parts.body);
-      parts.head = new THREE.Group(); parts.head.position.set(0, 0.75, 0.55); inner.add(parts.head);
-      const hd = box(0.38, 0.36, 0.4, c); hd.position.set(0, 0.02, 0.15); parts.head.add(hd);
-      const sn = box(0.2, 0.16, 0.2, dk); sn.position.set(0, -0.05, 0.42); parts.head.add(sn);
-      const e1 = box(0.06, 0.06, 0.02, 0xff2020, 0x550000); e1.position.set(-0.11, 0.08, 0.36); parts.head.add(e1);
-      const e2 = e1.clone(); e2.position.x = 0.11; parts.head.add(e2);
-      const ear1 = box(0.1, 0.14, 0.05, dk); ear1.position.set(-0.13, 0.24, 0.08); parts.head.add(ear1);
-      const ear2 = ear1.clone(); ear2.position.x = 0.13; parts.head.add(ear2);
-      parts.legL = limb(0.14, 0.42, 0.14, dk, -0.2, 0.42, 0.35); inner.add(parts.legL);
-      parts.legR = limb(0.14, 0.42, 0.14, dk, 0.2, 0.42, 0.35); inner.add(parts.legR);
-      parts.legL2 = limb(0.14, 0.42, 0.14, dk, -0.2, 0.42, -0.35); inner.add(parts.legL2);
-      parts.legR2 = limb(0.14, 0.42, 0.14, dk, 0.2, 0.42, -0.35); inner.add(parts.legR2);
-      const tail = box(0.07, 0.07, 0.6, dk); tail.position.set(0, 0.65, -0.78); tail.rotation.x = 0.3; inner.add(tail);
-      height = 1.0 * s; width = 0.8 * s;
-    } else if (o.model === 'snake') {
-      parts.segs = [];
-      for (let i = 0; i < 6; i++) {
-        const sg = box(0.26, 0.2, 0.34, i % 2 ? o.color : shade(o.color, 0.8)); sg.position.set(0, 0.1, 0.6 - i * 0.3); inner.add(sg); parts.segs.push(sg);
-      }
-      const hd = box(0.32, 0.22, 0.34, shade(o.color, 1.1)); hd.position.set(0, 0.16, 0.9); inner.add(hd);
-      const e1 = box(0.05, 0.05, 0.02, 0xffee00, 0x444400); e1.position.set(-0.1, 0.22, 1.07); inner.add(e1);
-      const e2 = e1.clone(); e2.position.x = 0.1; inner.add(e2);
-      height = 0.4 * s; width = 0.7 * s;
-    }
-    inner.scale.setScalar(s);
-    return { group: g, inner, parts, height, width, model: o.model };
-  }
-
-  function animateModel(M, walkPhase, moving, attackT, sitting) {
-    const p = M.parts;
-    const sw = moving ? Math.sin(walkPhase) * 0.7 : 0;
-    if (M.model === 'biped') {
-      p.legL.rotation.x = sw; p.legR.rotation.x = -sw;
-      p.armL.rotation.x = -sw * 0.8;
-      p.armR.rotation.x = attackT > 0 ? -2.2 * Math.sin(attackT * Math.PI) : sw * 0.8;
-      if (sitting) { p.legL.rotation.x = p.legR.rotation.x = -1.5; M.inner.position.y = -0.6 * M.inner.scale.y; }
-      else M.inner.position.y = 0;
-    } else if (M.model === 'quad') {
-      p.legL.rotation.x = sw; p.legR2.rotation.x = sw; p.legR.rotation.x = -sw; p.legL2.rotation.x = -sw;
-      p.head.rotation.x = attackT > 0 ? 0.5 * Math.sin(attackT * Math.PI) : 0;
-    } else if (M.model === 'snake') {
-      p.segs.forEach((sg, i) => { sg.position.x = Math.sin(walkPhase * 0.8 + i * 0.9) * (moving ? 0.12 : 0.04); });
-    }
-  }
+  // v4: detailed rigged voxel models live in models.js
+  function buildModel(o) { return EB.models.buildModel(o); }
+  function animateModel(M, walkPhase, moving, attackT, sitting, ex) { return EB.models.animateModel(M, walkPhase, moving, attackT, sitting, ex); }
 
   function makeNameplate(text, color, sub) {
     const cv = document.createElement('canvas');
@@ -191,7 +124,7 @@
       this.hp = this.maxHp;
       this.maxHit = Math.max(2, Math.floor((2 + this.level * 1.8) * (def.dmgMult || 1)));
       this.pos.set(x, y, z); this.home = new THREE.Vector3(x, y, z);
-      this.model = buildModel(def);
+      this.model = buildModel(EB.models.mobOpts(type, def));
       this.hw = Math.min(0.45, this.model.width / 2); this.h = Math.max(0.5, this.model.height * 0.95);
       this.state = 'idle'; this.target = null; this.swing = 1; this.wanderT = Math.random() * 5; this.wander = null;
       this.aggroCheck = Math.random() * 0.5; this.rootedUntil = 0; this.grpDamage = 0;
@@ -230,8 +163,7 @@
     die(game, killer) {
       this.state = 'dead'; this.target = null; this.vel.set(0, 0, 0); this.hate.clear(); this.casting = null;
       this.decay = this.def.named ? 420 : 240;
-      this.model.inner.rotation.z = Math.PI / 2; this.model.inner.position.y = 0.2 * this.model.inner.scale.y;
-      this.model.inner.traverse((o) => { if (o.isMesh) { o.material = mat(shade(o.material.color.getHex(), 0.55)); } });
+      EB.models.setDead(this.model, true);
       const L = this.level;
       this.loot = { coins: Math.random() < 0.8 ? U.randInt(0, L * 9 + 3) * (this.def.named ? 6 : 1) : 0, items: [] };
       for (const [id, ch] of this.def.loot || []) if (Math.random() < ch) this.loot.items.push({ id, count: 1 });
@@ -243,6 +175,7 @@
       const world = game.world, pl = game.player;
       if (!this.alive) {
         this.decay -= dt;
+        if (this.model.st.deadT < 1) animateModel(this.model, this.walkPhase, false, 0, false, { dt, always: true });
         if (this.decay <= 0) game.removeEntity(this);
         return;
       }
@@ -251,7 +184,7 @@
       if (game.time < (this.mezUntil || 0) || game.time < (this.stunUntil || 0)) {
         this.casting = null; this.vel.x = this.vel.z = 0;
         physicsMove(world, this, dt, true);
-        animateModel(this.model, this.walkPhase, false, 0, false);
+        animateModel(this.model, this.walkPhase, false, 0, false, { dt });
         this.model.group.rotation.z = game.time < (this.mezUntil || 0) ? Math.sin(game.time * 2) * 0.06 : 0;
         this.syncModel();
         return;
@@ -343,7 +276,7 @@
       if (this.inWater && moving) this.vel.y = Math.max(this.vel.y, 1.5);
       if (moving) this.walkPhase += dt * speed * 2.2;
       if (this.attackT > 0) { this.attackT += dt * 3; if (this.attackT >= 1) this.attackT = 0; }
-      animateModel(this.model, this.walkPhase, moving, this.casting ? 0.5 : this.attackT, false);
+      animateModel(this.model, this.walkPhase, moving, this.casting ? 0 : this.attackT, false, { dt, cast: !!this.casting, speed });
       this.syncModel();
     }
   }
@@ -354,9 +287,7 @@
       super('npc', d.name);
       this.npcKind = d.kind; this.level = d.kind === 'guard' ? 35 : 30;
       this.pos.set(d.x, d.y, d.z); this.home = this.pos.clone();
-      const opts = { model: 'biped', color: d.color, skin: 0xe0b08a, hair: d.kind === 'guard' ? null : 0x3a2a1a, scale: d.kind === 'guard' ? 1.1 : 1.0 };
-      if (d.kind === 'guard') { opts.helm = 0x9aa0b0; opts.weapon = true; opts.shield = 0x3a5aa0; opts.legColor = 0x6a6a7a; }
-      this.model = buildModel(opts);
+      this.model = buildModel(EB.models.npcOpts(d));
       this.hw = 0.3; this.h = this.model.height;
       this.maxHp = 3000; this.hp = 3000;
       const sub = d.sub || { merchant: '<Merchant>', trainer: '<Guildmaster>', binder: '<Soulbinder>', guard: '<Everblock Guard>', liaison: '<Mercenary Liaison>' }[d.kind];
@@ -402,7 +333,7 @@
       if (dir && r.blocked && this.onGround) this.vel.y = 7.5;
       if (dir) this.walkPhase += dt * 10;
       if (this.attackT > 0) { this.attackT += dt * 3; if (this.attackT >= 1) this.attackT = 0; }
-      animateModel(this.model, this.walkPhase, !!dir, this.attackT, false);
+      animateModel(this.model, this.walkPhase, !!dir, this.attackT, false, { dt });
       this.syncModel();
     }
   }
@@ -414,8 +345,9 @@
       this.pos.set(data.x, data.y, data.z);
       this.zone = data.zone || 'everblock';
       this.loot = { coins: data.coins || 0, items: data.items || [], equip: data.equip || {} };
-      this.model = buildModel(owner.modelOpts());
-      this.model.inner.rotation.z = Math.PI / 2; this.model.inner.position.y = 0.25;
+      this.model = buildModel(EB.models.playerOpts({ race: owner.race, cls: owner.cls, equip: this.loot.equip }));
+      EB.models.setDead(this.model, true); this.model.st.deadT = 1;
+      EB.models.animateModel(this.model, 0, false, 0, false, { dt: 0, always: true });
       this.hw = 0.4; this.h = 0.6;
       this.plate = makeNameplate(this.name, '#ffcc66', '(your corpse)');
       this.syncModel();

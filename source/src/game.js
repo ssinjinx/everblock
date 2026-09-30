@@ -65,8 +65,7 @@
     weapon() { return this.equip.primary ? ITEMS[this.equip.primary.id] : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
     castStat() { const ms = CLASSES[this.cls].manaStat; return ms != null ? this.statArr()[ms] : 75; }
     modelOpts() {
-      const r = RACES[this.race];
-      return { model: 'biped', color: CLASSES[this.cls].color, skin: r.skin, hair: r.hair, scale: r.scale * 0.97, legColor: 0x4a3a2a, weapon: true };
+      return EB.models.playerOpts({ race: this.race, cls: this.cls, equip: this.equip });
     }
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
@@ -106,8 +105,17 @@
       sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
       this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0 }));
       this.scene.add(this.stars);
-      this.ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.72, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false }));
-      this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; this.scene.add(this.ring);
+      // v4: textured, pulsing selection ring (dashed outer band + soft inner glow) tinted by con colour
+      const rc = document.createElement('canvas'); rc.width = rc.height = 128;
+      { const c = rc.getContext('2d'); const gr = c.createRadialGradient(64, 64, 30, 64, 64, 63); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.72, 'rgba(255,255,255,0.18)'); gr.addColorStop(0.8, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.88, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        c.fillStyle = gr; c.fillRect(0, 0, 128, 128); c.globalCompositeOperation = 'destination-out';
+        for (let i = 0; i < 12; i++) { c.save(); c.translate(64, 64); c.rotate((i / 12) * Math.PI * 2); c.fillRect(-3, 44, 6, 22); c.restore(); } }
+      const rtex = new THREE.CanvasTexture(rc);
+      this.ring = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({ map: rtex, color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
+      this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; this.ring.renderOrder = 2; this.scene.add(this.ring);
+      EB.fx.init(this.scene);
+      this.gfxPref = localStorage.getItem('everblock_gfx') || 'high';
+      this.applyGfx(this.gfxPref, true);
       this.raycaster = new THREE.Raycaster();
       // v3: a fixed pool of point lights reassigned to the nearest lanterns (+1 player torch) so shaders never recompile
       this.lampLights = [];
@@ -173,7 +181,7 @@
       $('hud').classList.remove('hidden');
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`MOTD: Greetings, ${pl.name}. New in v3: Rangers, Paladins, Shamans, Necromancers and Enchanters; a spellbook (K) with spell gems; mercenary stances and gear; and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
+      ui.log(`MOTD: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guildmaster Aldric says, 'Welcome, young ${RACES[pl.race].name.toLowerCase()}. Hunt the rats and snakes outside the walls to start. Return to me as you grow in power.'`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
       this.last = performance.now();
@@ -279,7 +287,7 @@
       }
     }
     removeEntity(e) {
-      e.removeFrom(this.scene);
+      e.removeFrom(this.scene); if (e.model) EB.models.dispose(e.model);
       if (e.kind === 'mob') { const i = this.mobs.indexOf(e); if (i >= 0) this.mobs.splice(i, 1); }
       if (e.kind === 'pcorpse') { const i = this.pcorpses.indexOf(e); if (i >= 0) this.pcorpses.splice(i, 1); }
       if (this.target === e) this.setTarget(null);
@@ -305,6 +313,8 @@
       document.addEventListener('pointerlockchange', () => this.updateClickPrompt());
       document.querySelectorAll('[data-close]').forEach((el) => (el.onclick = () => this.closeWin(el.dataset.close)));
       $('helpBtn').onclick = () => this.toggleWin('helpWin');
+      document.querySelectorAll('#gfxBtns button').forEach((b) => { b.onclick = () => this.applyGfx(b.dataset.gfx); });
+      this.applyGfx(this.gfxPref, true);
       $('btnLootAll').onclick = () => this.lootAll();
       $('chatInput').addEventListener('keydown', (e) => {
         e.stopPropagation();
@@ -497,7 +507,7 @@
       if (!this.facing(t)) { this.throttled('face', 3, 'You cannot see your target.', 'sys'); return; }
       const w = pl.weapon(), st = pl.stats();
       pl.swing = w.delay * (1 - Math.min(0.25, (st.DEX - 60) / 800 + pl.level / 200));
-      this.pAttackAnim = 0.01;
+      this.pAttackAnim = 0.01; this.pAttackKind = null;
       EB.audio.swing();
       const hitChance = U.clamp(0.72 + (pl.level - t.level) * 0.05 + (st.DEX - 75) / 400, 0.3, 0.95);
       if (Math.random() > hitChance) { this.log(`You try to ${w.verb} ${t.name}, but miss!`, 'miss'); if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this); return; }
@@ -519,7 +529,7 @@
     }
     damageMob(m, dmg, src) {
       if (!m.alive) return;
-      m.hp -= dmg;
+      m.hp -= dmg; if (dmg > 0) EB.models.flinch(m.model);
       if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} has been awakened by ${src === this.player ? 'you' : src.name}.`, 'spell'); }
       if (src === this.player || (src && src.kind === 'merc')) m.grpDamage += dmg;
       if (m.state !== 'chase' && m.state !== 'flee') m.aggroOn(src, this);
@@ -563,6 +573,7 @@
       }
       if (dinged) {
         ui.center('DING!', `Welcome to level ${pl.level}!`, 3);
+        EB.fx.column(pl, 0xffe070);
         EB.audio.ding();
         const avail = Object.keys(SPELLS).filter((s) => { const L = SPELLS[s].classes[pl.cls]; return L && L <= pl.level && !pl.spells.includes(s); });
         if (avail.length) this.log(`You feel you could learn something new at your guild. (${avail.map((s) => SPELLS[s].name).join(', ')})`, 'help');
@@ -585,12 +596,13 @@
         dmg = Math.max(1, Math.round(U.randInt(1, m.maxHit) * (1 - Math.min(0.5, t.ac / (t.ac + 150)))));
         this.log(`${U.cap(m.name)} ${VERB3[m.def.verb] || m.def.verb + 's'} ${t.name} for ${dmg} points of damage.`, 'other');
       }
-      t.hp -= dmg;
+      t.hp -= dmg; EB.models.flinch(t.model);
       if (t.hp <= 0) this.mercDie(t, m);
     }
     mobSpell(m, t, sp) {
       if (Math.random() < 0.1) { if (t === this.player) this.log(`You resist the ${sp.name} spell!`, 'spell'); return; }
       const dmg = U.randInt(sp.dmg[0], sp.dmg[1]);
+      EB.fx.bolt(this.castHand(m), t, /frost|glacial/i.test(sp.name) ? 0x9ee8ff : 0xff8040, { size: 0.6, speed: 24 });
       if (t === this.player) {
         if (!this.player.alive) return;
         this.log(`You are struck by ${sp.name}! You have taken ${dmg} points of non-melee damage.`, 'hitme');
@@ -618,7 +630,7 @@
     }
     damagePlayer(dmg, src) {
       const pl = this.player;
-      pl.hp -= dmg;
+      pl.hp -= dmg; if (dmg > 0 && this.pmodel) EB.models.flinch(this.pmodel);
       if (pl.hp <= 0) this.playerDie(src);
     }
     playerDie(src) {
@@ -746,6 +758,7 @@
           if (tg !== pl) this.log(`${tg.name} feels much better. (+${got} HP)`, 'spell');
           else this.log(id === 'bind_wound' ? `You bandage your wounds. (+${got} HP)` : sp.skill ? `Divine power washes over you. (+${got} HP)` : `You feel much better. (+${got} HP)`, 'spell');
           this.healAggro(pl, got);
+          EB.fx.heal(tg);
           EB.audio.heal();
           break;
         }
@@ -756,6 +769,7 @@
             const before = g.hp; g.hp = Math.min(g.maxHp, g.hp + amt);
             this.log(g === pl ? `You feel much better. (+${Math.round(g.hp - before)} HP)` : `${g.name} feels much better. (+${Math.round(g.hp - before)} HP)`, 'spell');
             this.healAggro(pl, g.hp - before);
+            EB.fx.heal(g);
           }
           EB.audio.heal();
           break;
@@ -778,7 +792,7 @@
           t.dots = (t.dots || []).filter((d) => d.id !== id);
           t.dots.push({ id, name: sp.name, src: pl, dmg: per, left: sp.dur, next: 3, school: sp.school });
           this.log(`${U.cap(t.name)} ${sp.school === 'fire' ? 'is covered in flames' : 'begins to sicken'}. (${sp.name})`, 'spell');
-          this.spellFx(t, sp.school); EB.audio.spell();
+          this.spellFx(t, sp.school, 'dot'); EB.audio.spell();
           this.damageMob(t, 0, pl); t.addHate(pl, per * 2);
           break;
         }
@@ -797,7 +811,7 @@
           t.addHate(pl, 20); t.casting = null;
           t.mezUntil = this.time + sp.dur;
           this.log(`${U.cap(t.name)} has been mesmerized.`, 'spell');
-          this.spellFx(t, 'magic'); EB.audio.spell();
+          this.spellFx(t, 'mind', 'mez'); EB.audio.spell();
           if (this.target === t && pl.autoAttack) { pl.autoAttack = false; this.log('Auto attack is off (your target is mesmerized).', 'sys'); }
           break;
         }
@@ -807,11 +821,11 @@
           this.damageMob(t, dmg, pl);
           if (t.alive && !t.def.named) { t.stunUntil = this.time + sp.dur; t.casting = null; this.log(`${U.cap(t.name)} is stunned.`, 'spell'); }
           else if (t.alive) this.log(`${U.cap(t.name)} is unaffected by the stun.`, 'spell');
-          this.spellFx(t, 'magic'); EB.audio.hit();
+          this.spellFx(t, 'magic', 'stun'); EB.audio.hit();
           break;
         }
         case 'pet': {
-          this.summonPet(sp.petLvl); EB.audio.spell();
+          { const pet = this.summonPet(sp.petLvl); if (pet) EB.fx.summon(pet); } EB.audio.spell();
           break;
         }
         case 'buff': {
@@ -820,6 +834,7 @@
           tg.buffs.push({ id, name: sp.name, left: sp.dur, buff: sp.buff });
           if (tg === pl) this.log(BUFF_MSG[id] || `You feel the effects of ${sp.name}.`, 'spell');
           else this.log(`${tg.name} is bolstered by your ${sp.name}.`, 'spell');
+          EB.fx.buff(tg, EB.fx.SCHOOL[sp.school] || 0xfff0a0);
           EB.audio.heal();
           break;
         }
@@ -845,14 +860,14 @@
             if (mf.dot(toP) > -0.25) { this.log('You must be behind your target to backstab!', 'sys'); pl.cooldowns[id] = this.time + 1; return; }
             const dmg = Math.floor((w.dmg * (2 + L / 3)) + U.randInt(1, 6 + L * 2));
             this.log(`You backstab ${t.name} for ${dmg} points of damage.`, 'melee');
-            EB.audio.hit(); this.pAttackAnim = 0.01;
+            EB.audio.hit(); this.pAttackAnim = 0.01; this.pAttackKind = 'pierce';
             this.damageMob(t, dmg, pl);
           } else {
             if (Math.random() < (sp.archery ? 0.2 : 0.15)) { this.log(`You try to ${sp.verb} ${t.name}, but miss!`, 'miss'); this.damageMob(t, 0, pl); break; }
             if (sp.archery) this.arrowFx(t);
             const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
             this.log(`You ${sp.verb} ${t.name} for ${dmg} points of damage.`, 'melee');
-            EB.audio.hit(); this.pAttackAnim = 0.01;
+            EB.audio.hit(); this.pAttackAnim = 0.01; this.pAttackKind = sp.archery ? 'bow' : sp.verb === 'kick' ? 'kick' : sp.verb === 'bash' ? (this.pmodel.parts.shield ? 'bash' : 'crush') : null;
             this.damageMob(t, dmg, pl);
           }
           break;
@@ -866,12 +881,25 @@
       this.scene.add(a); this.fx = this.fx || [];
       this.fx.push({ m: a, life: 0.35, from: a.position.clone(), to: new THREE.Vector3(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z), arrow: true });
     }
-    spellFx(t, school) {
-      const color = { cold: 0x80d0ff, fire: 0xff7020, magic: 0xfff080, disease: 0x90d040, life: 0xff4070 }[school] || 0xffffff;
-      const g = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false }));
-      g.position.set(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z);
-      this.scene.add(g);
-      this.fx = this.fx || []; this.fx.push({ m: g, life: 0.5 });
+    // v4: particle spell effects (bolt from the caster's hand, impact burst, mez/stun stars, DoT clouds are per-frame)
+    spellFx(t, school, kind, src) {
+      src = src || this.player;
+      const from = this.castHand(src);
+      EB.fx.spell(src, from, t, school, kind || 'nuke');
+    }
+    castHand(e) {
+      const M = e === this.player ? this.pmodel : e.model;
+      if (M && M.parts && M.parts.handR && (e !== this.player || this.camDist > 0)) { M.group.updateMatrixWorld(true); return EB.models.handPos(M, 'R'); }
+      return new THREE.Vector3(e.pos.x, e.pos.y + (e.h || 1.8) * 0.75, e.pos.z);
+    }
+    applyGfx(mode, silent) {
+      const high = mode !== 'low';
+      this.gfxPref = high ? 'high' : 'low';
+      localStorage.setItem('everblock_gfx', this.gfxPref);
+      EB.models.setQuality(high); EB.fx.setHigh(high);
+      if (this.renderer) { this.renderer.setPixelRatio(high ? Math.min(window.devicePixelRatio, 1.5) : 1); this.renderer.setSize(window.innerWidth, window.innerHeight); }
+      if (!silent) this.log(`Graphics quality: ${high ? 'HIGH (textured models, rim light, shadows, full particles)' : 'LOW (flat models, no blob shadows, fewer particles, 1x pixel ratio)'}.`, 'sys');
+      const b = document.getElementById('gfxBtns'); if (b) for (const el of b.querySelectorAll('button')) el.classList.toggle('on', el.dataset.gfx === this.gfxPref);
     }
     lineOfSight(a, b) {
       const ay = a.pos.y + (a.eyeH || a.h * 0.8), by = b.pos.y + (b.eyeH || b.h * 0.8);
@@ -1567,12 +1595,13 @@
         case 'sit': this.sit(); break;
         case 'stand': this.stand(); break;
         case 'quests': { const q = Object.keys(this.quests).filter((id) => QUESTS[id]); if (!q.length) this.log('You have no quests. Hail townsfolk to find work.', 'sys'); else q.forEach((id) => this.log(`${QUESTS[id].name}: ${this.quests[id] === 'done' ? 'Completed' : `${this.needStr(id)} (return to ${this.questGiver(id)})`}`, 'sys')); break; }
+        case 'gfx': { const a = (v.split(/\s+/)[1] || '').toLowerCase(); this.applyGfx(a === 'low' || a === 'high' ? a : this.gfxPref === 'high' ? 'low' : 'high'); break; }
         case 'lights': { const on = !this.lightsOn; this.lightsPref = on ? '1' : '0'; localStorage.setItem('everblock_lights', this.lightsPref); this.setLights(on, on ? 'Dynamic lantern lights ON.' : 'Dynamic lantern lights OFF.'); break; }
         case 'music': this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); break;
         case 'book': case 'spellbook': this.openWin('bookWin'); break;
         case 'dismiss': { const m = this.mercs[this.mercs.length - 1]; if (m) this.dismissMerc(m); else this.log('You have no mercenaries.', 'sys'); break; }
         case 'zone': this.log(`You are in ${this.world.zoneName}.`, 'sys'); break;
-        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand /music /book /lights. Press ? for key bindings.', 'help'); break;
+        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand /music /book /lights /gfx. Press ? for key bindings.', 'help'); break;
         default: this.log('That is not a valid command. Try /help.', 'sys');
       }
     }
@@ -1812,6 +1841,7 @@
       this.tickDots(dt);
       this.separate();
       for (const c of this.pcorpses) c.update(dt, this);
+      this.updateFx(dt);
       if (this.fx) this.fx = this.fx.filter((f) => { f.life -= dt; if (f.arrow) f.m.position.lerpVectors(f.to, f.from, Math.max(0, f.life / 0.35)); else f.m.scale.multiplyScalar(1 + dt * 3); f.m.material.opacity = Math.max(0, f.life * 1.6); if (f.life <= 0) { this.scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose(); return false; } return true; });
       this.updatePlayerModel(dt, moving);
       this.updateCamera();
@@ -1822,7 +1852,7 @@
       for (const e of this.npcs) { const dc = fit(e); e.plate.visible = dc > 2.2 && e.pos.distanceTo(pl.pos) < 30; }
       for (const e of this.mercs) e.plate.visible = fit(e) > 2.2;
       for (const zm of this.zoneMeshes) zm.material.opacity = 0.2 + 0.12 * Math.sin(this.time * 3);
-      if (this.target) { const t = this.target; this.ring.visible = true; this.ring.position.set(t.pos.x, t.pos.y + 0.06, t.pos.z); this.ring.scale.setScalar(Math.max(0.8, t.hw * 2.2)); this.ring.rotation.z += dt; }
+      if (this.target) { const t = this.target; this.ring.visible = true; this.ring.position.set(t.pos.x, t.pos.y + 0.06, t.pos.z); const pu = 1 + Math.sin(this.time * 5) * 0.06; this.ring.scale.setScalar(Math.max(0.8, t.hw * 2.2) * pu * (t.model && t.model.width ? Math.max(0.6, t.model.width / 0.6) * 0.5 + 0.5 : 1)); this.ring.rotation.z += dt * 0.8; this.ring.material.opacity = 0.75 + Math.sin(this.time * 5) * 0.2; }
       this.world.updateChunks(this.camera.position.x, this.camera.position.z, 7, 2);
       this.hudT -= dt;
       if (this.hudT <= 0) {
@@ -1842,6 +1872,32 @@
       const under = this.world.isWater(eye.x, eye.y, eye.z);
       if (under !== this.under) { this.under = under; let el = document.getElementById('underwater'); if (!el) { el = document.createElement('div'); el.id = 'underwater'; document.body.appendChild(el); } el.style.display = under ? 'block' : 'none'; }
     }
+    // v4: per-frame particle upkeep - DoT clouds, casting hand glows, crowd-control stars
+    updateFx(dt) {
+      const pl = this.player;
+      EB.models.camPos.copy(this.camera.position);
+      const DOT = { fire: 0xff7020, disease: 0x90d040, poison: 0x80e040, magic: 0xd080ff, life: 0xff4070, cold: 0x80d0ff };
+      for (const m of this.mobs) {
+        if (!m.alive || m.pos.distanceToSquared(pl.pos) > 3600) continue;
+        if (m.dots && m.dots.length) EB.fx.cloud(m, DOT[m.dots[0].school] || 0x90d040, dt);
+        if (m.casting) this.castGlow(m, m.def.glow || 0x80c0ff, dt);
+        if (this.time < (m.mezUntil || 0) || this.time < (m.stunUntil || 0)) { m._starT = (m._starT || 0) - dt; if (m._starT <= 0) { m._starT = 1.2; EB.fx.stars(m, 1.25); } }
+      }
+      for (const m of this.mercs) if (!m.dead && m.casting) this.castGlow(m, m.isPet ? 0xb060ff : 0xfff4b0, dt);
+      if (pl.alive && pl.casting && !pl.casting.skill && this.camDist > 0) { const sp = SPELLS[pl.casting.id]; this.castGlow(pl, EB.fx.SCHOOL[sp && sp.school] || (sp && sp.kind === 'heal' ? 0x9effa0 : 0xfff080), dt); }
+      // showcase models (photo mode / gallery): {M, walk, attack, cast} animated in place
+      if (this.showcase) for (const sc of this.showcase) { sc.ph = (sc.ph || 0) + dt * (sc.walk ? 8 : 0); if (sc.attack) { sc.at = (sc.at || 0) + dt * 1.3; if (sc.at > 1.6) sc.at = 0.01; } EB.models.animateModel(sc.M, sc.ph, !!sc.walk, sc.at > 0 && sc.at < 1 ? sc.at : 0, !!sc.sit, { dt, cast: !!sc.cast, always: true }); if (sc.cast) { sc.model = sc.M; this.castGlow(sc, sc.castColor || 0x80c0ff, dt); } }
+      EB.fx.update(dt, this.camera, this.renderer);
+    }
+    castGlow(e, color, dt) {
+      e._glowT = (e._glowT || 0) + dt;
+      if (e._glowT < 1 / 30) return;
+      e._glowT = 0;
+      const M = e === this.player ? this.pmodel : e.model;
+      if (!M || !M.parts || !M.parts.handR) return;
+      EB.fx.hand(EB.models.handPos(M, 'R'), color, dt);
+      EB.fx.hand(EB.models.handPos(M, 'L'), color, dt);
+    }
     updatePlayerModel(dt, moving) {
       const pl = this.player, M = this.pmodel;
       M.group.visible = this.camDist > 0 && pl.alive;
@@ -1849,11 +1905,19 @@
       M.group.rotation.y = pl.yaw;
       if (moving && pl.onGround) this.pWalk = (this.pWalk || 0) + dt * 11;
       if (this.pAttackAnim > 0) { this.pAttackAnim += dt * 3.5; if (this.pAttackAnim >= 1) this.pAttackAnim = 0; }
-      M.parts.weapon.visible = !!pl.equip.primary;
-      animateModel(M, this.pWalk || 0, moving && pl.onGround, this.pAttackAnim || 0, pl.sitting);
+      // v4: rebuild the rig whenever visible gear changes
+      this.gearChk = (this.gearChk || 0) - dt;
+      if (this.gearChk <= 0) {
+        this.gearChk = 0.25;
+        const spec = pl.modelOpts();
+        if (EB.models.sigOf(spec) !== M.sig) { EB.models.dispose(M); this.pmodel = EB.models.buildModel(spec); this.scene.add(this.pmodel.group); return this.updatePlayerModel(0, moving); }
+      }
+      const casting = !!(pl.casting && !pl.casting.skill && SPELLS[pl.casting.id] && SPELLS[pl.casting.id].cast > 0);
+      animateModel(M, this.pWalk || 0, moving && pl.onGround, casting ? 0 : this.pAttackAnim || 0, pl.sitting, { dt, cast: casting, kind: this.pAttackAnim > 0 ? this.pAttackKind || undefined : undefined, always: true });
     }
     updateCamera() {
       const pl = this.player, cam = this.camera;
+      if (this.camOverride) { cam.position.copy(this.camOverride.pos); cam.lookAt(this.camOverride.look); return; } // screenshot/photo mode hook
       const sitDrop = pl.sitting ? pl.h * 0.35 : 0;
       const eye = new THREE.Vector3(pl.pos.x, pl.pos.y + pl.eyeH - sitDrop + (this.eyeOffset || 0), pl.pos.z);
       const dir = this.camDir();
@@ -1871,7 +1935,7 @@
       this.dayT = (this.dayT + dt / DAY_LEN) % 1;
       const ang = (this.dayT - 0.25) * Math.PI * 2;
       const elev = Math.sin(ang);
-      const day = U.smoothstep(-0.12, 0.25, elev); this.nightF = 1 - day;
+      const day = U.smoothstep(-0.12, 0.25, elev); this.nightF = 1 - day; EB.models.setRim(0.26 + 0.2 * this.nightF);
       const dusk = Math.max(0, 1 - Math.abs(elev) / 0.3) * 0.8;
       const sunDir = new THREE.Vector3(Math.cos(ang), elev, 0.35).normalize();
       const cam = this.camera.position;

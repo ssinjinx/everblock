@@ -56,6 +56,8 @@
     const hp = calc.maxHp(create.cls, 1, st[1]), mana = calc.maxMana(create.cls, 1, st);
     $('derived').innerHTML = `Level 1 HP: <b>${hp}</b> &nbsp; Mana: <b>${mana || '—'}</b>`;
     const sp = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[create.cls] === 1).map((s) => SPELLS[s].name).join(', ');
+    const eq = {}; for (const id of CLASSES[create.cls].startItems || []) { const it = EB.data.ITEMS[id]; if (it && it.slot) eq[it.slot] = { id }; }
+    if (EB.models) EB.models.preview($('charPreview'), { race: create.race, cls: create.cls, equip: eq });
     $('descBox').innerHTML = `<b>${RACES[create.race].name}</b>: ${RACES[create.race].desc}<br><br><b>${CLASSES[create.cls].name}</b>: ${CLASSES[create.cls].desc}<br><br><i>Starting abilities:</i> ${sp}`;
   }
   function validName(n) {
@@ -69,10 +71,10 @@
       const c = save.char;
       $('continueInfo').innerHTML = `<b style="color:#f3c85a;font-size:20px">${c.name}</b><br>Level ${c.level} ${RACES[c.race].name} ${CLASSES[c.cls].name}`;
     }
-    $('btnContinue').onclick = () => { EB.audio.unlock(); onPlay(null); };
+    $('btnContinue').onclick = () => { EB.audio.unlock(); if (EB.models) EB.models.stopPreview(); onPlay(null); };
     $('btnDelete').onclick = () => { if (confirm('Delete this character forever?')) { localStorage.removeItem(EB.SAVE_KEY); location.reload(); } };
     $('btnNew').onclick = () => { $('menuMain').classList.add('hidden'); $('menuCreate').classList.remove('hidden'); renderCreate(); $('nameInput').focus(); };
-    $('btnBack').onclick = () => { $('menuCreate').classList.add('hidden'); $('menuMain').classList.remove('hidden'); };
+    $('btnBack').onclick = () => { if (EB.models) EB.models.stopPreview(); $('menuCreate').classList.add('hidden'); $('menuMain').classList.remove('hidden'); };
     $('btnCreate').onclick = () => {
       let n = $('nameInput').value.trim();
       const err = validName(n);
@@ -82,6 +84,7 @@
       EB.audio.unlock();
       const seedStr = $('seedInput').value.trim() || '1999';
       const seed = /^\d+$/.test(seedStr) ? parseInt(seedStr, 10) : U.hashStr(seedStr);
+      if (EB.models) EB.models.stopPreview();
       onPlay({ name: n, race: create.race, cls: create.cls, stats: baseStats(), seed });
     };
     $('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnCreate').click(); e.stopPropagation(); });

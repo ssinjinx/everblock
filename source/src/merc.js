@@ -16,9 +16,8 @@
       this.role = role; this.cls = M.cls; this.isPet = isPet; this.petLvl = petLvl;
       this.level = isPet ? petLvl : game.player.level;
       const tank = role === 'tank';
-      if (isPet) this.model = buildModel({ model: 'biped', color: M.color, skin: M.color, hair: null, thin: petLvl < 13, weapon: petLvl >= 8, scale: petLvl >= 13 ? 1.1 : 0.95, legColor: M.color, glow: petLvl >= 13 ? 0x8040ff : undefined });
-      else this.model = buildModel({ model: 'biped', color: M.color, skin: M.skin, hair: tank ? null : M.hair, scale: M.scale || 1, weapon: true,
-        shield: tank ? 0x7a5a3a : undefined, helm: tank ? 0x9a9aa8 : undefined, legColor: tank ? 0x5a5a6a : 0xd0d0e8 });
+      this.equip = (saved && saved.equip) || {};
+      this.model = buildModel(this.modelSpec());
       this.hw = 0.3; this.h = Math.max(1.4, this.model.height * 0.95);
       const owner = game.player.name;
       this.plate = makeNameplate(M.name, '#70ff70', isPet ? `<${owner}'s pet>` : tank ? '<Warrior Mercenary>' : '<Cleric Mercenary>');
@@ -32,6 +31,18 @@
       this.eyeH = this.h * 0.9;
     }
     get alive() { return !this.dead; }
+    modelSpec() { return this.isPet ? EB.models.petOpts(this.petLvl) : EB.models.mercOpts(this.role, this.equip); }
+    // v4: rebuild the rig when the merc's visible gear changes (keeps the same scene parent)
+    refreshModel() {
+      const spec = this.modelSpec(), sig = EB.models.sigOf(spec);
+      if (sig === this.model.sig) return false;
+      const parent = this.model.group.parent;
+      EB.models.dispose(this.model);
+      this.model = buildModel(spec);
+      if (parent) parent.add(this.model.group);
+      this.syncModel();
+      return true;
+    }
     buffSum(f) { let t = 0; for (const b of this.buffs) if (b.buff[f]) t += b.buff[f]; return t; }
     itemSum(f) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it[f]) t += it[f]; } return t; }
     statSum(n) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it.stats && it.stats[n]) t += it.stats[n]; } return t; }
@@ -61,11 +72,13 @@
         if (t === game.player) game.log(`You feel much better. (${this.name}'s ${sp.name}: +${got} HP)`, 'spell');
         else game.log(`${t.name === this.name ? this.name : t.name} feels much better. (+${got} HP)`, 'spell');
         game.healAggro(this, got);
+        EB.fx.heal(t);
         EB.audio.heal();
       } else if (sp.kind === 'buff') {
         t.buffs = t.buffs.filter((b) => b.id !== c.id);
         t.buffs.push({ id: c.id, name: sp.name, left: sp.dur, buff: sp.buff });
         if (t === game.player) game.log(`You feel brave. (${this.name} casts ${sp.name} on you)`, 'spell');
+        EB.fx.buff(t, 0xfff0a0);
       }
     }
     update(dt, game) {
@@ -120,7 +133,9 @@
       if (this.inWater && dir) this.vel.y = Math.max(this.vel.y, 1.5);
       if (dir) this.walkPhase += dt * speed * 2;
       if (this.attackT > 0) { this.attackT += dt * 3; if (this.attackT >= 1) this.attackT = 0; }
-      animateModel(this.model, this.walkPhase, !!dir, this.casting ? 0.5 : this.attackT, false);
+      this.gearChk = (this.gearChk || 0) - dt;
+      if (this.gearChk <= 0) { this.gearChk = 0.5; this.refreshModel(); }
+      animateModel(this.model, this.walkPhase, !!dir, this.casting ? 0 : this.attackT, false, { dt, cast: !!this.casting, speed });
       this.syncModel();
     }
     melee(foe, game, dt) {
