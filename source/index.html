@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>Everblock</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%235a3a1a'/%3E%3Crect y='0' width='16' height='6' fill='%234caf50'/%3E%3Crect x='3' y='8' width='4' height='4' fill='%23f3c85a'/%3E%3Crect x='9' y='9' width='3' height='3' fill='%23806040'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="src/style.css">
 </head>
@@ -22,6 +24,9 @@
         <button id="btnDelete" class="small">Delete Character</button>
       </div>
       <button id="btnNew" class="big">Create New Character</button>
+      <button id="btnPhone" class="phoneToggle">📱 Phone Mode: <b>OFF</b></button>
+      <div id="phoneSuggest" class="hidden">📱 Touch screen detected &mdash; Phone Mode (touch controls) is recommended and has been turned on.
+        <div class="btnRow"><button id="btnPhoneKeep" class="small">Keep Phone Mode</button><button id="btnPhoneNo" class="small">Use keyboard &amp; mouse</button></div></div>
       <div class="fine">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
     </div>
     <div id="menuCreate" class="menu hidden">
@@ -45,6 +50,7 @@
           <div id="nameErr" class="err"></div>
           <h3>World Seed</h3>
           <input id="seedInput" maxlength="12" value="1999">
+          <div class="btnRow"><button id="btnPhone2" class="phoneToggle small">📱 Phone Mode: <b>OFF</b></button></div>
           <div class="btnRow"><button id="btnBack">Back</button><button id="btnCreate" class="big">Enter Everblock</button></div>
         </div>
       </div>
@@ -84,9 +90,32 @@
   </div>
   <div id="hotbar"></div>
   <div id="gemBar" class="hidden"></div>
+  <div id="petBar" class="hidden"></div>
   <div id="centerMsg"></div>
   <div id="corpseArrow" class="hidden"></div>
   <div id="clickToPlay" class="hidden">Click to resume &bull; ? for help</div>
+  <div id="phoneUI">
+    <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+    <div id="phoneBtns">
+      <button data-act="jump" class="pb big">⤒<small>Jump</small></button>
+      <button data-act="attack" class="pb big">⚔<small>Attack</small></button>
+      <button data-act="interact" class="pb">E<small>Loot/Talk</small></button>
+      <button data-act="sit" class="pb">🪑<small>Sit</small></button>
+      <button data-act="consider" class="pb">👁<small>Con</small></button>
+      <button data-act="tab" class="pb">🎯<small>Next</small></button>
+      <button data-act="hail" class="pb">👋<small>Hail</small></button>
+    </div>
+    <div id="phoneTop">
+      <button data-act="chat" title="Chat log">💬</button>
+      <button data-act="inv" title="Inventory">🎒</button>
+      <button data-act="book" title="Spellbook">📖</button>
+      <button data-act="map" title="Map">🗺</button>
+      <button data-act="pet" title="Pet" class="hidden">🐾</button>
+      <button data-act="cam" title="1st / 3rd person">🎥</button>
+      <button data-act="say" title="Type a command">⌨</button>
+      <button data-act="help" title="Help">?</button>
+    </div>
+  </div>
 
   <div id="invWin" class="win panelwin hidden">
     <div class="wtitle">Inventory <span class="x" data-close="invWin">✕</span></div>
@@ -105,7 +134,7 @@
   <div id="merchantWin" class="win panelwin hidden">
     <div class="wtitle" id="merchTitle">Merchant <span class="x" data-close="merchantWin">✕</span></div>
     <div id="merchList"></div>
-    <div class="sub">Right-click items in your bags (I) to sell.</div>
+    <div class="sub">Sell from the list below, or right-click items in your bags (I).</div>
   </div>
   <div id="trainerWin" class="win panelwin hidden">
     <div class="wtitle">Guildmaster <span class="x" data-close="trainerWin">✕</span></div>
@@ -124,6 +153,10 @@
     <div class="wtitle" id="mcfgTitle">Mercenary <span class="x" data-close="mercCfgWin">✕</span></div>
     <div id="mcfgBody"></div>
   </div>
+  <div id="petWin" class="win panelwin hidden">
+    <div class="wtitle">Pet <span class="x" data-close="petWin">✕</span></div>
+    <div id="petBody"></div>
+  </div>
   <div id="dialogWin" class="win panelwin hidden">
     <div class="wtitle" id="dlgTitle">Quest <span class="x" data-close="dialogWin">✕</span></div>
     <div id="dlgText"></div>
@@ -141,7 +174,9 @@
         <b>C</b> consider target &bull; <b>X</b> sit / stand (faster regen)<br>
         <b>F1</b> target yourself &bull; <b>F2-F5</b> target group members (heals &amp; buffs land on your friendly target)</p>
         <h4>Group</h4>
-        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Click ⚙ in the group window to set stance (passive / balanced / aggressive), heal threshold, and hand them gear. Dead mercenaries can be revived for a fee (E on Brenna or the Revive button). Necromancers summon a pet. Experience is split EQ-style.</p>
+        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Click ⚙ in the group window to set stance (passive / balanced / aggressive), heal threshold, and hand them gear. Dead mercenaries can be revived for a fee (E on Brenna or the Revive button). Necromancers summon a pet and command it with the pet bar above the hotbar, <b>P</b> (pet window) or <b>/pet attack | backoff | follow | guard | sit</b>. Experience is split EQ-style.</p>
+        <h4>Factions</h4>
+        <p>Killing gnolls, orcs and Sandreaver bandits (and finishing quests) changes your standing with the Guards, the Hollis Rangers, the Sunward Caravan and the bandits themselves. <b>C</b> shows how a creature or NPC regards you; merchants charge more (or refuse) when they dislike you, and factions only attack on sight at Threateningly or worse. <b>/faction</b> lists your standings.</p>
         <h4>Interaction</h4>
         <p><b>E</b> loot corpse / talk to merchant, guildmaster, soulbinder<br><b>H</b> hail target (quest givers offer work) &bull; <b>I</b> inventory &bull; <b>Enter</b> chat/commands<br><b>N</b> toggle minimap &bull; <b>M</b> sound &bull; <b>Shift+M</b> music &bull; <b>?</b> / <b>F10</b> this help</p>
       </div>
@@ -149,7 +184,9 @@
         <h4>Building</h4>
         <p><b>B</b> toggle build mode: <b>Left click</b> break, <b>Right click</b> place, <b>1-9</b> pick block.</p>
         <h4>Commands</h4>
-        <p>/save /loc /who /played /corpse /help /time /quests /dismiss /zone /music /book /lights /gfx</p>
+        <p>/save /loc /who /played /corpse /help /time /quests /faction /pet /dismiss /zone /music /book /lights /gfx /phone</p>
+        <h4>Phone Mode</h4>
+        <p>Toggle on the start screen (or <b>/phone</b>). Left thumb: joystick to move. Drag the right side to look, tap a creature to target, pinch to zoom. Buttons: jump, attack, sit, E (loot/talk), consider, bags, spellbook, map.</p>
         <h4>Graphics</h4>
         <p id="gfxBtns">Model quality: <button class="small" data-gfx="high">High</button> <button class="small" data-gfx="low">Low</button><br><span style="color:#b0a080">Low = flat-shaded models, no blob shadows, fewer particles (also <b>/gfx low</b>).</span></p>
         <h4>Tips</h4>
@@ -178,5 +215,6 @@
 <script src="src/audio.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/game.js"></script>
+<script src="src/phone.js"></script>
 </body>
 </html>

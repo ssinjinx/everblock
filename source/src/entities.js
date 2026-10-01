@@ -170,7 +170,51 @@
       this.refreshPlate(game);
       if (this.spawn) this.spawn.respawnAt = game.time + this.spawn.def.respawn * (0.85 + Math.random() * 0.3);
     }
-    goHome() { this.state = 'return'; this.target = null; this.hate.clear(); this.casting = null; this.nav.reset(); }
+    goHome() { this.state = 'return'; this.target = null; this.hate.clear(); this.casting = null; this.nav.reset(); this.fledOnce = false; this.helper = null; }
+    // mobs flee when flagged, or when they are much weaker than the player (EQ style); undead and named never flee
+    canFlee(game) {
+      if (this.def.faction === 'undead' || this.def.named || this.def.noFlee) return false;
+      if (this.def.flee) return true;
+      const c = this.con(game); return c === 'green' || c === 'grey';
+    }
+    findHelper(game) {
+      let best = null, bd = 42;
+      for (const m of game.mobs) {
+        if (m === this || !m.alive || m.def.faction !== this.def.faction || m.state === 'chase' || m.state === 'flee' || m.state === 'return') continue;
+        const d = m.pos.distanceTo(this.pos); if (d < bd) { bd = d; best = m; }
+      }
+      return best;
+    }
+    trySupport(game) {
+      const heals = this.def.heals, buffs = this.def.buffs, now = game.time;
+      if (heals && (this.nextHeal || 0) <= now) {
+        let tg = null, low = 0.6;
+        if (heals.self !== false && this.hp < this.maxHp * low) { tg = this; low = this.hp / this.maxHp; }
+        if (!heals.self) for (const m of game.mobs) {
+          if (m === this || !m.alive || m.def.faction !== this.def.faction || m.state === 'dead') continue;
+          const f = m.hp / m.maxHp; if (f < low && m.pos.distanceTo(this.pos) < heals.range) { low = f; tg = m; }
+        }
+        if (tg) {
+          this.casting = { support: heals, type: 'heal', target: tg, t: heals.cast }; this.nextHeal = now + heals.cd;
+          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} begins to cast a spell. <${heals.name}>`, 'spell');
+          return true;
+        }
+      }
+      if (buffs && (this.nextBuff || 0) <= now) {
+        let tg = null;
+        for (const m of game.mobs) {
+          if (!m.alive || m.def.faction !== this.def.faction || m.state !== 'chase' || m.pos.distanceTo(this.pos) > buffs.range) continue;
+          if (now < (buffs.ward ? m.wardUntil || 0 : m.hasteUntil || 0)) continue;
+          tg = m; if (m !== this) break;
+        }
+        if (tg) {
+          this.casting = { support: buffs, type: 'buff', target: tg, t: buffs.cast }; this.nextBuff = now + buffs.cd;
+          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} begins to cast a spell. <${buffs.name}>`, 'spell');
+          return true;
+        }
+      }
+      return false;
+    }
     update(dt, game) {
       const world = game.world, pl = game.player;
       if (!this.alive) {
@@ -200,7 +244,7 @@
           for (const t of cands) {
             const d = this.pos.distanceTo(t.pos);
             const c = this.con(game);
-            const ignores = (c === 'grey' || c === 'green') && this.def.faction !== 'undead';
+            const ignores = ((c === 'grey' || c === 'green') && this.def.faction !== 'undead') || !game.factionKOS(this);
             if (d < this.def.aggro && !ignores && game.lineOfSight(this, t)) {
               this.aggroOn(t, game);
               if (this.def.named) game.log(`${U.cap(this.name)} says, 'You dare trespass here? Die!'`, 'say');
@@ -215,12 +259,17 @@
         const t = this.target;
         if (!t || (t === pl && !pl.alive) || this.pos.distanceTo(this.home) > 120) this.goHome();
         else {
-          if (this.def.flee && this.hp < this.maxHp * 0.18 && t.kind !== 'npc') { this.state = 'flee'; game.log(`${U.cap(this.name)} turns to flee!`, 'other'); }
+          if (this.canFlee(game) && this.hp < this.maxHp * 0.18 && t.kind !== 'npc' && !this.fledOnce) { this.state = 'flee'; this.fledOnce = true; this.casting = null; this.fleeT = 0; this.helper = this.findHelper(game); game.log(`${U.cap(this.name)} turns to flee!`, 'other'); }
+          // v5 support AI: casters heal wounded allies (or themselves) and buff allies in the fight
+          if (!this.casting && this.state === 'chase') this.trySupport(game);
           const d = this.dist(t);
           const reach = 1.35 + this.hw + (t.hw || 0.3) + (this.def.scale > 1.2 ? 0.3 + this.def.scale * 0.3 : 0);
           // spell casting mobs
           const cs = this.def.caster;
-          if (this.casting) {
+          if (this.casting && this.casting.support) {
+            const c = this.casting, tg = c.target; c.t -= dt; if (tg !== this) this.faceTo(tg.pos.x, tg.pos.z);
+            if (c.t <= 0) { this.casting = null; if (tg.alive && tg.pos.distanceTo(this.pos) < c.support.range + 6) game.mobSupport(this, tg, c.support, c.type); }
+          } else if (this.casting) {
             this.casting.t -= dt; this.faceTo(t.pos.x, t.pos.z);
             if (this.casting.t <= 0) { const sp = this.casting.sp; this.casting = null; if (d < sp.range + 6) game.mobSpell(this, t, sp); }
           } else if (cs && this.nextCast <= game.time && d < cs.range && d > 2 && game.lineOfSight(this, t)) {
@@ -232,7 +281,7 @@
             if (!dir) this.faceTo(t.pos.x, t.pos.z);
             this.swing -= dt;
             if (d <= reach + 0.4 && this.swing <= 0) {
-              this.swing = this.def.delay * (0.9 + Math.random() * 0.2) * (game.time < (this.slowedUntil || 0) ? 1.65 : 1);
+              this.swing = this.def.delay * (0.9 + Math.random() * 0.2) * (game.time < (this.slowedUntil || 0) ? 1.65 : 1) * (game.time < (this.hasteUntil || 0) ? 1 - (this.haste || 0) : 1);
               this.attackT = 0.01;
               game.mobAttack(this, t);
             }
@@ -240,9 +289,21 @@
         }
       } else if (this.state === 'flee') {
         const t = this.target || pl;
-        const ang = Math.atan2(this.pos.x - t.pos.x, this.pos.z - t.pos.z);
-        dir = { x: Math.sin(ang), z: Math.cos(ang) }; speed *= 0.65;
-        if (this.pos.distanceTo(t.pos) > 45 || !pl.alive) this.goHome();
+        this.fleeT = (this.fleeT || 0) + dt;
+        const h = this.helper;
+        if (h && h.alive && h.state !== 'chase' && h.state !== 'flee') {
+          // run to the nearest idle friend and bring it back
+          dir = this.nav.steer(this, h.pos.x, h.pos.y, h.pos.z, game, 3, dt) || null; speed *= 0.8;
+          if (this.pos.distanceTo(h.pos) < 4.5) {
+            if (pl.pos.distanceTo(this.pos) < 70) game.log(`${U.cap(this.name)} shouts for help! ${U.cap(h.name)} comes to ${this.def.faction === 'bandit' ? 'the call' : 'its aid'}!`, 'shout');
+            this.helper = null; h.aggroOn(t, game); for (const [e, v] of this.hate) h.addHate(e, v * 0.5);
+            this.state = 'chase'; this.recruited = true;
+          }
+        } else {
+          const ang = Math.atan2(this.pos.x - t.pos.x, this.pos.z - t.pos.z);
+          dir = { x: Math.sin(ang), z: Math.cos(ang) }; speed *= 0.65;
+        }
+        if (this.pos.distanceTo(t.pos) > 45 || !pl.alive || this.fleeT > 30) this.goHome();
         if (this.hp > this.maxHp * 0.4) this.state = 'chase';
       } else if (this.state === 'return') {
         dir = this.nav.steer(this, this.home.x, this.home.y, this.home.z, game, 1.2, dt);
@@ -286,6 +347,7 @@
     constructor(d) {
       super('npc', d.name);
       this.npcKind = d.kind; this.level = d.kind === 'guard' ? 35 : 30;
+      this.faction = d.faction || null; this.stock = d.stock || null; this.data = d;
       this.pos.set(d.x, d.y, d.z); this.home = this.pos.clone();
       this.model = buildModel(EB.models.npcOpts(d));
       this.hw = 0.3; this.h = this.model.height;

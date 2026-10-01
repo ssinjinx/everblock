@@ -202,3 +202,134 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
 #charPreview { display: block; width: 100%; height: 300px; margin-top: 10px; border-radius: 8px; cursor: grab;
   background: radial-gradient(ellipse at 50% 35%, rgba(120,150,200,0.35), rgba(20,24,34,0.75) 70%); border: 1px solid rgba(243,200,90,0.25); }
 #gfxBtns button.on { background: #6a5424; color: #ffe8a0; border-color: #f3c85a; }
+/* ---------------- v5: factions, pet bar, pet window ---------------- */
+.m.faction { color: #7fd8d0; }
+.sub.fstand { color: #9fe0d8; margin-bottom: 4px; }
+#petBar { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); display: flex; gap: 3px; align-items: center; background: rgba(18,14,10,0.6); border: 1px solid #5a4a30; border-radius: 4px; padding: 2px 4px; pointer-events: auto; }
+#petBar .plabel { font-size: 11px; color: #70ff70; margin-right: 3px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+#petBar .petBtn { width: 50px; height: 38px; padding: 1px; background: rgba(18,14,10,0.9); border: 2px solid #4a7a4a; border-radius: 3px; color: #e8f0e0; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+#petBar .petBtn span { font-size: 15px; }
+#petBar .petBtn small { font-size: 9px; margin-top: 2px; }
+#petBar .petBtn.on { border-color: #b0ff90; box-shadow: 0 0 6px #80ff60; }
+#petWin { width: 380px; }
+#petWin .bar { margin: 6px 0; }
+.petCmds button.on { border-color: #b0ff90; box-shadow: 0 0 6px #80ff60; }
+/* ---------------- v5: spellbook actions & merchant sell list ---------------- */
+.bookActions { background: rgba(30,22,48,0.97); border: 1px solid #6a4a9a; border-radius: 4px; padding: 6px 8px; margin: 4px 0 8px; font-size: 12px; }
+.bookActions .brow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 5px; }
+.bookActions .brow span { color: #c8b0f0; margin-right: 4px; }
+.bookActions .brow button { min-width: 30px; }
+.sellHdr { margin: 10px 0 4px; color: #f3c85a; font-size: 13px; border-bottom: 1px solid #5a4a30; }
+
+/* ---------------- v5: Phone Mode ---------------- */
+.phoneToggle { font-size: 15px; }
+.phoneToggle.on { background: linear-gradient(#5a8a3a, #2a4a1a); border-color: #b0f080; color: #fff; }
+#phoneSuggest { max-width: 420px; font-size: 14px; color: #e8dcc0; background: rgba(40,60,30,0.75); border: 2px solid #80b060; border-radius: 6px; padding: 10px 14px; }
+#phoneSuggest .btnRow { justify-content: center; }
+#phoneUI { display: none; }
+body.phone #phoneUI { display: block; }
+body.phone, body.phone #game, body.phone #hud, body.phone canvas { touch-action: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+body.phone .panelwin, body.phone #chatLog, body.phone #title { touch-action: pan-y; }
+body.phone button, body.phone .islot, body.phone .bspell, body.phone .gem, body.phone #hotbar .slot { touch-action: manipulation; }
+body.phone #crosshair, body.phone #clickToPlay, body.phone #helpBtn, body.phone #tooltip { display: none !important; }
+/* title / character creation on small screens */
+body.phone #title { align-items: flex-start; padding: 8px 0 30px; }
+body.phone .logo { font-size: clamp(34px, 11vw, 70px); letter-spacing: 4px; }
+body.phone .tagline { margin-bottom: 12px; font-size: 14px; }
+body.phone .createGrid { grid-template-columns: 1fr; gap: 8px; }
+body.phone .panel { padding: 8px 10px; }
+body.phone #charPreview { height: 190px; }
+body.phone #statTable td { font-size: 13px; padding: 2px; }
+body.phone #statTable button { padding: 4px 10px; font-size: 14px; }
+body.phone .choiceList button { padding: 8px 4px; }
+@media (orientation: landscape) { body.phone .createGrid { grid-template-columns: 1fr 1fr; } body.phone #charPreview { height: 150px; } }
+/* joystick */
+#joyZone { position: absolute; left: 0; bottom: 0; width: 46vw; max-width: 280px; height: 52vh; max-height: 270px; pointer-events: auto; touch-action: none; z-index: 2; }
+#joyBase { position: absolute; left: calc(env(safe-area-inset-left) + 22px); bottom: calc(env(safe-area-inset-bottom) + 22px); width: 118px; height: 118px; border-radius: 50%; background: radial-gradient(circle, rgba(40,30,16,0.25), rgba(20,14,8,0.5)); border: 2px solid rgba(240,220,160,0.5); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+#joyKnob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(255,235,180,0.9), rgba(180,140,70,0.75)); border: 2px solid rgba(255,240,200,0.9); pointer-events: none; }
+#joyZone.active #joyBase { border-color: rgba(255,230,140,0.9); }
+/* action buttons (right thumb) */
+#phoneBtns { position: absolute; right: calc(env(safe-area-inset-right) + 8px); bottom: calc(env(safe-area-inset-bottom) + 10px); width: 206px; height: 176px; pointer-events: none; z-index: 2; }
+#phoneBtns .pb { position: absolute; width: 50px; height: 50px; border-radius: 50%; padding: 0; font-size: 19px; line-height: 1; background: rgba(24,18,10,0.72); border: 2px solid rgba(220,190,120,0.8); color: #f8ecd0; pointer-events: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#phoneBtns .pb small { font-size: 8px; margin-top: 2px; font-family: Verdana, sans-serif; }
+#phoneBtns .pb.big { width: 66px; height: 66px; font-size: 24px; }
+#phoneBtns .pb.on { border-color: #ffe070; box-shadow: 0 0 10px #ffc040; background: rgba(90,50,10,0.8); }
+#phoneBtns [data-act="jump"] { right: 0; bottom: 0; }
+#phoneBtns [data-act="attack"] { right: 74px; bottom: 0; border-color: rgba(255,120,90,0.9); }
+#phoneBtns [data-act="interact"] { right: 8px; bottom: 76px; }
+#phoneBtns [data-act="consider"] { right: 66px; bottom: 76px; }
+#phoneBtns [data-act="tab"] { right: 124px; bottom: 66px; }
+#phoneBtns [data-act="sit"] { right: 148px; bottom: 6px; }
+#phoneBtns [data-act="hail"] { right: 36px; bottom: 130px; }
+/* top utility buttons */
+#phoneTop { position: absolute; display: flex; gap: 4px; z-index: 2; }
+#phoneTop button { width: 36px; height: 34px; padding: 0; font-size: 17px; background: rgba(24,18,10,0.75); border: 2px solid rgba(200,170,110,0.8); border-radius: 6px; }
+#phoneTop button.on { border-color: #ffe070; box-shadow: 0 0 8px #ffc040; }
+/* compact HUD */
+body.phone #playerWin { left: calc(env(safe-area-inset-left) + 4px); top: 4px; width: 168px; padding: 3px 5px; }
+body.phone #targetWin { left: calc(env(safe-area-inset-left) + 4px); top: 66px; width: 168px; padding: 3px 5px; }
+body.phone .wname { font-size: 11px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.phone #pLvl { font-size: 9px; }
+body.phone .bar { height: 11px; margin: 2px 0; }
+body.phone .bar span { font-size: 9px; line-height: 11px; }
+body.phone .bar.xp { height: 6px; } body.phone .bar.xp span { display: none; }
+body.phone .status { font-size: 9px; height: 10px; }
+body.phone #tInfo { font-size: 9px; }
+body.phone #compass { width: 150px; height: 18px; top: 3px; }
+body.phone #compassStrip { font-size: 11px; }
+body.phone #zoneName { top: 22px; font-size: 10px; }
+body.phone #rightCol { right: calc(env(safe-area-inset-right) + 4px); top: 4px; width: 96px; gap: 3px; }
+body.phone #minimap { width: 92px; height: 92px; }
+body.phone #groupWin, body.phone #buffWin { font-size: 9px; padding: 2px 4px; }
+body.phone #questWin { display: none !important; }
+body.phone #chatWin { display: none; }
+body.phone.chatOpen #chatWin { display: flex; left: calc(env(safe-area-inset-left) + 4px); top: 124px; bottom: auto; width: min(62vw, 380px); height: 28vh; font-size: 11px; background: rgba(18,14,10,0.62); z-index: 3; }
+body.phone #chatLog { font-size: 11px; }
+body.phone #centerMsg { font-size: 24px; top: 20%; }
+body.phone #centerMsg small { font-size: 13px; }
+body.phone #castBar { bottom: 50%; width: 200px; }
+body.phone #hotbar { bottom: calc(env(safe-area-inset-bottom) + 6px); gap: 3px; }
+body.phone #hotbar .slot { width: 38px; height: 38px; padding: 12px 1px 1px; font-size: 7px; line-height: 1; }
+body.phone #hotbar .slot .k { font-size: 8px; } body.phone #hotbar .slot .ic { font-size: 9px; }
+body.phone #hotbar .slot .blk { width: 16px; height: 16px; }
+body.phone #hotbar .slot .sic { width: 20px !important; height: 20px !important; }
+body.phone #gemBar { left: 50%; top: auto; bottom: calc(env(safe-area-inset-bottom) + 50px); transform: translateX(-50%); flex-direction: row; gap: 3px; }
+body.phone #gemBar .gem { width: 32px; height: 32px; } body.phone #gemBar .gem .sic { width: 28px; height: 28px; }
+body.phone #petBar { bottom: calc(env(safe-area-inset-bottom) + 88px); padding: 1px 3px; }
+body.phone #petBar .petBtn { width: 40px; height: 32px; } body.phone #petBar .petBtn small { font-size: 7px; }
+body.phone #corpseArrow { top: 40px; font-size: 11px; }
+/* dialogs: full-width, scrollable, big touch targets */
+body.phone .panelwin { min-width: 0; width: min(96vw, 560px) !important; max-width: 96vw; max-height: calc(100% - 12px); font-size: 12px; padding: 6px 8px; z-index: 30; -webkit-overflow-scrolling: touch; }
+body.phone .wtitle { font-size: 14px; position: sticky; top: -6px; background: rgba(18,14,10,0.97); z-index: 1; padding: 4px 0; }
+body.phone .wtitle .x { font-size: 20px; padding: 0 8px; line-height: 20px; }
+body.phone .panelwin button { min-height: 34px; padding: 4px 10px; }
+body.phone .panelwin button.small { min-height: 30px; }
+body.phone .invCols { grid-template-columns: 1fr; }
+body.phone .panelwin .row { min-height: 34px; }
+body.phone #deathScreen .big { font-size: 34px; }
+/* landscape phones: side thumbs, utility row top-centre */
+@media (orientation: landscape) {
+  body.phone #phoneTop { top: 36px; left: 50%; transform: translateX(-50%); }
+}
+/* portrait phones: controls at the bottom, hotbar/gems stacked above them, utility column on the right */
+@media (orientation: portrait) {
+  body.phone #phoneTop { right: calc(env(safe-area-inset-right) + 4px); top: 104px; flex-direction: column; }
+  body.phone #hotbar { bottom: calc(env(safe-area-inset-bottom) + 190px); }
+  body.phone #gemBar { bottom: calc(env(safe-area-inset-bottom) + 234px); }
+  body.phone #petBar { bottom: calc(env(safe-area-inset-bottom) + 272px); }
+  body.phone #joyZone { height: 200px; width: 50vw; }
+  body.phone #castBar { bottom: calc(env(safe-area-inset-bottom) + 316px); }
+  body.phone.chatOpen #chatWin { width: calc(100vw - 56px); height: 22vh; }
+}
+body.phone #groupWin .gcfg, body.phone #groupWin .gx { display: inline-block; font-size: 15px; padding: 2px 5px; }
+body.phone #rightCol { max-height: calc(100% - 200px); overflow: hidden; }
+@media (orientation: landscape) and (max-height: 420px) { body.phone #rightCol { max-height: calc(100% - 190px); } body.phone #minimap { width: 78px; height: 78px; } }
+@media (orientation: portrait) {
+  body.phone #compass { left: auto; right: 104px; transform: none; width: 112px; }
+  body.phone #zoneName { left: auto; right: 104px; transform: none; width: 112px; text-align: center; white-space: nowrap; overflow: hidden; }
+}
+body.phone .panelwin { background: rgba(18,14,10,0.95); }
+body.phone #tInfo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bookActions .bdesc { height: 66px; overflow-y: auto; }
+.bookActions .bdesc .hint { color: #a898c0; font-style: italic; }
+.bookActions button[disabled] { opacity: 0.35; }

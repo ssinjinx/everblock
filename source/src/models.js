@@ -182,6 +182,7 @@
         R.bone('shin' + S, 'thigh' + S, 0, -L * 0.5, 0);
       }
       if (P.tail) R.bone('tail', 'hips', 0, -0.02, -TD * 0.5);
+      if (P.djinn) R.bone('vortex', 'hips', 0, -0.12, 0);
       if (P.skeleton) skeletonBody(R, P, L, T, TW, TD, SW, AW, LW, UA, FA);
       else fleshBody(R, P, L, T, TW, TD, SW, AW, LW, UA, FA);
       headBuild(R, P);
@@ -259,6 +260,12 @@
       R.box('farm' + S, -s * AW * 0.42, -FA - 0.03, 0.04, 0.04, 0.07, 0.04, hc);
       for (let k = 0; k < 2; k++) R.box('farm' + S, s * AW * (0.08 + k * 0.22) - s * 0.03, -FA - 0.12, 0.05, AW * 0.2, 0.05, AW * 0.34, shade(hc, 0.92)); // fingers
       if (P.claws) for (let k = -1; k <= 1; k++) R.box('farm' + S, k * AW * 0.26, -FA - 0.15, 0.05, 0.025, 0.1, 0.025, P.claws, { r: [0.4, 0, 0] });
+      if (P.wraps) { // mummy bandages: offset strips around each limb
+        for (let k = 0; k < 3; k++) { R.box('uarm' + S, 0, -UA * (0.2 + k * 0.28), 0, AW * 1.06, 0.035, AW * 1.06, shade(P.wraps, k % 2 ? 0.82 : 1.08), { r: [0, 0, (k % 2 ? 0.2 : -0.2)] }); R.box('farm' + S, 0, -FA * (0.2 + k * 0.28), 0, AW * 0.98, 0.035, AW * 0.98, shade(P.wraps, k % 2 ? 1.08 : 0.82), { r: [0, 0, (k % 2 ? -0.2 : 0.2)] }); }
+        if (!P.djinn) for (let k = 0; k < 3; k++) { R.box('thigh' + S, 0, -L * (0.1 + k * 0.14), 0, LW * 1.06, 0.04, LW * 1.06, shade(P.wraps, k % 2 ? 0.82 : 1.08), { r: [0, 0, (k % 2 ? 0.18 : -0.18)] }); R.box('shin' + S, 0, -L * (0.08 + k * 0.12), 0, LW * 0.98, 0.04, LW * 0.98, shade(P.wraps, k % 2 ? 1.08 : 0.82), { r: [0, 0, (k % 2 ? -0.18 : 0.18)] }); }
+        R.box('farm' + S, s * AW * 0.3, -FA * 0.9, -AW * 0.4, 0.03, FA * 0.5, 0.03, shade(P.wraps, 0.9), { r: [0.2, 0, 0] }); // loose trailing strip
+      }
+      if (P.djinn) continue;
       R.box('thigh' + S, 0, -L * 0.25 + 0.02, 0, LW, L * 0.5 + 0.04, LW, pants);
       R.box('shin' + S, 0, -L * 0.25, 0, LW * 0.92, L * 0.5, LW * 0.92, pants);
       if (P.kneePad) R.box('shin' + S, 0, -0.03, LW * 0.45, LW * 0.8, 0.1, 0.06, P.kneePad);
@@ -278,6 +285,19 @@
       if (P.rags) { const r = R.r; for (let k = 0; k < 3; k++) R.box('thigh' + S, (k - 1) * LW * 0.33, -L * (0.5 + r() * 0.2), LW * 0.5, LW * 0.3, L * (0.1 + r() * 0.15), 0.02, P.pants); }
     }
     if (P.loincloth) { R.box('hips', 0, -0.25, TD * 0.5, TW * 0.5, 0.32, 0.03, P.loincloth); R.box('hips', 0, -0.25, -TD * 0.5, TW * 0.5, 0.3, 0.03, shade(P.loincloth, 0.9)); }
+    if (P.wraps) { // torso bandages, a few hanging loose
+      for (let i = 0; i < 6; i++) R.box('torso', 0, T * (0.1 + i * 0.15), 0, TW * 1.03, 0.04, TD * 1.03, shade(P.wraps, i % 2 ? 0.8 : 1.1), { r: [0, 0, i % 2 ? 0.1 : -0.1] });
+      R.box('torso', TW * 0.3, T * 0.3, TD * 0.52, 0.05, T * 0.5, 0.02, shade(P.wraps, 0.9), { r: [0, 0, 0.15] });
+      R.box('hips', -TW * 0.2, -0.22, TD * 0.5, 0.06, 0.3, 0.02, shade(P.wraps, 0.85), { r: [0, 0, -0.1] });
+      R.box('hips', 0, -0.1, 0, TW * 0.95, 0.05, TD * 1.0, shade(P.wraps, 1.05));
+    }
+    if (P.djinn) { // smoky vortex instead of legs: stacked, shrinking, twisted rings
+      const vc = P.vortex || P.skin;
+      for (let i = 0; i < 8; i++) { const k = 1 - i / 8, w = TW * (0.95 * k + 0.12); R.box('vortex', 0, -i * L * 0.13, 0, w, L * 0.15, w * 0.9, shade(vc, 0.8 + (i % 3) * 0.12), { r: [0, i * 0.45, 0] }); }
+      for (let i = 0; i < 4; i++) R.box('vortex', Math.sin(i * 1.6) * TW * 0.4, -i * L * 0.22 - 0.05, Math.cos(i * 1.6) * TW * 0.4, 0.05, 0.05, 0.18, P.glowC || 0xc0f0ff, { glow: true, r: [0, i * 1.6, 0] });
+      R.box('hips', 0, -0.02, 0, TW * 1.02, 0.12, TD * 1.02, P.sash || 0xd8b050);
+      R.box('hips', TW * 0.35, -0.18, TD * 0.3, 0.08, 0.3, 0.04, P.sash || 0xd8b050, { r: [0, 0, 0.2] });
+    }
   }
   function skeletonBody(R, P, L, T, TW, TD, SW, AW, LW, UA, FA) {
     const b = P.skin, dk = shade(b, 0.75), j = shade(b, 1.08);
@@ -413,6 +433,39 @@
       for (const s of [-1, 1]) R.box('head', s * S * 0.56, S * 0.55, -S * 0.02, 0.07, S * 1.0, S * 1.1, shade(hc, 0.9));
       R.box('head', 0, S * 1.12, -S * 0.4, S * 0.4, S * 0.18, S * 0.4, shade(hc, 0.9));
     }
+    if (P.turban) { // wrapped cloth: base band, crown, twisted folds and a trailing tail
+      const tc = P.turban;
+      R.box('head', 0, S * 0.9, -S * 0.02, S * 1.12, S * 0.24, S * 1.12, tc);
+      R.box('head', 0, S * 1.1, -S * 0.04, S * 0.96, S * 0.2, S * 0.96, shade(tc, 0.92));
+      R.box('head', 0, S * 1.24, -S * 0.04, S * 0.62, S * 0.12, S * 0.62, shade(tc, 1.06));
+      R.box('head', 0, S * 0.98, S * 0.5, S * 0.9, S * 0.08, 0.05, shade(tc, 0.82), { r: [0, 0, 0.35] });
+      R.box('head', 0, S * 1.12, S * 0.46, S * 0.7, S * 0.07, 0.05, shade(tc, 1.12), { r: [0, 0, -0.3] });
+      R.box('head', S * 0.3, S * 0.6, -S * 0.55, S * 0.16, S * 0.6, 0.04, shade(tc, 0.9), { r: [0.15, 0, 0] });
+      if (P.turbanGem) R.box('head', 0, S * 0.98, S * 0.57, 0.06, 0.07, 0.03, P.turbanGem, { glow: true });
+    }
+    if (P.veil) { // lower-face veil
+      R.box('head', 0, S * 0.24, S * 0.51, S * 1.04, S * 0.42, 0.03, P.veil);
+      for (const s of [-1, 1]) R.box('head', s * S * 0.52, S * 0.28, S * 0.1, 0.03, S * 0.46, S * 0.8, shade(P.veil, 0.9));
+      R.box('head', 0, S * 0.02, S * 0.5, S * 0.6, S * 0.12, 0.03, shade(P.veil, 0.85));
+    }
+    if (P.faceWraps) { // mummy face bandages over the regular face (eyes left peeking through)
+      for (let i = 0; i < 5; i++) if (i !== 2) R.box('head', 0, S * (0.12 + i * 0.19), S * 0.51, S * 1.03, S * 0.1, 0.02, shade(P.faceWraps, i % 2 ? 0.85 : 1.08), { r: [0, 0, i % 2 ? 0.08 : -0.08] });
+      R.box('head', 0, S * 1.02, 0, S * 1.04, S * 0.1, S * 1.04, shade(P.faceWraps, 0.95));
+      R.box('head', -S * 0.3, S * 0.5, S * 0.515, S * 0.3, S * 0.08, 0.02, shade(P.faceWraps, 0.9), { r: [0, 0, 0.4] });
+    }
+    if (P.nemes) { // pharaoh's striped headcloth with lappets and a golden cobra
+      const [a, b] = P.nemes;
+      R.box('head', 0, S * 1.04, -S * 0.04, S * 1.14, S * 0.16, S * 1.14, a);
+      for (let i = 0; i < 4; i++) R.box('head', 0, S * (0.95 - i * 0.12), -S * 0.08, S * 1.16, S * 0.05, S * 1.12, i % 2 ? a : b);
+      R.box('head', 0, S * 0.5, -S * 0.56, S * 1.0, S * 0.9, 0.06, a);
+      for (const s of [-1, 1]) {
+        R.box('head', s * S * 0.57, S * 0.65, -S * 0.02, 0.07, S * 0.7, S * 0.9, a);
+        for (let i = 0; i < 4; i++) R.box('head', s * S * 0.44, S * (0.1 - i * 0.15), S * 0.28, S * 0.22, S * 0.13, S * 0.14, i % 2 ? a : b); // lappets
+      }
+      R.box('head', 0, S * 1.06, S * 0.56, 0.06, S * 0.2, 0.05, 0xe8c040); R.box('head', 0, S * 1.2, S * 0.6, 0.08, 0.05, 0.06, 0xe8c040);
+      R.box('head', 0, S * 1.12, S * 0.63, 0.03, 0.03, 0.02, 0xff3020, { glow: true });
+      R.box('head', 0, -S * 0.08, S * 0.46, S * 0.1, S * 0.3, 0.08, 0x3a2a1a); // false beard
+    }
     if (P.fezHat) { R.box('head', 0, S * 1.12, 0, S * 0.6, S * 0.26, S * 0.6, P.fezHat); R.box('head', S * 0.2, S * 1.12, S * 0.25, 0.04, S * 0.3, 0.04, 0xe8c040); }
     if (P.furHat) { R.box('head', 0, S * 1.08, 0, S * 1.12, S * 0.26, S * 1.12, P.furHat); R.box('head', 0, S * 1.26, 0, S * 0.8, S * 0.12, S * 0.8, shade(P.furHat, 0.9)); }
     if (P.feathers) for (let i = 0; i < 3; i++) R.box('head', (i - 1) * S * 0.2, S * 1.25, -S * 0.35, 0.05, S * 0.45, 0.03, P.feathers[i % P.feathers.length], { r: [-0.3, 0, (i - 1) * 0.3] });
@@ -508,6 +561,52 @@
       return finish(R, { rig: 'insect' });
     });
   }
+  function scorpion(P) {
+    const key = 'X|' + JSON.stringify(P);
+    return template(key, () => {
+      const R = new Rig(key, 0.9), c = P.color, dk = shade(c, 0.6), lt = shade(c, 1.2), sh = P.shell || shade(c, 1.05);
+      R.bone('body', null, 0, 0.3, 0);
+      // segmented carapace (cephalothorax + 4 plates)
+      R.box('body', 0, 0, 0.18, 0.46, 0.2, 0.3, sh);
+      R.box('body', 0, 0.1, 0.2, 0.36, 0.05, 0.24, lt);
+      for (let i = 0; i < 4; i++) { const w = 0.5 - i * 0.05; R.box('body', 0, 0.01, -0.06 - i * 0.13, w, 0.2 - i * 0.015, 0.13, i % 2 ? sh : shade(sh, 0.92)); R.box('body', 0, 0.11 - i * 0.008, -0.06 - i * 0.13, w * 0.7, 0.03, 0.1, lt); R.box('body', 0, -0.1, -0.06 - i * 0.13, w * 0.8, 0.02, 0.11, dk); }
+      for (const s of [-1, 1]) { R.box('body', s * 0.07, 0.1, 0.33, 0.06, 0.05, 0.04, P.eye || 0x201010, { glow: !!P.eyeGlow }); R.box('body', s * 0.15, 0.08, 0.3, 0.04, 0.04, 0.03, P.eye || 0x201010, { glow: !!P.eyeGlow }); R.box('body', s * 0.05, -0.05, 0.35, 0.04, 0.06, 0.06, dk); }
+      // pincers
+      for (const s of [-1, 1]) {
+        const S = s < 0 ? 'L' : 'R';
+        R.bone('claw' + S, 'body', s * 0.2, 0.0, 0.3, [0, s * 0.35, 0]);
+        R.box('claw' + S, s * 0.04, 0, 0.12, 0.08, 0.08, 0.24, c);
+        R.box('claw' + S, s * 0.02, 0, 0.3, 0.07, 0.07, 0.16, shade(c, 0.9), { r: [0, -s * 0.5, 0] });
+        R.bone('pin' + S, 'claw' + S, 0, 0, 0.4);
+        R.box('pin' + S, 0, 0, 0.08, 0.16, 0.12, 0.18, sh);
+        R.box('pin' + S, s * 0.04, 0, 0.22, 0.06, 0.07, 0.16, lt);
+        R.box('pin' + S, -s * 0.05, 0, 0.2, 0.04, 0.05, 0.14, dk, { r: [0, s * 0.3, 0] });
+      }
+      // tail: 5 segments arching up, stinger at the end
+      let prev = 'body';
+      for (let i = 0; i < 5; i++) {
+        const n = 'tail' + i, len = 0.14 - i * 0.008;
+        R.bone(n, prev, 0, i === 0 ? 0.04 : 0, i === 0 ? -0.5 : -(0.14 - (i - 1) * 0.008));
+        const w = 0.14 - i * 0.012;
+        R.box(n, 0, 0, -len / 2, w, w * 0.9, len + 0.01, i % 2 ? sh : c);
+        R.box(n, 0, w * 0.45, -len / 2, w * 0.6, 0.02, len * 0.8, lt);
+        prev = n;
+      }
+      R.bone('sting', 'tail4', 0, 0, -0.12);
+      R.box('sting', 0, 0, -0.04, 0.1, 0.1, 0.12, P.bulb || shade(c, 1.1));
+      R.box('sting', 0, -0.05, -0.1, 0.03, 0.1, 0.03, 0x1a1008, { r: [0.8, 0, 0] });
+      R.box('sting', 0, 0, -0.04, 0.05, 0.05, 0.1, P.venom || 0x90ff40, { glow: true });
+      // 8 legs (4 per side), two segments each
+      for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+        const n = 'leg' + i + (s < 0 ? 'L' : 'R');
+        R.bone(n, 'body', s * 0.2, -0.04, 0.12 - i * 0.14, [0, 0, s * -0.7]);
+        R.bone(n + '2', n, s * 0.2, 0, 0, [0, 0, s * 1.5]);
+        R.box(n, s * 0.1, 0, 0, 0.22, 0.05, 0.05, c);
+        R.box(n + '2', s * 0.11, 0, 0, 0.24, 0.04, 0.04, dk);
+      }
+      return finish(R, { rig: 'scorp' });
+    });
+  }
   function snake(P) {
     const key = 'S|' + JSON.stringify(P);
     return template(key, () => {
@@ -535,7 +634,7 @@
   }
 
   // ---------------------------------------------------------------- gear
-  const METAL = { rusty: 0x8a6a50, bronze: 0xc08a4a, steel: 0xc8ccd4, bone: 0xe0d8c0, ice: 0xa8e0ff, soul: 0x50e090, dark: 0x505060 };
+  const METAL = { rusty: 0x8a6a50, bronze: 0xc08a4a, steel: 0xc8ccd4, bone: 0xe0d8c0, ice: 0xa8e0ff, soul: 0x50e090, dark: 0x505060, gold: 0xe0b84a };
   function gearTpl(kind, o) {
     const key = 'G|' + kind + '|' + JSON.stringify(o);
     return template(key, () => {
@@ -572,6 +671,13 @@
           R.box('g', 0, 0, 0, 0.05, 0.16, 0.06, grip);
           for (let i = 1; i <= 4; i++) for (const s of [-1, 1]) R.box('g', 0, s * (0.08 + i * 0.12), -0.02 - i * i * 0.012, 0.035, 0.14, 0.04, o.wood || 0x8a6a3a);
           R.box('g', 0, 0, -0.24, 0.006, 1.1, 0.006, 0xe8e0d0); break;
+        case 'scimitar': { // curved desert blade: segments bending back towards the tip
+          R.box('g', 0, -0.02, 0, 0.05, 0.2, 0.05, grip); R.box('g', 0, -0.13, 0, 0.07, 0.06, 0.07, gold); R.box('g', 0, 0.09, 0, 0.24, 0.04, 0.07, o.guard || gold);
+          let y = 0.12, z = 0, ang = 0;
+          for (let i = 0; i < 6; i++) { const len = 0.13, w = 0.085 + (i > 1 && i < 5 ? 0.025 : 0) - (i === 5 ? 0.03 : 0); R.box('g', 0, y + Math.cos(ang) * len / 2, z - Math.sin(ang) * len / 2, 0.022, len + 0.02, w, i === 5 ? shade(m, 1.1) : m, { r: [ang, 0, 0] }); y += Math.cos(ang) * len; z -= Math.sin(ang) * len; ang += 0.13; }
+          R.box('g', 0.012, 0.42, -0.06, 0.006, 0.5, 0.02, shade(m, 1.3), { r: [0.3, 0, 0] });
+          if (glow) R.box('g', 0, 0.42, -0.07, 0.03, 0.55, 0.05, glow, { glow: true, r: [0.3, 0, 0] });
+          break; }
         case 'spear': R.box('g', 0, 0.35, 0, 0.045, 1.6, 0.045, 0x6a4a2a); R.box('g', 0, 1.24, 0, 0.07, 0.22, 0.02, m); R.box('g', 0, 1.1, 0, 0.08, 0.04, 0.05, 0xa04030); break;
         case 'shield_wood':
           R.box('g', 0, 0, 0, 0.05, 0.56, 0.5, 0x8a5a32); for (let i = -1; i <= 1; i++) R.box('g', -0.028, 0, i * 0.16, 0.01, 0.54, 0.02, 0x5a3a20);
@@ -607,6 +713,8 @@
     if (!id) return null;
     const it = ITEMS[id]; if (!it) return 'sword';
     if (/greatsword/.test(id)) return 'greatsword';
+    if (/scimitar|khopesh/.test(id)) return 'scimitar';
+    if (/crook/.test(id)) return 'staff';
     if (/long_sword|warblade|soulblade|grimbone_blade/.test(id)) return 'longsword';
     if (/staff/.test(id)) return 'staff';
     if (/club/.test(id)) return 'club';
@@ -620,9 +728,9 @@
   function metalOf(id) {
     if (!id) return METAL.steel;
     if (/rusty/.test(id)) return METAL.rusty; if (/bronze/.test(id)) return METAL.bronze; if (/bone/.test(id)) return METAL.bone;
-    if (/icicle|frost/.test(id)) return METAL.ice; if (/grimbone/.test(id)) return METAL.dark; return METAL.steel;
+    if (/icicle|frost/.test(id)) return METAL.ice; if (/grimbone/.test(id)) return METAL.dark; if (/sunforged|pharaoh|sand_/.test(id)) return METAL.gold; return METAL.steel;
   }
-  function weaponGlow(id) { return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : null; }
+  function weaponGlow(id) { return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : /sunforged|pharaoh/.test(id || '') ? 0xffc040 : /venom/.test(id || '') ? 0x90ff40 : null; }
   function chestTier(id, clsColor) {
     if (!id) return { tier: 'cloth', color: clsColor };
     if (/robe/.test(id)) return { tier: 'robe', color: clsColor };
@@ -711,6 +819,17 @@
   function petOpts(lvl) {
     const P = Object.assign({}, HUMAN, { skeleton: true, skull: true, skin: 0xe8e2c8, torsoW: 0.44, armW: 0.14, eyeGlow: 0x60ff90 }), gear = {};
     if (lvl >= 8) { gear.weapon = { kind: 'sword', o: { metal: METAL.rusty } }; gear.shield = { kind: 'shield_bone', o: {} }; P.rags = 0x4a3a2a; }
+    if (lvl >= 23) {
+      Object.assign(P, { skin: 0x2a2a34, eyeGlow: 0x60ffd0, cloak: 0x1e3a5a, pauldron: 0xd8b050, rags: null, crown: 0xd8b050 });
+      gear.weapon = { kind: 'scimitar', o: { metal: METAL.gold, glow: 0x60ffd0 } }; gear.offhand = { kind: 'scimitar', o: { metal: METAL.gold } }; gear.shield = null;
+      return { rig: 'human', P, gear, scale: 1.2 };
+    }
+    if (lvl >= 18) {
+      Object.assign(P, { skin: 0xc8b890, eyeGlow: 0xffa040, cloak: 0x6a3a1a, pauldron: 0xc08a4a, rags: 0x8a6a3a });
+      gear.weapon = { kind: 'scimitar', o: { metal: METAL.bronze, glow: 0xffa040 } }; gear.shield = { kind: 'shield_crest', o: { color: 0x8a5a2a } };
+      gear.helm = { kind: 'helm_horned', o: { S: P.headS, color: 0xc08a4a } };
+      return { rig: 'human', P, gear, scale: 1.15 };
+    }
     if (lvl >= 13) {
       Object.assign(P, { skin: 0x5a5a6a, eyeGlow: 0xb060ff, cloak: 0x2a1a3a, pauldron: 0x3a3a4a, rags: null });
       gear.weapon = { kind: 'longsword', o: { metal: METAL.dark, glow: 0xb060ff } }; gear.shield = null;
@@ -737,12 +856,61 @@
       case 'liaison': outfit(P, 'leather'); P.mantle = shade(col, 0.9); P.gloves = 0x5a3a22; gear.weapon = { kind: 'sword', o: {} }; break;
       default: outfit(P, r() < 0.5 ? 'cloth' : 'leather', col); if (r() < 0.4) P.headband = shade(col, 0.8);
     }
+    if (d.tabard != null) { P.tabard = d.tabard; P.emblem = 0xe8e0c8; if (gear.shield) gear.shield.o = { color: d.tabard }; if (gear.helm && gear.helm.o) gear.helm.o.plume = d.tabard; }
+    if (d.turban != null) { P.turban = d.turban; P.hood = null; P.fezHat = null; P.headband = null; gear.helm = null; P.skin = [0xc89070, 0xb07850, 0xa87050, 0xd8a080][(r() * 4) | 0]; P.hair = 0x1a1410; }
+    if (d.veil != null) P.veil = d.veil;
     return { rig: 'human', P, gear, scale };
   }
   // per mob type looks (colour from MOBS def); rig & dims
   function mobLook(type, def) {
     const c = def.color, H = (x) => Object.assign({}, HUMAN, x);
+    if (def.lookAs && def.lookAs !== type) return mobLook(def.lookAs, def);
     switch (type) {
+      case 'sand_scorpion': return { rig: 'scorp', P: { color: c, shell: 0xd8a84c, eye: 0x1a0a0a, venom: 0xb0ff50 }, style: 'insect' };
+      case 'szyrix': return { rig: 'scorp', P: { color: c, shell: 0x5a1a12, eye: 0xff4020, eyeGlow: true, venom: 0x90ff40, bulb: 0x3a1a10 }, style: 'insect', glow: 0x90ff40 };
+      case 'bandit': case 'rahzik': {
+        const boss = type === 'rahzik';
+        const P = H({ skin: 0xb07850, hair: 0x1a1410, ears: 'round', eyes: boss ? 0xff4040 : 0x2a1a0a, eyeGlow: boss, angryBrow: true, pants: boss ? 0x2a2230 : 0x8a7050, boots: 0x3a2a1a, belt: 0x5a2a1a, buckle: 0xc8a040 });
+        outfit(P, 'leather'); P.shirt = boss ? 0x2e2238 : 0xb89a6a; P.shirtLow = shade(P.shirt, 0.85); P.sleeve = shade(P.shirt, 0.9); P.trim = boss ? 0xc03030 : 0x8a2a2a;
+        P.turban = boss ? 0x1a1420 : 0xd8c8a0; P.veil = boss ? 0x1a1420 : 0x8a2a2a; P.gloves = 0x5a3a22; P.mantle = boss ? 0x3a1a2a : null; P.bracer = boss ? 0xc8a040 : null;
+        if (boss) P.turbanGem = 0xff3030;
+        const gear = { weapon: { kind: 'scimitar', o: { metal: boss ? METAL.dark : METAL.steel, glow: boss ? 0xff4040 : null } } };
+        if (boss) gear.offhand = { kind: 'scimitar', o: { metal: METAL.dark, glow: 0xff4040 } };
+        else gear.cloak = { color: 0x9a7a52, collar: 0x8a2a2a };
+        return { rig: 'human', P, gear, style: 'humanoid', glow: boss ? 0xff4040 : null };
+      }
+      case 'bandit_mystic': {
+        const P = H({ skin: 0xa87048, hair: 0x1a1410, ears: 'round', eyes: 0xffb040, eyeGlow: true, pants: 0x4a2a4a, boots: 0x3a2a1a, belt: 0xc8a040 });
+        outfit(P, 'robe', c); P.trim = 0xe8b040; P.turban = 0x3a1a4a; P.turbanGem = 0xffb040; P.veil = 0x2a1a3a; P.necklace = 0xe8b040;
+        return { rig: 'human', P, gear: { weapon: { kind: 'staff', o: { orb: 0xffb040, wood: 0x4a3020 } } }, style: 'humanoid', glow: 0xffb040 };
+      }
+      case 'mummy': {
+        const P = H({ skin: c, wraps: c, faceWraps: c, eyes: 0x60ffd0, eyeGlow: true, eyeWhite: 0x101010, bareChest: true, shirt: c, shirtLow: shade(c, 0.92), sleeve: c, longSleeve: true, pants: shade(c, 0.9), belt: shade(c, 0.75), buckle: shade(c, 0.75), feet: shade(c, 0.85), hunch: 0.18, hair: null, ears: null, mouth: 0x1a1410 });
+        return { rig: 'human', P, gear: {}, style: 'ghoul' };
+      }
+      case 'tomb_priest': case 'sethek': {
+        const boss = type === 'sethek';
+        const P = H({ skin: 0xc8b890, faceWraps: 0xc8b890, wraps: 0xc8b890, eyes: 0x60ffd0, eyeGlow: true, eyeWhite: 0x101010, pants: 0x1e2a30, belt: 0xd8b050, buckle: 0x60ffd0, hair: null, ears: null, hunch: 0.1 });
+        outfit(P, 'robe', c); P.trim = 0xd8b050; P.necklace = 0xd8b050; P.cuff = 0xd8b050;
+        if (boss) { P.nemes = [0x1e5a8a, 0xd8b050]; P.mantle = 0xd8b050; } else P.hood = shade(c, 0.8);
+        return { rig: 'human', P, gear: { weapon: { kind: 'staff', o: { orb: 0x60ffd0, wood: boss ? 0xd8b050 : 0x3a2a1a } } }, style: 'humanoid', glow: 0x60ffd0 };
+      }
+      case 'sand_giant': case 'gorukh': {
+        const boss = type === 'gorukh';
+        const P = H({ skin: c, hair: 0x2a1a10, hairStyle: boss ? 'mohawk' : 'wild', beard: 'long', beardColor: 0x3a2a18, ears: 'big', heavyBrow: true, jaw: true, bigNose: true, eyes: boss ? 0xffa040 : 0x2a1a0a, eyeGlow: boss, torsoW: 0.64, torsoD: 0.4, shoulderW: 0.41, armW: 0.21, legW: 0.25, bareChest: true, shirt: c, shirtLow: shade(c, 0.93), sleeve: c, pants: 0x7a5a3a, belt: 0x4a2a14, buckle: 0xd8b050, feet: shade(c, 0.8), loincloth: 0xa0703a, warpaint: 0xc05020 });
+        if (boss) { P.pauldron = 0xc08a4a; P.spikes = true; P.necklace = 0xd8b050; P.bracer = 0xc08a4a; P.crown = 0xe8c040; }
+        else P.headband = 0xa0703a;
+        return { rig: 'human', P, gear: { weapon: boss ? { kind: 'mace', o: { metal: METAL.bronze } } : { kind: 'club', o: { wood: 0x8a6a3a } } }, style: 'brute', glow: boss ? 0xffa040 : null };
+      }
+      case 'dust_djinn': {
+        const P = H({ djinn: true, skin: c, vortex: 0xd8c8a0, glowC: 0xc0f0ff, hair: 0xf0f8ff, hairStyle: 'topknot', ears: 'pointy', eyes: 0xc0f0ff, eyeGlow: true, eyeWhite: 0x80e0ff, angryBrow: true, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: c, belt: 0xd8b050, bracer: 0xd8b050, necklace: 0xd8b050, sash: 0xc04030, torsoW: 0.56, shoulderW: 0.37 });
+        return { rig: 'human', P, gear: {}, style: 'beast', glow: 0x80e0ff };
+      }
+      case 'ankhetra': {
+        const P = H({ skin: c, wraps: c, faceWraps: c, eyes: 0xffd040, eyeGlow: true, eyeWhite: 0x101010, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: 0xe8e0c8, belt: 0xd8b050, buckle: 0x3050c0, feet: shade(c, 0.85), hair: null, ears: null, torsoW: 0.54, shoulderW: 0.35 });
+        P.nemes = [0x2050a0, 0xe8c040]; P.collar = null; P.mantle = 0xe8c040; P.necklace = 0x3050c0; P.bracer = 0xe8c040; P.loincloth = 0xe8e0c8; P.tabard = 0xe8c040; P.emblem = 0x3050c0;
+        return { rig: 'human', P, gear: { weapon: { kind: 'staff', o: { orb: 0xffd040, wood: 0xe8c040 } }, cloak: { color: 0x2050a0, collar: 0xe8c040 } }, style: 'brute', glow: 0xffd040 };
+      }
       case 'rat': return { rig: 'quad', P: { color: c, belly: 0xb09070, bodyLen: 1.1, bodyW: 0.52, bodyH: 0.46, legLen: 0.34, headS: 0.36, snoutLen: 0.34, ears: 'round', whiskers: true, teeth: true, tailLen: 0.55, tailW: 0.07, tailColor: 0xd09a8a, paw: 0xd09a8a, nose: 0xe08080, eye: 0xff3030, eyeGlow: false, ribs: false }, style: 'rat' };
       case 'wolf': return { rig: 'quad', P: { color: c, belly: 0xc8c8c0, bodyLen: 1.15, bodyW: 0.46, bodyH: 0.46, legLen: 0.56, headS: 0.36, snoutLen: 0.3, fangs: true, bushy: true, tailLen: 0.36, tailW: 0.11, tailTip: 0xe0e0e0, ruff: shade(c, 1.12), ridge: shade(c, 0.75), claws: true, eye: 0xe8b030 }, style: 'wolf' };
       case 'frost_wolf': return { rig: 'quad', P: { color: c, belly: 0xffffff, bodyLen: 1.15, bodyW: 0.48, bodyH: 0.48, legLen: 0.58, headS: 0.37, snoutLen: 0.3, fangs: true, bushy: true, tailLen: 0.38, tailW: 0.12, tailTip: 0xffffff, ruff: 0xffffff, ridge: 0xa8c8e0, claws: true, eye: 0x60d0ff, eyeGlow: true }, style: 'wolf' };
@@ -815,6 +983,7 @@
     if (rig === 'quad') { tpl = quad(spec.P); height = 1.0 * s; width = 0.8 * s; model = 'quad'; }
     else if (rig === 'insect') { tpl = insect(spec.P); height = 1.0 * s; width = 0.8 * s; model = 'quad'; }
     else if (rig === 'snake') { tpl = snake(spec.P); height = 0.4 * s; width = 0.7 * s; model = 'snake'; }
+    else if (rig === 'scorp') { tpl = scorpion(spec.P); height = 0.9 * s; width = 0.9 * s; model = 'quad'; }
     else tpl = humanoid(spec.P);
     instantiate(tpl, inner, parts);
     inner.scale.setScalar(s);
@@ -902,11 +1071,12 @@
     else if (M.rig === 'quad') poseQuad(M, a, st);
     else if (M.rig === 'insect') poseInsect(M, a, st);
     else if (M.rig === 'snake') poseSnake(M, a, st);
+    else if (M.rig === 'scorp') poseScorp(M, a, st);
     // death collapse / flinch shake on the inner group
     const inn = M.inner;
     if (st.dead) {
       const e = ease(st.deadT);
-      const flip = M.rig === 'insect' || M.rig === 'snake';
+      const flip = M.rig === 'insect' || M.rig === 'snake' || M.rig === 'scorp';
       inn.rotation.set(0, 0, (flip ? Math.PI : Math.PI / 2) * e);
       inn.position.set(0, (flip ? 0.25 : 0.12) * e * inn.scale.y, 0);
     } else {
@@ -1000,6 +1170,24 @@
     R(p.uarmL, uL[0], uL[1], uL[2]); R(p.uarmR, uR[0], uR[1], uR[2]); R(p.farmL, fL[0]); R(p.farmR, fR[0]);
     if (p.cloak) { R(p.cloak, 0.08 + 0.35 * mv + Math.sin(t * 2.3) * 0.03 + (a.sit ? 0.3 : 0), 0, 0); }
     if (p.tail) R(p.tail, 0.2 * mv, Math.sin(t * (4 + 6 * mv)) * 0.35, 0);
+    if (p.vortex) { R(p.vortex, 0.15 * mv, t * 4, 0); if (!st.dead) Pz(p.hips, 0, 0.18 + Math.sin(t * 1.7 + st.seed) * 0.07, 0); R(p.thighL); R(p.thighR); }
+  }
+  function poseScorp(M, a, st) {
+    const p = M.parts, t = st.t, mv = a.mv, ph = a.ph * 1.9;
+    for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+      const n = 'leg' + i + (s < 0 ? 'L' : 'R'), off = ((i + (s < 0 ? 0 : 1)) % 2) * Math.PI;
+      R(p[n], 0, Math.sin(ph + off) * 0.4 * mv, Math.max(0, Math.cos(ph + off)) * 0.3 * mv * -s);
+    }
+    Pz(p.body, 0, Math.abs(Math.sin(ph)) * 0.02 * mv + Math.sin(t * 2) * 0.006, 0);
+    // pincers open/close idly; tail sways; strike arcs the tail over the head
+    const snap = Math.max(0, Math.sin(t * 2.3 + st.seed)) * 0.35;
+    let tl = 0, cl = 0;
+    if (a.atk >= 0) { const q = a.atk, k = Math.sin(q * Math.PI); tl = q < 0.35 ? -0.3 * ease(q / 0.35) : -0.3 + 1.1 * k; cl = 0.5 * k; Pz(p.body, 0, 0, 0.1 * k); }
+    for (const s of ['L', 'R']) { const m = s === 'L' ? -1 : 1; R(p['claw' + s], -0.1 - cl * 0.4, m * (0.35 - cl * 0.5 + Math.sin(t * 0.9 + m) * 0.08), 0); R(p['pin' + s], 0, m * -(0.1 + snap + cl), 0); }
+    const sway = Math.sin(t * 1.4 + st.seed) * 0.12 * (1 - mv);
+    for (let i = 0; i < 5; i++) R(p['tail' + i], 0.3 + 0.05 * i + tl * (i < 3 ? 0.45 : 0.25), sway * (i + 1) * 0.4, 0);
+    if (st.flinch > 0) p.body.rotation.z = Math.sin(t * 50) * 0.1 * st.flinch; else p.body.rotation.z = 0;
+    if (st.dead) { const e = ease(st.deadT); for (let i = 0; i < 4; i++) for (const s of [-1, 1]) R(p['leg' + i + (s < 0 ? 'L' : 'R')], 0, 0, -s * 0.9 * e); for (let i = 0; i < 5; i++) R(p['tail' + i], 0.3 * (1 - e) + 0.05, 0, 0); }
   }
   function poseQuad(M, a, st) {
     const p = M.parts, t = st.t, mv = a.mv, rat = M.style === 'rat';

@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>Everblock</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%235a3a1a'/%3E%3Crect y='0' width='16' height='6' fill='%234caf50'/%3E%3Crect x='3' y='8' width='4' height='4' fill='%23f3c85a'/%3E%3Crect x='9' y='9' width='3' height='3' fill='%23806040'/%3E%3C/svg%3E">
 <style>
 * { box-sizing: border-box; }
@@ -210,6 +212,137 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
 #charPreview { display: block; width: 100%; height: 300px; margin-top: 10px; border-radius: 8px; cursor: grab;
   background: radial-gradient(ellipse at 50% 35%, rgba(120,150,200,0.35), rgba(20,24,34,0.75) 70%); border: 1px solid rgba(243,200,90,0.25); }
 #gfxBtns button.on { background: #6a5424; color: #ffe8a0; border-color: #f3c85a; }
+/* ---------------- v5: factions, pet bar, pet window ---------------- */
+.m.faction { color: #7fd8d0; }
+.sub.fstand { color: #9fe0d8; margin-bottom: 4px; }
+#petBar { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); display: flex; gap: 3px; align-items: center; background: rgba(18,14,10,0.6); border: 1px solid #5a4a30; border-radius: 4px; padding: 2px 4px; pointer-events: auto; }
+#petBar .plabel { font-size: 11px; color: #70ff70; margin-right: 3px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+#petBar .petBtn { width: 50px; height: 38px; padding: 1px; background: rgba(18,14,10,0.9); border: 2px solid #4a7a4a; border-radius: 3px; color: #e8f0e0; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+#petBar .petBtn span { font-size: 15px; }
+#petBar .petBtn small { font-size: 9px; margin-top: 2px; }
+#petBar .petBtn.on { border-color: #b0ff90; box-shadow: 0 0 6px #80ff60; }
+#petWin { width: 380px; }
+#petWin .bar { margin: 6px 0; }
+.petCmds button.on { border-color: #b0ff90; box-shadow: 0 0 6px #80ff60; }
+/* ---------------- v5: spellbook actions & merchant sell list ---------------- */
+.bookActions { background: rgba(30,22,48,0.97); border: 1px solid #6a4a9a; border-radius: 4px; padding: 6px 8px; margin: 4px 0 8px; font-size: 12px; }
+.bookActions .brow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 5px; }
+.bookActions .brow span { color: #c8b0f0; margin-right: 4px; }
+.bookActions .brow button { min-width: 30px; }
+.sellHdr { margin: 10px 0 4px; color: #f3c85a; font-size: 13px; border-bottom: 1px solid #5a4a30; }
+
+/* ---------------- v5: Phone Mode ---------------- */
+.phoneToggle { font-size: 15px; }
+.phoneToggle.on { background: linear-gradient(#5a8a3a, #2a4a1a); border-color: #b0f080; color: #fff; }
+#phoneSuggest { max-width: 420px; font-size: 14px; color: #e8dcc0; background: rgba(40,60,30,0.75); border: 2px solid #80b060; border-radius: 6px; padding: 10px 14px; }
+#phoneSuggest .btnRow { justify-content: center; }
+#phoneUI { display: none; }
+body.phone #phoneUI { display: block; }
+body.phone, body.phone #game, body.phone #hud, body.phone canvas { touch-action: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+body.phone .panelwin, body.phone #chatLog, body.phone #title { touch-action: pan-y; }
+body.phone button, body.phone .islot, body.phone .bspell, body.phone .gem, body.phone #hotbar .slot { touch-action: manipulation; }
+body.phone #crosshair, body.phone #clickToPlay, body.phone #helpBtn, body.phone #tooltip { display: none !important; }
+/* title / character creation on small screens */
+body.phone #title { align-items: flex-start; padding: 8px 0 30px; }
+body.phone .logo { font-size: clamp(34px, 11vw, 70px); letter-spacing: 4px; }
+body.phone .tagline { margin-bottom: 12px; font-size: 14px; }
+body.phone .createGrid { grid-template-columns: 1fr; gap: 8px; }
+body.phone .panel { padding: 8px 10px; }
+body.phone #charPreview { height: 190px; }
+body.phone #statTable td { font-size: 13px; padding: 2px; }
+body.phone #statTable button { padding: 4px 10px; font-size: 14px; }
+body.phone .choiceList button { padding: 8px 4px; }
+@media (orientation: landscape) { body.phone .createGrid { grid-template-columns: 1fr 1fr; } body.phone #charPreview { height: 150px; } }
+/* joystick */
+#joyZone { position: absolute; left: 0; bottom: 0; width: 46vw; max-width: 280px; height: 52vh; max-height: 270px; pointer-events: auto; touch-action: none; z-index: 2; }
+#joyBase { position: absolute; left: calc(env(safe-area-inset-left) + 22px); bottom: calc(env(safe-area-inset-bottom) + 22px); width: 118px; height: 118px; border-radius: 50%; background: radial-gradient(circle, rgba(40,30,16,0.25), rgba(20,14,8,0.5)); border: 2px solid rgba(240,220,160,0.5); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+#joyKnob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(255,235,180,0.9), rgba(180,140,70,0.75)); border: 2px solid rgba(255,240,200,0.9); pointer-events: none; }
+#joyZone.active #joyBase { border-color: rgba(255,230,140,0.9); }
+/* action buttons (right thumb) */
+#phoneBtns { position: absolute; right: calc(env(safe-area-inset-right) + 8px); bottom: calc(env(safe-area-inset-bottom) + 10px); width: 206px; height: 176px; pointer-events: none; z-index: 2; }
+#phoneBtns .pb { position: absolute; width: 50px; height: 50px; border-radius: 50%; padding: 0; font-size: 19px; line-height: 1; background: rgba(24,18,10,0.72); border: 2px solid rgba(220,190,120,0.8); color: #f8ecd0; pointer-events: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#phoneBtns .pb small { font-size: 8px; margin-top: 2px; font-family: Verdana, sans-serif; }
+#phoneBtns .pb.big { width: 66px; height: 66px; font-size: 24px; }
+#phoneBtns .pb.on { border-color: #ffe070; box-shadow: 0 0 10px #ffc040; background: rgba(90,50,10,0.8); }
+#phoneBtns [data-act="jump"] { right: 0; bottom: 0; }
+#phoneBtns [data-act="attack"] { right: 74px; bottom: 0; border-color: rgba(255,120,90,0.9); }
+#phoneBtns [data-act="interact"] { right: 8px; bottom: 76px; }
+#phoneBtns [data-act="consider"] { right: 66px; bottom: 76px; }
+#phoneBtns [data-act="tab"] { right: 124px; bottom: 66px; }
+#phoneBtns [data-act="sit"] { right: 148px; bottom: 6px; }
+#phoneBtns [data-act="hail"] { right: 36px; bottom: 130px; }
+/* top utility buttons */
+#phoneTop { position: absolute; display: flex; gap: 4px; z-index: 2; }
+#phoneTop button { width: 36px; height: 34px; padding: 0; font-size: 17px; background: rgba(24,18,10,0.75); border: 2px solid rgba(200,170,110,0.8); border-radius: 6px; }
+#phoneTop button.on { border-color: #ffe070; box-shadow: 0 0 8px #ffc040; }
+/* compact HUD */
+body.phone #playerWin { left: calc(env(safe-area-inset-left) + 4px); top: 4px; width: 168px; padding: 3px 5px; }
+body.phone #targetWin { left: calc(env(safe-area-inset-left) + 4px); top: 66px; width: 168px; padding: 3px 5px; }
+body.phone .wname { font-size: 11px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.phone #pLvl { font-size: 9px; }
+body.phone .bar { height: 11px; margin: 2px 0; }
+body.phone .bar span { font-size: 9px; line-height: 11px; }
+body.phone .bar.xp { height: 6px; } body.phone .bar.xp span { display: none; }
+body.phone .status { font-size: 9px; height: 10px; }
+body.phone #tInfo { font-size: 9px; }
+body.phone #compass { width: 150px; height: 18px; top: 3px; }
+body.phone #compassStrip { font-size: 11px; }
+body.phone #zoneName { top: 22px; font-size: 10px; }
+body.phone #rightCol { right: calc(env(safe-area-inset-right) + 4px); top: 4px; width: 96px; gap: 3px; }
+body.phone #minimap { width: 92px; height: 92px; }
+body.phone #groupWin, body.phone #buffWin { font-size: 9px; padding: 2px 4px; }
+body.phone #questWin { display: none !important; }
+body.phone #chatWin { display: none; }
+body.phone.chatOpen #chatWin { display: flex; left: calc(env(safe-area-inset-left) + 4px); top: 124px; bottom: auto; width: min(62vw, 380px); height: 28vh; font-size: 11px; background: rgba(18,14,10,0.62); z-index: 3; }
+body.phone #chatLog { font-size: 11px; }
+body.phone #centerMsg { font-size: 24px; top: 20%; }
+body.phone #centerMsg small { font-size: 13px; }
+body.phone #castBar { bottom: 50%; width: 200px; }
+body.phone #hotbar { bottom: calc(env(safe-area-inset-bottom) + 6px); gap: 3px; }
+body.phone #hotbar .slot { width: 38px; height: 38px; padding: 12px 1px 1px; font-size: 7px; line-height: 1; }
+body.phone #hotbar .slot .k { font-size: 8px; } body.phone #hotbar .slot .ic { font-size: 9px; }
+body.phone #hotbar .slot .blk { width: 16px; height: 16px; }
+body.phone #hotbar .slot .sic { width: 20px !important; height: 20px !important; }
+body.phone #gemBar { left: 50%; top: auto; bottom: calc(env(safe-area-inset-bottom) + 50px); transform: translateX(-50%); flex-direction: row; gap: 3px; }
+body.phone #gemBar .gem { width: 32px; height: 32px; } body.phone #gemBar .gem .sic { width: 28px; height: 28px; }
+body.phone #petBar { bottom: calc(env(safe-area-inset-bottom) + 88px); padding: 1px 3px; }
+body.phone #petBar .petBtn { width: 40px; height: 32px; } body.phone #petBar .petBtn small { font-size: 7px; }
+body.phone #corpseArrow { top: 40px; font-size: 11px; }
+/* dialogs: full-width, scrollable, big touch targets */
+body.phone .panelwin { min-width: 0; width: min(96vw, 560px) !important; max-width: 96vw; max-height: calc(100% - 12px); font-size: 12px; padding: 6px 8px; z-index: 30; -webkit-overflow-scrolling: touch; }
+body.phone .wtitle { font-size: 14px; position: sticky; top: -6px; background: rgba(18,14,10,0.97); z-index: 1; padding: 4px 0; }
+body.phone .wtitle .x { font-size: 20px; padding: 0 8px; line-height: 20px; }
+body.phone .panelwin button { min-height: 34px; padding: 4px 10px; }
+body.phone .panelwin button.small { min-height: 30px; }
+body.phone .invCols { grid-template-columns: 1fr; }
+body.phone .panelwin .row { min-height: 34px; }
+body.phone #deathScreen .big { font-size: 34px; }
+/* landscape phones: side thumbs, utility row top-centre */
+@media (orientation: landscape) {
+  body.phone #phoneTop { top: 36px; left: 50%; transform: translateX(-50%); }
+}
+/* portrait phones: controls at the bottom, hotbar/gems stacked above them, utility column on the right */
+@media (orientation: portrait) {
+  body.phone #phoneTop { right: calc(env(safe-area-inset-right) + 4px); top: 104px; flex-direction: column; }
+  body.phone #hotbar { bottom: calc(env(safe-area-inset-bottom) + 190px); }
+  body.phone #gemBar { bottom: calc(env(safe-area-inset-bottom) + 234px); }
+  body.phone #petBar { bottom: calc(env(safe-area-inset-bottom) + 272px); }
+  body.phone #joyZone { height: 200px; width: 50vw; }
+  body.phone #castBar { bottom: calc(env(safe-area-inset-bottom) + 316px); }
+  body.phone.chatOpen #chatWin { width: calc(100vw - 56px); height: 22vh; }
+}
+body.phone #groupWin .gcfg, body.phone #groupWin .gx { display: inline-block; font-size: 15px; padding: 2px 5px; }
+body.phone #rightCol { max-height: calc(100% - 200px); overflow: hidden; }
+@media (orientation: landscape) and (max-height: 420px) { body.phone #rightCol { max-height: calc(100% - 190px); } body.phone #minimap { width: 78px; height: 78px; } }
+@media (orientation: portrait) {
+  body.phone #compass { left: auto; right: 104px; transform: none; width: 112px; }
+  body.phone #zoneName { left: auto; right: 104px; transform: none; width: 112px; text-align: center; white-space: nowrap; overflow: hidden; }
+}
+body.phone .panelwin { background: rgba(18,14,10,0.95); }
+body.phone #tInfo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bookActions .bdesc { height: 66px; overflow-y: auto; }
+.bookActions .bdesc .hint { color: #a898c0; font-style: italic; }
+.bookActions button[disabled] { opacity: 0.35; }
 
 </style>
 </head>
@@ -228,6 +361,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         <button id="btnDelete" class="small">Delete Character</button>
       </div>
       <button id="btnNew" class="big">Create New Character</button>
+      <button id="btnPhone" class="phoneToggle">📱 Phone Mode: <b>OFF</b></button>
+      <div id="phoneSuggest" class="hidden">📱 Touch screen detected &mdash; Phone Mode (touch controls) is recommended and has been turned on.
+        <div class="btnRow"><button id="btnPhoneKeep" class="small">Keep Phone Mode</button><button id="btnPhoneNo" class="small">Use keyboard &amp; mouse</button></div></div>
       <div class="fine">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
     </div>
     <div id="menuCreate" class="menu hidden">
@@ -251,6 +387,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           <div id="nameErr" class="err"></div>
           <h3>World Seed</h3>
           <input id="seedInput" maxlength="12" value="1999">
+          <div class="btnRow"><button id="btnPhone2" class="phoneToggle small">📱 Phone Mode: <b>OFF</b></button></div>
           <div class="btnRow"><button id="btnBack">Back</button><button id="btnCreate" class="big">Enter Everblock</button></div>
         </div>
       </div>
@@ -290,9 +427,32 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   </div>
   <div id="hotbar"></div>
   <div id="gemBar" class="hidden"></div>
+  <div id="petBar" class="hidden"></div>
   <div id="centerMsg"></div>
   <div id="corpseArrow" class="hidden"></div>
   <div id="clickToPlay" class="hidden">Click to resume &bull; ? for help</div>
+  <div id="phoneUI">
+    <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+    <div id="phoneBtns">
+      <button data-act="jump" class="pb big">⤒<small>Jump</small></button>
+      <button data-act="attack" class="pb big">⚔<small>Attack</small></button>
+      <button data-act="interact" class="pb">E<small>Loot/Talk</small></button>
+      <button data-act="sit" class="pb">🪑<small>Sit</small></button>
+      <button data-act="consider" class="pb">👁<small>Con</small></button>
+      <button data-act="tab" class="pb">🎯<small>Next</small></button>
+      <button data-act="hail" class="pb">👋<small>Hail</small></button>
+    </div>
+    <div id="phoneTop">
+      <button data-act="chat" title="Chat log">💬</button>
+      <button data-act="inv" title="Inventory">🎒</button>
+      <button data-act="book" title="Spellbook">📖</button>
+      <button data-act="map" title="Map">🗺</button>
+      <button data-act="pet" title="Pet" class="hidden">🐾</button>
+      <button data-act="cam" title="1st / 3rd person">🎥</button>
+      <button data-act="say" title="Type a command">⌨</button>
+      <button data-act="help" title="Help">?</button>
+    </div>
+  </div>
 
   <div id="invWin" class="win panelwin hidden">
     <div class="wtitle">Inventory <span class="x" data-close="invWin">✕</span></div>
@@ -311,7 +471,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   <div id="merchantWin" class="win panelwin hidden">
     <div class="wtitle" id="merchTitle">Merchant <span class="x" data-close="merchantWin">✕</span></div>
     <div id="merchList"></div>
-    <div class="sub">Right-click items in your bags (I) to sell.</div>
+    <div class="sub">Sell from the list below, or right-click items in your bags (I).</div>
   </div>
   <div id="trainerWin" class="win panelwin hidden">
     <div class="wtitle">Guildmaster <span class="x" data-close="trainerWin">✕</span></div>
@@ -330,6 +490,10 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     <div class="wtitle" id="mcfgTitle">Mercenary <span class="x" data-close="mercCfgWin">✕</span></div>
     <div id="mcfgBody"></div>
   </div>
+  <div id="petWin" class="win panelwin hidden">
+    <div class="wtitle">Pet <span class="x" data-close="petWin">✕</span></div>
+    <div id="petBody"></div>
+  </div>
   <div id="dialogWin" class="win panelwin hidden">
     <div class="wtitle" id="dlgTitle">Quest <span class="x" data-close="dialogWin">✕</span></div>
     <div id="dlgText"></div>
@@ -347,7 +511,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         <b>C</b> consider target &bull; <b>X</b> sit / stand (faster regen)<br>
         <b>F1</b> target yourself &bull; <b>F2-F5</b> target group members (heals &amp; buffs land on your friendly target)</p>
         <h4>Group</h4>
-        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Click ⚙ in the group window to set stance (passive / balanced / aggressive), heal threshold, and hand them gear. Dead mercenaries can be revived for a fee (E on Brenna or the Revive button). Necromancers summon a pet. Experience is split EQ-style.</p>
+        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Click ⚙ in the group window to set stance (passive / balanced / aggressive), heal threshold, and hand them gear. Dead mercenaries can be revived for a fee (E on Brenna or the Revive button). Necromancers summon a pet and command it with the pet bar above the hotbar, <b>P</b> (pet window) or <b>/pet attack | backoff | follow | guard | sit</b>. Experience is split EQ-style.</p>
+        <h4>Factions</h4>
+        <p>Killing gnolls, orcs and Sandreaver bandits (and finishing quests) changes your standing with the Guards, the Hollis Rangers, the Sunward Caravan and the bandits themselves. <b>C</b> shows how a creature or NPC regards you; merchants charge more (or refuse) when they dislike you, and factions only attack on sight at Threateningly or worse. <b>/faction</b> lists your standings.</p>
         <h4>Interaction</h4>
         <p><b>E</b> loot corpse / talk to merchant, guildmaster, soulbinder<br><b>H</b> hail target (quest givers offer work) &bull; <b>I</b> inventory &bull; <b>Enter</b> chat/commands<br><b>N</b> toggle minimap &bull; <b>M</b> sound &bull; <b>Shift+M</b> music &bull; <b>?</b> / <b>F10</b> this help</p>
       </div>
@@ -355,7 +521,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         <h4>Building</h4>
         <p><b>B</b> toggle build mode: <b>Left click</b> break, <b>Right click</b> place, <b>1-9</b> pick block.</p>
         <h4>Commands</h4>
-        <p>/save /loc /who /played /corpse /help /time /quests /dismiss /zone /music /book /lights /gfx</p>
+        <p>/save /loc /who /played /corpse /help /time /quests /faction /pet /dismiss /zone /music /book /lights /gfx /phone</p>
+        <h4>Phone Mode</h4>
+        <p>Toggle on the start screen (or <b>/phone</b>). Left thumb: joystick to move. Drag the right side to look, tap a creature to target, pinch to zoom. Buttons: jump, attack, sit, E (loot/talk), consider, bags, spellbook, map.</p>
         <h4>Graphics</h4>
         <p id="gfxBtns">Model quality: <button class="small" data-gfx="high">High</button> <button class="small" data-gfx="low">Low</button><br><span style="color:#b0a080">Low = flat-shaded models, no blob shadows, fewer particles (also <b>/gfx low</b>).</span></p>
         <h4>Tips</h4>
@@ -459,7 +627,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   // ---------- Blocks ----------
   // tiles: [top, side, bottom] indices into the procedural atlas
   const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, WATER: 5, LOG: 6, LEAVES: 7, COBBLE: 8,
-    PLANKS: 9, BRICK: 10, MOSSY: 11, LANTERN: 12, BEDROCK: 13, ROOF: 14, GRAVEL: 15, CRYPT: 16, WOOL: 17, SNOW: 18, ICE: 19, PINE: 20, BLACKSTONE: 21, BANNER: 22 };
+    PLANKS: 9, BRICK: 10, MOSSY: 11, LANTERN: 12, BEDROCK: 13, ROOF: 14, GRAVEL: 15, CRYPT: 16, WOOL: 17, SNOW: 18, ICE: 19, PINE: 20, BLACKSTONE: 21, BANNER: 22,
+    SANDSTONE: 23, CARVED: 24, GOLD: 25, CACTUS: 26, PALM: 27, DUNE: 28, BRAZIER: 29 };
   const BLOCKS = [];
   function def(id, name, tiles, opts) { BLOCKS[id] = Object.assign({ id, name, tiles, solid: true, opaque: true, water: false, emissive: false }, opts || {}); }
   def(B.AIR, 'Air', [0, 0, 0], { solid: false, opaque: false });
@@ -485,6 +654,14 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   def(B.PINE, 'Pine Needles', [22, 22, 22]);
   def(B.BLACKSTONE, 'Blackstone', [23, 23, 23]);
   def(B.BANNER, 'Warbanner', [24, 24, 24]);
+  // v5: The Sunscorched Expanse
+  def(B.SANDSTONE, 'Sandstone', [25, 26, 25]);
+  def(B.CARVED, 'Carved Sandstone', [25, 27, 25]);
+  def(B.GOLD, 'Gilded Stone', [28, 28, 28]);
+  def(B.CACTUS, 'Cactus', [29, 30, 29]);
+  def(B.PALM, 'Palm Fronds', [31, 31, 31]);
+  def(B.DUNE, 'Dune Sand', [32, 32, 32]);
+  def(B.BRAZIER, 'Spirit Brazier', [33, 33, 33], { emissive: true });
   const BUILDABLE = [B.COBBLE, B.PLANKS, B.BRICK, B.STONE, B.DIRT, B.LOG, B.LEAVES, B.LANTERN, B.ICE];
 
   // ---------- Races ----------
@@ -583,6 +760,38 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     kerra_letter:      { name: "Kerra's Sealed Letter", value: 0, quest: true, icon: '✉' },
     hollis_map:        { name: "Hollis's Warcamp Map", value: 0, quest: true, icon: '🗺' },
     warden_shard:      { name: "Shard of the Warden's Signet", value: 0, quest: true, icon: '💠' },
+    // ---- v5: The Sunscorched Expanse (levels 15-25) ----
+    sand_scimitar:     { name: 'Sandreaver Scimitar', slot: 'primary', dmg: 17, delay: 2.5, verb: 'slash', stats: { STR: 4, DEX: 4 }, value: 2400, icon: '⚔' },
+    steel_scimitar:    { name: 'Tempered Steel Scimitar', slot: 'primary', dmg: 14, delay: 2.5, verb: 'slash', stats: { STR: 2 }, value: 1800, icon: '⚔' },
+    venom_stinger:     { name: 'Venomous Stinger', slot: 'primary', dmg: 14, delay: 1.9, verb: 'pierce', stats: { DEX: 5, AGI: 3 }, value: 2600, icon: '🗡' },
+    dune_staff:        { name: 'Staff of Shifting Dunes', slot: 'primary', dmg: 11, delay: 3.0, verb: 'crush', stats: { INT: 6, WIS: 6 }, mana: 40, value: 2200, icon: '🦯' },
+    dune_maul:         { name: 'Maul of the Dune Titan', slot: 'primary', dmg: 27, delay: 3.6, verb: 'crush', stats: { STR: 8, STA: 6 }, hp: 50, value: 9000, icon: '🔨', rare: true },
+    sunforged_khopesh: { name: 'Sunforged Khopesh', slot: 'primary', dmg: 25, delay: 2.6, verb: 'slash', stats: { STR: 8, DEX: 6, AGI: 4 }, hp: 60, value: 16000, icon: '⚔', rare: true },
+    pharaoh_crook:     { name: 'Crook of Ankhet-Ra', slot: 'primary', dmg: 18, delay: 3.2, verb: 'crush', stats: { INT: 10, WIS: 10, STA: 4 }, hp: 40, mana: 120, value: 16000, icon: '🦯', rare: true },
+    scorpion_shield:   { name: 'Scorpion Chitin Shield', slot: 'secondary', ac: 12, stats: { STA: 3 }, value: 2000, icon: '🛡' },
+    bandit_leathers:   { name: 'Sandreaver Leathers', slot: 'chest', ac: 15, stats: { AGI: 4, DEX: 3 }, value: 2400, icon: '🦺' },
+    dune_robe:         { name: 'Robe of the Dunes', slot: 'chest', ac: 8, stats: { INT: 6, WIS: 6 }, mana: 60, value: 2600, icon: '👘' },
+    linen_wraps:       { name: 'Burial Linen Wraps', slot: 'hands', ac: 7, stats: { STA: 3, WIS: 3 }, value: 1500, icon: '🧤' },
+    mummy_mask:        { name: 'Gilded Funerary Mask', slot: 'head', ac: 11, stats: { INT: 5, WIS: 5, STA: 3 }, mana: 30, value: 5000, icon: '🎭', rare: true },
+    vizier_sash:       { name: "Vizier's Silken Sash", slot: 'back', ac: 8, stats: { INT: 5, WIS: 5 }, mana: 45, value: 4200, icon: '🧣' },
+    desert_cloak:      { name: 'Sunward Desert Cloak', slot: 'back', ac: 7, stats: { STA: 3, AGI: 3 }, hp: 20, value: 1600, icon: '🧥' },
+    scarab_boots:      { name: 'Scarab-Shell Boots', slot: 'feet', ac: 10, stats: { AGI: 5, STA: 2 }, value: 3800, icon: '🥾' },
+    sunward_bracer:    { name: 'Bracer of the Sunward Guard', slot: 'hands', ac: 9, stats: { STR: 3, STA: 3 }, hp: 25, value: 2500, icon: '🧤' },
+    djinn_ring:        { name: 'Ring of the Bound Djinn', slot: 'ring', stats: { INT: 6, WIS: 6, AGI: 3 }, mana: 50, value: 6000, icon: '💍', rare: true },
+    ankh_amulet:       { name: 'Ankh of Eternity', slot: 'neck', ac: 6, stats: { STA: 8, WIS: 6, INT: 6 }, hp: 80, mana: 60, value: 15000, icon: '☥', rare: true },
+    sunward_signet:    { name: 'Signet of the Sunward Caravan', slot: 'ring', ac: 6, stats: { STR: 6, STA: 6, AGI: 6, DEX: 6, WIS: 6, INT: 6, CHA: 8 }, hp: 70, mana: 70, value: 18000, icon: '💍', rare: true },
+    greymane_mantle:   { name: "Greymane's Mantle", slot: 'back', ac: 5, stats: { AGI: 3, STA: 2 }, value: 600, icon: '🧥', rare: true },
+    whitefang_collar:  { name: "Whitefang's Collar", slot: 'neck', ac: 4, stats: { AGI: 4, STA: 4 }, hp: 20, value: 2500, icon: '📿', rare: true },
+    rahzik_veil:       { name: "Rahzik's Viper Veil", slot: 'head', ac: 9, stats: { DEX: 5, AGI: 5 }, value: 5500, icon: '🎭', rare: true },
+    scorpion_tail:     { name: 'Sand Scorpion Tail', value: 40, stack: true, icon: '🦂' },
+    bandit_insignia:   { name: 'Sandreaver Insignia', value: 35, stack: true, icon: '🔻' },
+    linen_scrap:       { name: 'Scrap of Burial Linen', value: 50, stack: true, icon: '🧻' },
+    djinn_essence:     { name: 'Swirling Djinn Essence', value: 120, stack: true, icon: '🌪' },
+    giant_tooth:       { name: 'Sand Giant Molar', value: 90, stack: true, icon: '🦷' },
+    golden_scarab:     { name: 'Golden Scarab', value: 200, stack: true, icon: '🪲' },
+    pharaoh_heart:     { name: 'Heart of Ankhet-Ra', value: 0, quest: true, icon: '❤' },
+    superior_potion:   { name: 'Greater Healing Potion', value: 450, stack: true, use: { heal: 400 }, icon: '🧪' },
+    waterskin:         { name: 'Waterskin of Oasis Water', value: 12, stack: true, use: { heal: 40 }, icon: '💧' },
     healing_potion:    { name: 'Minor Healing Potion', value: 30, stack: true, use: { heal: 45 }, icon: '🧪' },
     greater_potion:    { name: 'Healing Potion', value: 120, stack: true, use: { heal: 150 }, icon: '🧪' },
     bread:             { name: 'Loaf of Bread', value: 3, stack: true, use: { heal: 10 }, icon: '🍞' },
@@ -636,6 +845,52 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     breeze:       { name: 'Breeze', classes: { enchanter: 4 }, mana: 25, cast: 3, recast: 3, kind: 'buff', buff: { manaRegen: 2 }, dur: 1200, friendly: true, ic: 'drop', desc: '+2 mana per tick.' },
     clarity:      { name: 'Clarity', classes: { enchanter: 8 }, mana: 45, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 5 }, dur: 1500, friendly: true, ic: 'drop', desc: '+5 mana per tick.' },
     shock_of_lightning:{ name: 'Shock of Lightning', classes: { wizard: 8 }, mana: 38, cast: 2.5, recast: 6, kind: 'nuke', dmg: [40, 55], perLvl: 2.5, school: 'magic', desc: 'Calls down lightning.' },
+    // ---- v5: levels 11-25 for every class ----
+    taunt:        { name: 'Taunt', classes: { warrior: 11, paladin: 14 }, ic: 'fury', mana: 0, cast: 0, recast: 8, kind: 'skill', taunt: true, dmg: [1, 3], verb: 'taunt', desc: 'Forces your target to attack you (top of its hate list).' },
+    slam:         { name: 'Slam', classes: { warrior: 14 }, ic: 'shieldbash', mana: 0, cast: 0, recast: 10, kind: 'skill', dmg: [20, 34], perLvl: 1.5, verb: 'slam', desc: 'A crushing shoulder slam. Instant.' },
+    defensive:    { name: 'Defensive Stance', classes: { warrior: 18 }, ic: 'shield', mana: 0, cast: 0, recast: 120, kind: 'buff', buff: { ac: 60 }, dur: 20, self: true, skill: true, desc: '+60 AC for 20s.' },
+    rampage:      { name: 'Rampage', classes: { warrior: 22 }, ic: 'sword', mana: 0, cast: 0, recast: 20, kind: 'skill', dmg: [48, 72], perLvl: 2.5, verb: 'rampage', desc: 'A furious flurry of blows. Instant.' },
+    greater_healing:{ name: 'Greater Healing', classes: { cleric: 13, shaman: 19, paladin: 21 }, mana: 90, cast: 3, recast: 2, kind: 'heal', amt: [150, 190], perLvl: 4, friendly: true, desc: 'Heals a great amount.' },
+    symbol_of_transal:{ name: 'Symbol of Transal', classes: { cleric: 15 }, mana: 70, cast: 3, recast: 3, kind: 'buff', buff: { hp: 80 }, dur: 1500, friendly: true, ic: 'cross3', desc: '+80 HP.' },
+    wrath:        { name: 'Wrath', classes: { cleric: 17 }, mana: 70, cast: 2.5, recast: 7, kind: 'nuke', dmg: [90, 120], perLvl: 3, school: 'magic', desc: 'Righteous divine wrath.' },
+    superior_healing:{ name: 'Superior Healing', classes: { cleric: 20 }, mana: 140, cast: 3.5, recast: 2, kind: 'heal', amt: [270, 330], perLvl: 5, friendly: true, desc: 'Heals a massive amount.' },
+    word_of_vigor:{ name: 'Word of Vigor', classes: { cleric: 22 }, mana: 160, cast: 4, recast: 10, kind: 'groupheal', amt: [130, 170], perLvl: 4, desc: 'Heals your whole group a large amount.' },
+    armor_of_faith:{ name: 'Armor of Faith', classes: { cleric: 24, paladin: 25 }, mana: 120, cast: 4, recast: 3, kind: 'buff', buff: { ac: 25, hp: 60 }, dur: 1800, friendly: true, desc: '+25 AC, +60 HP.' },
+    lightning_bolt:{ name: 'Lightning Bolt', classes: { wizard: 12 }, mana: 60, cast: 2.5, recast: 6, kind: 'nuke', dmg: [70, 92], perLvl: 3, school: 'magic', desc: 'A crackling bolt of lightning.' },
+    shielding:    { name: 'Shielding', classes: { wizard: 14, enchanter: 14, necromancer: 15 }, mana: 45, cast: 3, recast: 3, kind: 'buff', buff: { ac: 10, hp: 45 }, dur: 1500, self: true, desc: '+10 AC, +45 HP.' },
+    fire_bolt:    { name: 'Fire Bolt', classes: { wizard: 16 }, mana: 80, cast: 3, recast: 7, kind: 'nuke', dmg: [100, 125], perLvl: 3.5, school: 'fire', desc: 'Hurls a bolt of fire.' },
+    ice_comet:    { name: 'Ice Comet', classes: { wizard: 20 }, mana: 120, cast: 3.5, recast: 8, kind: 'nuke', dmg: [155, 195], perLvl: 4, school: 'cold', desc: 'Drops a comet of ice on your foe.' },
+    sunstrike:    { name: 'Sunstrike', classes: { wizard: 24 }, mana: 170, cast: 4, recast: 10, kind: 'nuke', dmg: [230, 280], perLvl: 5, school: 'fire', desc: 'Calls down the fury of the sun.' },
+    kidney_shot:  { name: 'Kidney Shot', classes: { rogue: 12 }, ic: 'star', mana: 0, cast: 0, recast: 20, kind: 'stun', dur: 2.5, dmg: [10, 20], skill: true, desc: 'A crippling blow that stuns the target. Instant.' },
+    poison_blade: { name: 'Envenom Blades', classes: { rogue: 16 }, ic: 'dagger', mana: 0, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 22 }, dur: 60, self: true, skill: true, desc: '+22% melee damage for 60s.' },
+    eviscerate:   { name: 'Eviscerate', classes: { rogue: 19 }, ic: 'dagger', mana: 0, cast: 0, recast: 12, kind: 'skill', dmg: [55, 85], perLvl: 2.5, verb: 'eviscerate', desc: 'A savage finishing strike. Instant.' },
+    assassinate:  { name: 'Assassinate', classes: { rogue: 23 }, ic: 'dagger', mana: 0, cast: 0, recast: 30, kind: 'skill', dmg: [110, 160], perLvl: 4, verb: 'assassinate', desc: 'A lethal strike to a vital spot. Instant.' },
+    barbed_arrow: { name: 'Barbed Arrow', classes: { ranger: 12 }, mana: 0, cast: 0, recast: 8, kind: 'skill', archery: true, range: 34, dmg: [24, 36], perLvl: 2, verb: 'shoot', ic: 'arrow', desc: 'A barbed arrow for heavy ranged damage (LOS required).' },
+    firefist:     { name: 'Firefist', classes: { ranger: 14 }, mana: 30, cast: 2, recast: 3, kind: 'buff', buff: { dmgPct: 12 }, dur: 600, self: true, ic: 'fury', desc: '+12% melee damage.' },
+    ensnare:      { name: 'Ensnare', classes: { ranger: 16 }, mana: 30, cast: 1.5, recast: 6, kind: 'snare', dur: 60, desc: 'A long-lasting snare.' },
+    greater_salve:{ name: 'Greater Salve', classes: { ranger: 18 }, mana: 45, cast: 2, recast: 3, kind: 'heal', amt: [90, 120], perLvl: 3, friendly: true, ic: 'leaf', desc: 'A potent woodland heal.' },
+    call_of_fire: { name: 'Call of Fire', classes: { ranger: 21 }, mana: 60, cast: 2, recast: 8, kind: 'dot', tick: [20, 26], perLvl: 1.2, dur: 24, school: 'fire', desc: 'Engulfs the target in flame over 24 seconds.' },
+    eagle_eye:    { name: 'Eagle Eye Shot', classes: { ranger: 24 }, mana: 0, cast: 0, recast: 14, kind: 'skill', archery: true, range: 40, dmg: [60, 88], perLvl: 3, verb: 'shoot', ic: 'arrow', desc: 'A perfectly aimed long shot.' },
+    holy_might:   { name: 'Holy Might', classes: { paladin: 12 }, mana: 40, cast: 1, recast: 12, kind: 'stun', dur: 3, dmg: [30, 45], desc: 'Smites and stuns the target.' },
+    ward_undead:  { name: 'Ward Undead', classes: { paladin: 16, cleric: 12 }, mana: 50, cast: 2.5, recast: 6, kind: 'nuke', dmg: [55, 75], perLvl: 2.5, school: 'magic', undead: 2, desc: 'Holy fire. Double damage against the undead.' },
+    celestial_healing:{ name: 'Celestial Healing', classes: { paladin: 18 }, mana: 70, cast: 2.5, recast: 3, kind: 'heal', amt: [110, 140], perLvl: 3, friendly: true, desc: 'A strong paladin heal.' },
+    divine_aura:  { name: 'Divine Aura', classes: { paladin: 20 }, ic: 'shield', mana: 50, cast: 0, recast: 180, kind: 'buff', buff: { ac: 120 }, dur: 12, self: true, desc: 'Near-invulnerable holy shell (+120 AC) for 12s. Instant.' },
+    winters_roar: { name: "Winter's Roar", classes: { shaman: 12 }, mana: 55, cast: 2.5, recast: 6, kind: 'nuke', dmg: [62, 82], perLvl: 2.5, school: 'cold', desc: 'A howling blast of spirit frost.' },
+    quickness:    { name: 'Quickness', classes: { shaman: 14, enchanter: 16 }, mana: 45, cast: 3, recast: 3, kind: 'buff', buff: { dmgPct: 15 }, dur: 900, friendly: true, ic: 'paw', desc: '+15% melee damage (attack speed).' },
+    envenomed_breath:{ name: 'Envenomed Breath', classes: { shaman: 16, necromancer: 13 }, mana: 45, cast: 2, recast: 6, kind: 'dot', tick: [14, 18], perLvl: 0.9, dur: 24, school: 'disease', desc: 'Venom eats at the target over 24 seconds.' },
+    tagars_insects:{ name: "Tagar's Insects", classes: { shaman: 18 }, mana: 50, cast: 2.5, recast: 8, kind: 'slow', dur: 70, desc: 'A swarm slows the target\'s attacks for 70s.' },
+    spirit_of_ox: { name: 'Spirit of the Ox', classes: { shaman: 20 }, mana: 70, cast: 3, recast: 3, kind: 'buff', buff: { hp: 70, ac: 6 }, dur: 1500, friendly: true, ic: 'bark', desc: '+70 HP, +6 AC.' },
+    vampiric_embrace:{ name: 'Vampiric Embrace', classes: { necromancer: 12 }, mana: 50, cast: 2.5, recast: 4, kind: 'nuke', lifetap: true, dmg: [45, 60], perLvl: 2, school: 'life', ic: 'heart', desc: 'Drains a large amount of life.' },
+    boil_blood:   { name: 'Boil Blood', classes: { necromancer: 16 }, mana: 60, cast: 2.5, recast: 6, kind: 'dot', tick: [18, 23], perLvl: 1, dur: 30, school: 'fire', desc: 'Boils the target\'s blood over 30 seconds.' },
+    invoke_death: { name: 'Invoke Death', classes: { necromancer: 17 }, mana: 130, cast: 8, recast: 10, kind: 'pet', petLvl: 18, desc: 'Raise a bone knight (level 18).' },
+    servant_of_bones:{ name: 'Servant of Bones', classes: { necromancer: 22 }, mana: 180, cast: 9, recast: 10, kind: 'pet', petLvl: 23, desc: 'Raise a sand-wrapped revenant (level 23).' },
+    drain_soul:   { name: 'Drain Soul', classes: { necromancer: 24 }, mana: 140, cast: 3, recast: 8, kind: 'nuke', lifetap: true, dmg: [125, 155], perLvl: 3, school: 'life', ic: 'heart', desc: 'Rips the soul from your foe to heal yourself.' },
+    enthrall:     { name: 'Enthrall', classes: { enchanter: 12 }, mana: 40, cast: 2, recast: 4, kind: 'mez', dur: 30, maxLvl: 23, ic: 'eye', desc: 'Mesmerizes the target (up to level 23).' },
+    color_shift:  { name: 'Color Shift', classes: { enchanter: 15 }, mana: 45, cast: 1.5, recast: 12, kind: 'stun', dur: 4.5, dmg: [15, 25], desc: 'A dazzling flash that stuns the target.' },
+    chaotic_feedback:{ name: 'Chaotic Feedback', classes: { enchanter: 18 }, mana: 70, cast: 2.5, recast: 6, kind: 'nuke', dmg: [75, 95], perLvl: 3, school: 'magic', desc: 'Mind-shattering feedback.' },
+    clarity_ii:   { name: 'Clarity II', classes: { enchanter: 20 }, mana: 90, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 9 }, dur: 1800, friendly: true, ic: 'drop', desc: '+9 mana per tick.' },
+    scourge:      { name: 'Scourge', classes: { shaman: 23 }, mana: 80, cast: 2.5, recast: 6, kind: 'dot', tick: [28, 34], perLvl: 1.2, dur: 30, school: 'disease', desc: 'A virulent plague rots the target over 30 seconds.' },
+    dazzle:       { name: 'Dazzle', classes: { enchanter: 24 }, mana: 70, cast: 2, recast: 5, kind: 'mez', dur: 40, maxLvl: 27, ic: 'eye', desc: 'A powerful mesmerize (up to level 27).' },
   };
 
   // ---------- Mobs ----------
@@ -678,7 +933,70 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       loot: [['warden_shard', 1.0], ['tusk_necklace', 0.6], ['fang_warblade', 0.5], ['orc_chain', 0.4]] },
     vorgath: { name: 'Vorgath the Frostbound', lvl: [15, 15], model: 'biped', color: 0x5a8ac8, scale: 2.3, weapon: true, glow: 0x80ffff, aggro: 16, aggressive: true, faction: 'giant', social: true, verb: 'crush', delay: 3.2, speed: 3.4, named: true, hpMult: 3.0, dmgMult: 1.3,
       caster: { name: 'Glacial Breath', dmg: [30, 50], cast: 3, cd: 16, range: 22 }, loot: [['frost_greatsword', 0.5], ['frozen_heart', 0.5], ['giant_helm', 0.5]] },
+    // ---- v5: rare named placeholders (a PH spawn is sometimes replaced by these) ----
+    greymane: { name: 'Greymane the Elder', lvl: [7, 7], model: 'quad', lookAs: 'wolf', color: 0x5a5a62, scale: 0.95, aggro: 16, aggressive: true, faction: 'wolf', social: true, verb: 'bite', delay: 1.9, speed: 4.6, named: true, hpMult: 1.6, dmgMult: 1.15,
+      loot: [['greymane_mantle', 0.7], ['wolf_pelt', 1.0]] },
+    whitefang: { name: 'Whitefang', lvl: [12, 12], model: 'quad', lookAs: 'frost_wolf', color: 0xf4f8ff, scale: 1.05, aggro: 17, aggressive: true, faction: 'frostwolf', social: true, verb: 'bite', delay: 1.9, speed: 4.8, named: true, hpMult: 1.7, dmgMult: 1.2, glow: 0x80e0ff,
+      loot: [['whitefang_collar', 0.7], ['snow_boots', 0.3], ['frost_wolf_pelt', 1.0]] },
+    // ---- The Sunscorched Expanse (zone 3, levels 15-25) ----
+    sand_scorpion: { name: 'a sand scorpion', lvl: [15, 17], model: 'quad', color: 0xc8963c, scale: 1.35, aggro: 12, aggressive: true, faction: 'scorpion', social: false, verb: 'sting', delay: 2.2, speed: 3.9,
+      loot: [['scorpion_tail', 0.7], ['venom_stinger', 0.04], ['scorpion_shield', 0.04]] },
+    szyrix: { name: 'Szyrix the Venomqueen', lvl: [20, 20], model: 'quad', color: 0x7a2a1a, scale: 2.0, aggro: 16, aggressive: true, faction: 'scorpion', social: false, verb: 'sting', delay: 2.0, speed: 4.0, named: true, hpMult: 1.9, dmgMult: 1.2, glow: 0x90ff40,
+      loot: [['venom_stinger', 0.6], ['scorpion_shield', 0.5], ['scarab_boots', 0.35], ['scorpion_tail', 1.0]] },
+    bandit: { name: 'a Sandreaver bandit', lvl: [16, 18], model: 'biped', color: 0xb89a6a, scale: 1.0, weapon: true, aggro: 13, aggressive: true, faction: 'bandit', social: true, verb: 'slash', delay: 2.3, speed: 4.0, flee: true,
+      loot: [['bandit_insignia', 0.7], ['bandit_leathers', 0.05], ['sand_scimitar', 0.04], ['waterskin', 0.2]] },
+    bandit_mystic: { name: 'a Sandreaver mystic', lvl: [17, 19], model: 'biped', color: 0x6a3a7a, scale: 1.0, glow: 0xffb040, aggro: 13, aggressive: true, faction: 'bandit', social: true, verb: 'hit', delay: 2.6, speed: 3.6, flee: true,
+      caster: { name: 'Scorching Sands', dmg: [38, 58], cast: 2.5, cd: 12, range: 24 },
+      heals: { name: 'Desert Mending', amt: [90, 130], cast: 2, cd: 8, range: 22 }, buffs: { name: 'Sandskin', ward: 0.25, dur: 45, cast: 2, cd: 18, range: 18, color: 0xffc060 },
+      loot: [['bandit_insignia', 0.7], ['dune_robe', 0.05], ['dune_staff', 0.04]] },
+    rahzik: { name: 'Rahzik the Sand Viper', lvl: [21, 21], model: 'biped', color: 0x2e2238, scale: 1.1, weapon: true, glow: 0xff4040, aggro: 16, aggressive: true, faction: 'bandit', social: true, verb: 'slash', delay: 2.0, speed: 4.2, named: true, hpMult: 2.0, dmgMult: 1.25,
+      loot: [['rahzik_veil', 0.6], ['sand_scimitar', 0.6], ['bandit_leathers', 0.4], ['bandit_insignia', 1.0]] },
+    mummy: { name: 'a wrapped mummy', lvl: [19, 21], model: 'biped', color: 0xd8ccaa, scale: 1.05, aggro: 12, aggressive: true, faction: 'undead', social: true, verb: 'hit', delay: 2.6, speed: 2.9, hpMult: 1.2,
+      factionHits: [['sunward', 2]], loot: [['linen_scrap', 0.7], ['linen_wraps', 0.06], ['golden_scarab', 0.15]] },
+    tomb_priest: { name: 'a tomb priest', lvl: [20, 22], model: 'biped', color: 0x2e5a66, scale: 1.0, glow: 0x60ffd0, aggro: 13, aggressive: true, faction: 'undead', social: true, verb: 'hit', delay: 2.7, speed: 3.2,
+      caster: { name: 'Curse of Ages', dmg: [48, 72], cast: 2.8, cd: 13, range: 24 },
+      heals: { name: 'Embalming Rite', amt: [130, 180], cast: 2.2, cd: 9, range: 22 }, buffs: { name: 'Unholy Zeal', haste: 0.3, dur: 45, cast: 2, cd: 20, range: 18, color: 0x60ffd0 },
+      factionHits: [['sunward', 3]], loot: [['linen_scrap', 0.6], ['vizier_sash', 0.04], ['golden_scarab', 0.25]] },
+    sethek: { name: 'Grand Vizier Sethek', lvl: [23, 23], model: 'biped', color: 0x1e3a4a, scale: 1.2, glow: 0x60ffd0, aggro: 15, aggressive: true, faction: 'undead', social: true, verb: 'hit', delay: 2.4, speed: 3.4, named: true, hpMult: 2.2, dmgMult: 1.2,
+      caster: { name: 'Withering Hex', dmg: [60, 90], cast: 2.6, cd: 11, range: 26 },
+      heals: { name: 'Rite of Preservation', amt: [220, 300], cast: 2.5, cd: 12, range: 24 }, buffs: { name: 'Unholy Zeal', haste: 0.3, dur: 45, cast: 2, cd: 20, range: 20, color: 0x60ffd0 },
+      factionHits: [['sunward', 15]], loot: [['vizier_sash', 0.6], ['mummy_mask', 0.5], ['golden_scarab', 1.0]] },
+    sand_giant: { name: 'a sand giant', lvl: [21, 23], model: 'biped', color: 0xb8875a, scale: 2.1, aggro: 14, aggressive: true, faction: 'sandgiant', social: true, verb: 'crush', delay: 3.0, speed: 3.5, hpMult: 1.4,
+      loot: [['giant_tooth', 0.8], ['superior_potion', 0.15], ['scarab_boots', 0.03]] },
+    gorukh: { name: 'Gorukh the Dune Titan', lvl: [24, 24], model: 'biped', color: 0x9a6a42, scale: 2.5, aggro: 16, aggressive: true, faction: 'sandgiant', social: true, verb: 'crush', delay: 3.2, speed: 3.5, named: true, hpMult: 2.6, dmgMult: 1.3, glow: 0xffa040,
+      loot: [['dune_maul', 0.6], ['giant_tooth', 1.0], ['superior_potion', 1.0]] },
+    dust_djinn: { name: 'a dust djinn', lvl: [20, 22], model: 'biped', color: 0x5e98c4, scale: 1.15, glow: 0x80e0ff, aggro: 14, aggressive: true, faction: 'djinn', social: true, verb: 'hit', delay: 2.2, speed: 4.3,
+      caster: { name: 'Sandstorm', dmg: [44, 68], cast: 2.2, cd: 10, range: 26 }, loot: [['djinn_essence', 0.6], ['djinn_ring', 0.03]] },
+    ankhetra: { name: 'Pharaoh Ankhet-Ra the Eternal', lvl: [25, 25], model: 'biped', color: 0xd8c898, scale: 1.75, weapon: true, glow: 0xffd040, aggro: 18, aggressive: true, faction: 'undead', social: true, verb: 'crush', delay: 2.6, speed: 3.5, named: true, hpMult: 3.6, dmgMult: 1.35,
+      caster: { name: 'Sunfire Curse', dmg: [70, 110], cast: 3, cd: 14, range: 26 }, heals: { name: 'Eternal Renewal', amt: [500, 700], cast: 3, cd: 30, range: 0, self: true },
+      factionHits: [['sunward', 40]], loot: [['pharaoh_heart', 1.0], ['sunforged_khopesh', 0.5], ['pharaoh_crook', 0.5], ['ankh_amulet', 0.5], ['golden_scarab', 1.0]] },
   };
+  // v5: EQ-style faction standing. Kills adjust standing; standing drives con messages, aggression and merchant prices.
+  const FACTIONS = {
+    guards:  { name: 'Guards of Everblock', start: 100 },
+    hollis:  { name: 'Hollis Rangers', start: 100 },
+    sunward: { name: 'Sunward Caravan', start: 0 },
+    gnoll:   { name: 'Darkpaw Gnolls', start: -800 },
+    orc:     { name: 'Frostfang Orcs', start: -800 },
+    bandit:  { name: 'Sandreaver Bandits', start: -800 },
+  };
+  // faction hits applied when a mob of the given (social) faction dies; per-mob factionHits add to these
+  const KILL_FACTION = {
+    gnoll: [['gnoll', -12], ['guards', 8]],
+    orc: [['orc', -12], ['hollis', 8], ['guards', 3]],
+    giant: [['hollis', 4]],
+    undead: [['guards', 1]],
+    bandit: [['bandit', -14], ['sunward', 10]],
+  };
+  // EQ standing tiers (min value -> label, con verb)
+  const STANDINGS = [
+    [1100, 'Ally', 'regards you as an ally'], [750, 'Warmly', 'looks upon you warmly'], [500, 'Kindly', 'kindly considers you'],
+    [100, 'Amiable', 'judges you amiably'], [-99, 'Indifferent', 'regards you indifferently'], [-500, 'Apprehensive', 'looks your way apprehensively'],
+    [-750, 'Dubious', 'glowers at you dubiously'], [-1100, 'Threateningly', 'glares at you threateningly'], [-1e9, 'Scowls', 'scowls at you, ready to attack'],
+  ];
+  function standingOf(v) { for (const s of STANDINGS) if (v >= s[0]) return { label: s[1], con: s[2], min: s[0] }; return { label: 'Scowls', con: STANDINGS[8][2] }; }
+  // merchant price multiplier by standing (null = refuses to trade)
+  function factionPriceMult(v) { return v >= 1100 ? 0.88 : v >= 750 ? 0.92 : v >= 500 ? 0.95 : v >= 100 ? 0.98 : v >= -99 ? 1 : v >= -500 ? 1.12 : v >= -750 ? 1.3 : null; }
 
   // Mercenaries (hired at the Mercenary Liaison in Everblock Keep)
   const MERCS = {
@@ -690,6 +1008,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     3: { name: 'Gabober', desc: 'A cavorting skeleton.', color: 0xe8e2c8 },
     8: { name: 'Jobekab', desc: 'A skeletal warrior.', color: 0xd0c8b0 },
     13: { name: 'Xabanek', desc: 'A shadow knight.', color: 0x3a3a4a },
+    18: { name: 'Kobaron', desc: 'A bone knight.', color: 0xd8d0b8 },
+    23: { name: 'Sabekhet', desc: 'A sand-wrapped revenant.', color: 0xc8b890 },
   };
   function mercCost(role, L) { return (role === 'healer' ? 25 : 20) + L * L * 10; }
 
@@ -736,6 +1056,19 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         hint: "Slay Warlord Grimtusk (Frostfang Warcamp) and bring the Signet Shard and Hollis's Map to Guildmaster Aldric (Everblock)" },
     ] };
 
+  // v5: Sunward Outpost quests (The Sunscorched Expanse)
+  Object.assign(QUESTS, {
+    scorpion_tails: { name: 'Stingers in the Sand', giver: 'Caravan Master Idris', item: 'scorpion_tail', count: 4, coins: 4000, reward: 'desert_cloak', rewardCount: 1, xp: 12000, faction: [['sunward', 60]],
+      offer: 'The sand scorpions of the flats have been stinging my camels half to death. Bring me 4 Sand Scorpion Tails and I will give you a proper desert cloak.',
+      done: 'Four tails! My camels thank you, friend. Wear this cloak, the sun is merciless out there.' },
+    bandit_insignias: { name: 'The Sandreaver Threat', giver: 'Captain Asha', item: 'bandit_insignia', count: 4, coins: 5000, reward: 'sunward_bracer', rewardCount: 1, xp: 15000, faction: [['sunward', 80], ['bandit', -60]],
+      offer: 'The Sandreaver bandits in the eastern hideout raid every caravan that leaves this outpost. Bring me 4 of their insignias and you will wear the bracer of the Sunward Guard.',
+      done: 'Four fewer cutthroats. You fight like one of us. Wear this bracer with pride.' },
+    eternal_pharaoh: { name: 'The Eternal Pharaoh', giver: 'Loremaster Kheti', item: 'pharaoh_heart', count: 1, coins: 20000, reward: 'sunward_signet', rewardCount: 1, xp: 60000, title: 'Tombbreaker', faction: [['sunward', 200]],
+      offer: 'Beneath the Great Pyramid to the north lies the Tomb of Ankhet-Ra. The Pharaoh refuses to stay dead; his priests keep him bound to this world. Descend, destroy him, and bring me his heart so that I may burn it.',
+      done: 'The heart of Ankhet-Ra... at last, it can be burned. The whole caravan is in your debt, Tombbreaker. Take this signet.' },
+  });
+
   // Con colors: grey green lightblue blue white yellow red
   function conColor(plLvl, mobLvl) {
     const d = mobLvl - plLvl;
@@ -757,9 +1090,16 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   };
 
   function xpToNext(L) { return Math.floor(80 * L * L + 20 * L); }
-  const MAX_LEVEL = 20;
+  const MAX_LEVEL = 25;
+  // merchant inventories (stock key on the NPC)
+  const STOCKS = {
+    general: ['healing_potion', 'greater_potion', 'bread', 'cloth_cap', 'cloth_pants', 'rawhide_gloves', 'leather_boots', 'leather_tunic', 'wooden_shield', 'bronze_long_sword', 'fine_steel_dagger', 'oak_staff'],
+    desert: ['superior_potion', 'greater_potion', 'waterskin', 'bread', 'steel_scimitar', 'dune_staff', 'desert_cloak', 'scorpion_shield'],
+    fence: ['superior_potion', 'waterskin', 'sand_scimitar', 'venom_stinger', 'bandit_leathers', 'dune_robe'],
+  };
 
-  EB.data = { PETS, MERCS, mercCost, QUESTS, B, BLOCKS, BUILDABLE, RACES, STAT_NAMES, CLASSES, ITEMS, EQUIP_SLOTS, SPELLS, MOBS, conColor, CON_HEX, CON_XP, CON_MSG, xpToNext, MAX_LEVEL };
+  EB.data = { PETS, MERCS, mercCost, QUESTS, B, BLOCKS, BUILDABLE, RACES, STAT_NAMES, CLASSES, ITEMS, EQUIP_SLOTS, SPELLS, MOBS, conColor, CON_HEX, CON_XP, CON_MSG, xpToNext, MAX_LEVEL,
+    FACTIONS, KILL_FACTION, STANDINGS, standingOf, factionPriceMult, STOCKS };
 })();
 
 </script>
@@ -1026,6 +1366,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         R.bone('shin' + S, 'thigh' + S, 0, -L * 0.5, 0);
       }
       if (P.tail) R.bone('tail', 'hips', 0, -0.02, -TD * 0.5);
+      if (P.djinn) R.bone('vortex', 'hips', 0, -0.12, 0);
       if (P.skeleton) skeletonBody(R, P, L, T, TW, TD, SW, AW, LW, UA, FA);
       else fleshBody(R, P, L, T, TW, TD, SW, AW, LW, UA, FA);
       headBuild(R, P);
@@ -1103,6 +1444,12 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       R.box('farm' + S, -s * AW * 0.42, -FA - 0.03, 0.04, 0.04, 0.07, 0.04, hc);
       for (let k = 0; k < 2; k++) R.box('farm' + S, s * AW * (0.08 + k * 0.22) - s * 0.03, -FA - 0.12, 0.05, AW * 0.2, 0.05, AW * 0.34, shade(hc, 0.92)); // fingers
       if (P.claws) for (let k = -1; k <= 1; k++) R.box('farm' + S, k * AW * 0.26, -FA - 0.15, 0.05, 0.025, 0.1, 0.025, P.claws, { r: [0.4, 0, 0] });
+      if (P.wraps) { // mummy bandages: offset strips around each limb
+        for (let k = 0; k < 3; k++) { R.box('uarm' + S, 0, -UA * (0.2 + k * 0.28), 0, AW * 1.06, 0.035, AW * 1.06, shade(P.wraps, k % 2 ? 0.82 : 1.08), { r: [0, 0, (k % 2 ? 0.2 : -0.2)] }); R.box('farm' + S, 0, -FA * (0.2 + k * 0.28), 0, AW * 0.98, 0.035, AW * 0.98, shade(P.wraps, k % 2 ? 1.08 : 0.82), { r: [0, 0, (k % 2 ? -0.2 : 0.2)] }); }
+        if (!P.djinn) for (let k = 0; k < 3; k++) { R.box('thigh' + S, 0, -L * (0.1 + k * 0.14), 0, LW * 1.06, 0.04, LW * 1.06, shade(P.wraps, k % 2 ? 0.82 : 1.08), { r: [0, 0, (k % 2 ? 0.18 : -0.18)] }); R.box('shin' + S, 0, -L * (0.08 + k * 0.12), 0, LW * 0.98, 0.04, LW * 0.98, shade(P.wraps, k % 2 ? 1.08 : 0.82), { r: [0, 0, (k % 2 ? -0.18 : 0.18)] }); }
+        R.box('farm' + S, s * AW * 0.3, -FA * 0.9, -AW * 0.4, 0.03, FA * 0.5, 0.03, shade(P.wraps, 0.9), { r: [0.2, 0, 0] }); // loose trailing strip
+      }
+      if (P.djinn) continue;
       R.box('thigh' + S, 0, -L * 0.25 + 0.02, 0, LW, L * 0.5 + 0.04, LW, pants);
       R.box('shin' + S, 0, -L * 0.25, 0, LW * 0.92, L * 0.5, LW * 0.92, pants);
       if (P.kneePad) R.box('shin' + S, 0, -0.03, LW * 0.45, LW * 0.8, 0.1, 0.06, P.kneePad);
@@ -1122,6 +1469,19 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (P.rags) { const r = R.r; for (let k = 0; k < 3; k++) R.box('thigh' + S, (k - 1) * LW * 0.33, -L * (0.5 + r() * 0.2), LW * 0.5, LW * 0.3, L * (0.1 + r() * 0.15), 0.02, P.pants); }
     }
     if (P.loincloth) { R.box('hips', 0, -0.25, TD * 0.5, TW * 0.5, 0.32, 0.03, P.loincloth); R.box('hips', 0, -0.25, -TD * 0.5, TW * 0.5, 0.3, 0.03, shade(P.loincloth, 0.9)); }
+    if (P.wraps) { // torso bandages, a few hanging loose
+      for (let i = 0; i < 6; i++) R.box('torso', 0, T * (0.1 + i * 0.15), 0, TW * 1.03, 0.04, TD * 1.03, shade(P.wraps, i % 2 ? 0.8 : 1.1), { r: [0, 0, i % 2 ? 0.1 : -0.1] });
+      R.box('torso', TW * 0.3, T * 0.3, TD * 0.52, 0.05, T * 0.5, 0.02, shade(P.wraps, 0.9), { r: [0, 0, 0.15] });
+      R.box('hips', -TW * 0.2, -0.22, TD * 0.5, 0.06, 0.3, 0.02, shade(P.wraps, 0.85), { r: [0, 0, -0.1] });
+      R.box('hips', 0, -0.1, 0, TW * 0.95, 0.05, TD * 1.0, shade(P.wraps, 1.05));
+    }
+    if (P.djinn) { // smoky vortex instead of legs: stacked, shrinking, twisted rings
+      const vc = P.vortex || P.skin;
+      for (let i = 0; i < 8; i++) { const k = 1 - i / 8, w = TW * (0.95 * k + 0.12); R.box('vortex', 0, -i * L * 0.13, 0, w, L * 0.15, w * 0.9, shade(vc, 0.8 + (i % 3) * 0.12), { r: [0, i * 0.45, 0] }); }
+      for (let i = 0; i < 4; i++) R.box('vortex', Math.sin(i * 1.6) * TW * 0.4, -i * L * 0.22 - 0.05, Math.cos(i * 1.6) * TW * 0.4, 0.05, 0.05, 0.18, P.glowC || 0xc0f0ff, { glow: true, r: [0, i * 1.6, 0] });
+      R.box('hips', 0, -0.02, 0, TW * 1.02, 0.12, TD * 1.02, P.sash || 0xd8b050);
+      R.box('hips', TW * 0.35, -0.18, TD * 0.3, 0.08, 0.3, 0.04, P.sash || 0xd8b050, { r: [0, 0, 0.2] });
+    }
   }
   function skeletonBody(R, P, L, T, TW, TD, SW, AW, LW, UA, FA) {
     const b = P.skin, dk = shade(b, 0.75), j = shade(b, 1.08);
@@ -1257,6 +1617,39 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       for (const s of [-1, 1]) R.box('head', s * S * 0.56, S * 0.55, -S * 0.02, 0.07, S * 1.0, S * 1.1, shade(hc, 0.9));
       R.box('head', 0, S * 1.12, -S * 0.4, S * 0.4, S * 0.18, S * 0.4, shade(hc, 0.9));
     }
+    if (P.turban) { // wrapped cloth: base band, crown, twisted folds and a trailing tail
+      const tc = P.turban;
+      R.box('head', 0, S * 0.9, -S * 0.02, S * 1.12, S * 0.24, S * 1.12, tc);
+      R.box('head', 0, S * 1.1, -S * 0.04, S * 0.96, S * 0.2, S * 0.96, shade(tc, 0.92));
+      R.box('head', 0, S * 1.24, -S * 0.04, S * 0.62, S * 0.12, S * 0.62, shade(tc, 1.06));
+      R.box('head', 0, S * 0.98, S * 0.5, S * 0.9, S * 0.08, 0.05, shade(tc, 0.82), { r: [0, 0, 0.35] });
+      R.box('head', 0, S * 1.12, S * 0.46, S * 0.7, S * 0.07, 0.05, shade(tc, 1.12), { r: [0, 0, -0.3] });
+      R.box('head', S * 0.3, S * 0.6, -S * 0.55, S * 0.16, S * 0.6, 0.04, shade(tc, 0.9), { r: [0.15, 0, 0] });
+      if (P.turbanGem) R.box('head', 0, S * 0.98, S * 0.57, 0.06, 0.07, 0.03, P.turbanGem, { glow: true });
+    }
+    if (P.veil) { // lower-face veil
+      R.box('head', 0, S * 0.24, S * 0.51, S * 1.04, S * 0.42, 0.03, P.veil);
+      for (const s of [-1, 1]) R.box('head', s * S * 0.52, S * 0.28, S * 0.1, 0.03, S * 0.46, S * 0.8, shade(P.veil, 0.9));
+      R.box('head', 0, S * 0.02, S * 0.5, S * 0.6, S * 0.12, 0.03, shade(P.veil, 0.85));
+    }
+    if (P.faceWraps) { // mummy face bandages over the regular face (eyes left peeking through)
+      for (let i = 0; i < 5; i++) if (i !== 2) R.box('head', 0, S * (0.12 + i * 0.19), S * 0.51, S * 1.03, S * 0.1, 0.02, shade(P.faceWraps, i % 2 ? 0.85 : 1.08), { r: [0, 0, i % 2 ? 0.08 : -0.08] });
+      R.box('head', 0, S * 1.02, 0, S * 1.04, S * 0.1, S * 1.04, shade(P.faceWraps, 0.95));
+      R.box('head', -S * 0.3, S * 0.5, S * 0.515, S * 0.3, S * 0.08, 0.02, shade(P.faceWraps, 0.9), { r: [0, 0, 0.4] });
+    }
+    if (P.nemes) { // pharaoh's striped headcloth with lappets and a golden cobra
+      const [a, b] = P.nemes;
+      R.box('head', 0, S * 1.04, -S * 0.04, S * 1.14, S * 0.16, S * 1.14, a);
+      for (let i = 0; i < 4; i++) R.box('head', 0, S * (0.95 - i * 0.12), -S * 0.08, S * 1.16, S * 0.05, S * 1.12, i % 2 ? a : b);
+      R.box('head', 0, S * 0.5, -S * 0.56, S * 1.0, S * 0.9, 0.06, a);
+      for (const s of [-1, 1]) {
+        R.box('head', s * S * 0.57, S * 0.65, -S * 0.02, 0.07, S * 0.7, S * 0.9, a);
+        for (let i = 0; i < 4; i++) R.box('head', s * S * 0.44, S * (0.1 - i * 0.15), S * 0.28, S * 0.22, S * 0.13, S * 0.14, i % 2 ? a : b); // lappets
+      }
+      R.box('head', 0, S * 1.06, S * 0.56, 0.06, S * 0.2, 0.05, 0xe8c040); R.box('head', 0, S * 1.2, S * 0.6, 0.08, 0.05, 0.06, 0xe8c040);
+      R.box('head', 0, S * 1.12, S * 0.63, 0.03, 0.03, 0.02, 0xff3020, { glow: true });
+      R.box('head', 0, -S * 0.08, S * 0.46, S * 0.1, S * 0.3, 0.08, 0x3a2a1a); // false beard
+    }
     if (P.fezHat) { R.box('head', 0, S * 1.12, 0, S * 0.6, S * 0.26, S * 0.6, P.fezHat); R.box('head', S * 0.2, S * 1.12, S * 0.25, 0.04, S * 0.3, 0.04, 0xe8c040); }
     if (P.furHat) { R.box('head', 0, S * 1.08, 0, S * 1.12, S * 0.26, S * 1.12, P.furHat); R.box('head', 0, S * 1.26, 0, S * 0.8, S * 0.12, S * 0.8, shade(P.furHat, 0.9)); }
     if (P.feathers) for (let i = 0; i < 3; i++) R.box('head', (i - 1) * S * 0.2, S * 1.25, -S * 0.35, 0.05, S * 0.45, 0.03, P.feathers[i % P.feathers.length], { r: [-0.3, 0, (i - 1) * 0.3] });
@@ -1352,6 +1745,52 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       return finish(R, { rig: 'insect' });
     });
   }
+  function scorpion(P) {
+    const key = 'X|' + JSON.stringify(P);
+    return template(key, () => {
+      const R = new Rig(key, 0.9), c = P.color, dk = shade(c, 0.6), lt = shade(c, 1.2), sh = P.shell || shade(c, 1.05);
+      R.bone('body', null, 0, 0.3, 0);
+      // segmented carapace (cephalothorax + 4 plates)
+      R.box('body', 0, 0, 0.18, 0.46, 0.2, 0.3, sh);
+      R.box('body', 0, 0.1, 0.2, 0.36, 0.05, 0.24, lt);
+      for (let i = 0; i < 4; i++) { const w = 0.5 - i * 0.05; R.box('body', 0, 0.01, -0.06 - i * 0.13, w, 0.2 - i * 0.015, 0.13, i % 2 ? sh : shade(sh, 0.92)); R.box('body', 0, 0.11 - i * 0.008, -0.06 - i * 0.13, w * 0.7, 0.03, 0.1, lt); R.box('body', 0, -0.1, -0.06 - i * 0.13, w * 0.8, 0.02, 0.11, dk); }
+      for (const s of [-1, 1]) { R.box('body', s * 0.07, 0.1, 0.33, 0.06, 0.05, 0.04, P.eye || 0x201010, { glow: !!P.eyeGlow }); R.box('body', s * 0.15, 0.08, 0.3, 0.04, 0.04, 0.03, P.eye || 0x201010, { glow: !!P.eyeGlow }); R.box('body', s * 0.05, -0.05, 0.35, 0.04, 0.06, 0.06, dk); }
+      // pincers
+      for (const s of [-1, 1]) {
+        const S = s < 0 ? 'L' : 'R';
+        R.bone('claw' + S, 'body', s * 0.2, 0.0, 0.3, [0, s * 0.35, 0]);
+        R.box('claw' + S, s * 0.04, 0, 0.12, 0.08, 0.08, 0.24, c);
+        R.box('claw' + S, s * 0.02, 0, 0.3, 0.07, 0.07, 0.16, shade(c, 0.9), { r: [0, -s * 0.5, 0] });
+        R.bone('pin' + S, 'claw' + S, 0, 0, 0.4);
+        R.box('pin' + S, 0, 0, 0.08, 0.16, 0.12, 0.18, sh);
+        R.box('pin' + S, s * 0.04, 0, 0.22, 0.06, 0.07, 0.16, lt);
+        R.box('pin' + S, -s * 0.05, 0, 0.2, 0.04, 0.05, 0.14, dk, { r: [0, s * 0.3, 0] });
+      }
+      // tail: 5 segments arching up, stinger at the end
+      let prev = 'body';
+      for (let i = 0; i < 5; i++) {
+        const n = 'tail' + i, len = 0.14 - i * 0.008;
+        R.bone(n, prev, 0, i === 0 ? 0.04 : 0, i === 0 ? -0.5 : -(0.14 - (i - 1) * 0.008));
+        const w = 0.14 - i * 0.012;
+        R.box(n, 0, 0, -len / 2, w, w * 0.9, len + 0.01, i % 2 ? sh : c);
+        R.box(n, 0, w * 0.45, -len / 2, w * 0.6, 0.02, len * 0.8, lt);
+        prev = n;
+      }
+      R.bone('sting', 'tail4', 0, 0, -0.12);
+      R.box('sting', 0, 0, -0.04, 0.1, 0.1, 0.12, P.bulb || shade(c, 1.1));
+      R.box('sting', 0, -0.05, -0.1, 0.03, 0.1, 0.03, 0x1a1008, { r: [0.8, 0, 0] });
+      R.box('sting', 0, 0, -0.04, 0.05, 0.05, 0.1, P.venom || 0x90ff40, { glow: true });
+      // 8 legs (4 per side), two segments each
+      for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+        const n = 'leg' + i + (s < 0 ? 'L' : 'R');
+        R.bone(n, 'body', s * 0.2, -0.04, 0.12 - i * 0.14, [0, 0, s * -0.7]);
+        R.bone(n + '2', n, s * 0.2, 0, 0, [0, 0, s * 1.5]);
+        R.box(n, s * 0.1, 0, 0, 0.22, 0.05, 0.05, c);
+        R.box(n + '2', s * 0.11, 0, 0, 0.24, 0.04, 0.04, dk);
+      }
+      return finish(R, { rig: 'scorp' });
+    });
+  }
   function snake(P) {
     const key = 'S|' + JSON.stringify(P);
     return template(key, () => {
@@ -1379,7 +1818,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   }
 
   // ---------------------------------------------------------------- gear
-  const METAL = { rusty: 0x8a6a50, bronze: 0xc08a4a, steel: 0xc8ccd4, bone: 0xe0d8c0, ice: 0xa8e0ff, soul: 0x50e090, dark: 0x505060 };
+  const METAL = { rusty: 0x8a6a50, bronze: 0xc08a4a, steel: 0xc8ccd4, bone: 0xe0d8c0, ice: 0xa8e0ff, soul: 0x50e090, dark: 0x505060, gold: 0xe0b84a };
   function gearTpl(kind, o) {
     const key = 'G|' + kind + '|' + JSON.stringify(o);
     return template(key, () => {
@@ -1416,6 +1855,13 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           R.box('g', 0, 0, 0, 0.05, 0.16, 0.06, grip);
           for (let i = 1; i <= 4; i++) for (const s of [-1, 1]) R.box('g', 0, s * (0.08 + i * 0.12), -0.02 - i * i * 0.012, 0.035, 0.14, 0.04, o.wood || 0x8a6a3a);
           R.box('g', 0, 0, -0.24, 0.006, 1.1, 0.006, 0xe8e0d0); break;
+        case 'scimitar': { // curved desert blade: segments bending back towards the tip
+          R.box('g', 0, -0.02, 0, 0.05, 0.2, 0.05, grip); R.box('g', 0, -0.13, 0, 0.07, 0.06, 0.07, gold); R.box('g', 0, 0.09, 0, 0.24, 0.04, 0.07, o.guard || gold);
+          let y = 0.12, z = 0, ang = 0;
+          for (let i = 0; i < 6; i++) { const len = 0.13, w = 0.085 + (i > 1 && i < 5 ? 0.025 : 0) - (i === 5 ? 0.03 : 0); R.box('g', 0, y + Math.cos(ang) * len / 2, z - Math.sin(ang) * len / 2, 0.022, len + 0.02, w, i === 5 ? shade(m, 1.1) : m, { r: [ang, 0, 0] }); y += Math.cos(ang) * len; z -= Math.sin(ang) * len; ang += 0.13; }
+          R.box('g', 0.012, 0.42, -0.06, 0.006, 0.5, 0.02, shade(m, 1.3), { r: [0.3, 0, 0] });
+          if (glow) R.box('g', 0, 0.42, -0.07, 0.03, 0.55, 0.05, glow, { glow: true, r: [0.3, 0, 0] });
+          break; }
         case 'spear': R.box('g', 0, 0.35, 0, 0.045, 1.6, 0.045, 0x6a4a2a); R.box('g', 0, 1.24, 0, 0.07, 0.22, 0.02, m); R.box('g', 0, 1.1, 0, 0.08, 0.04, 0.05, 0xa04030); break;
         case 'shield_wood':
           R.box('g', 0, 0, 0, 0.05, 0.56, 0.5, 0x8a5a32); for (let i = -1; i <= 1; i++) R.box('g', -0.028, 0, i * 0.16, 0.01, 0.54, 0.02, 0x5a3a20);
@@ -1451,6 +1897,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     if (!id) return null;
     const it = ITEMS[id]; if (!it) return 'sword';
     if (/greatsword/.test(id)) return 'greatsword';
+    if (/scimitar|khopesh/.test(id)) return 'scimitar';
+    if (/crook/.test(id)) return 'staff';
     if (/long_sword|warblade|soulblade|grimbone_blade/.test(id)) return 'longsword';
     if (/staff/.test(id)) return 'staff';
     if (/club/.test(id)) return 'club';
@@ -1464,9 +1912,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   function metalOf(id) {
     if (!id) return METAL.steel;
     if (/rusty/.test(id)) return METAL.rusty; if (/bronze/.test(id)) return METAL.bronze; if (/bone/.test(id)) return METAL.bone;
-    if (/icicle|frost/.test(id)) return METAL.ice; if (/grimbone/.test(id)) return METAL.dark; return METAL.steel;
+    if (/icicle|frost/.test(id)) return METAL.ice; if (/grimbone/.test(id)) return METAL.dark; if (/sunforged|pharaoh|sand_/.test(id)) return METAL.gold; return METAL.steel;
   }
-  function weaponGlow(id) { return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : null; }
+  function weaponGlow(id) { return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : /sunforged|pharaoh/.test(id || '') ? 0xffc040 : /venom/.test(id || '') ? 0x90ff40 : null; }
   function chestTier(id, clsColor) {
     if (!id) return { tier: 'cloth', color: clsColor };
     if (/robe/.test(id)) return { tier: 'robe', color: clsColor };
@@ -1555,6 +2003,17 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   function petOpts(lvl) {
     const P = Object.assign({}, HUMAN, { skeleton: true, skull: true, skin: 0xe8e2c8, torsoW: 0.44, armW: 0.14, eyeGlow: 0x60ff90 }), gear = {};
     if (lvl >= 8) { gear.weapon = { kind: 'sword', o: { metal: METAL.rusty } }; gear.shield = { kind: 'shield_bone', o: {} }; P.rags = 0x4a3a2a; }
+    if (lvl >= 23) {
+      Object.assign(P, { skin: 0x2a2a34, eyeGlow: 0x60ffd0, cloak: 0x1e3a5a, pauldron: 0xd8b050, rags: null, crown: 0xd8b050 });
+      gear.weapon = { kind: 'scimitar', o: { metal: METAL.gold, glow: 0x60ffd0 } }; gear.offhand = { kind: 'scimitar', o: { metal: METAL.gold } }; gear.shield = null;
+      return { rig: 'human', P, gear, scale: 1.2 };
+    }
+    if (lvl >= 18) {
+      Object.assign(P, { skin: 0xc8b890, eyeGlow: 0xffa040, cloak: 0x6a3a1a, pauldron: 0xc08a4a, rags: 0x8a6a3a });
+      gear.weapon = { kind: 'scimitar', o: { metal: METAL.bronze, glow: 0xffa040 } }; gear.shield = { kind: 'shield_crest', o: { color: 0x8a5a2a } };
+      gear.helm = { kind: 'helm_horned', o: { S: P.headS, color: 0xc08a4a } };
+      return { rig: 'human', P, gear, scale: 1.15 };
+    }
     if (lvl >= 13) {
       Object.assign(P, { skin: 0x5a5a6a, eyeGlow: 0xb060ff, cloak: 0x2a1a3a, pauldron: 0x3a3a4a, rags: null });
       gear.weapon = { kind: 'longsword', o: { metal: METAL.dark, glow: 0xb060ff } }; gear.shield = null;
@@ -1581,12 +2040,61 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       case 'liaison': outfit(P, 'leather'); P.mantle = shade(col, 0.9); P.gloves = 0x5a3a22; gear.weapon = { kind: 'sword', o: {} }; break;
       default: outfit(P, r() < 0.5 ? 'cloth' : 'leather', col); if (r() < 0.4) P.headband = shade(col, 0.8);
     }
+    if (d.tabard != null) { P.tabard = d.tabard; P.emblem = 0xe8e0c8; if (gear.shield) gear.shield.o = { color: d.tabard }; if (gear.helm && gear.helm.o) gear.helm.o.plume = d.tabard; }
+    if (d.turban != null) { P.turban = d.turban; P.hood = null; P.fezHat = null; P.headband = null; gear.helm = null; P.skin = [0xc89070, 0xb07850, 0xa87050, 0xd8a080][(r() * 4) | 0]; P.hair = 0x1a1410; }
+    if (d.veil != null) P.veil = d.veil;
     return { rig: 'human', P, gear, scale };
   }
   // per mob type looks (colour from MOBS def); rig & dims
   function mobLook(type, def) {
     const c = def.color, H = (x) => Object.assign({}, HUMAN, x);
+    if (def.lookAs && def.lookAs !== type) return mobLook(def.lookAs, def);
     switch (type) {
+      case 'sand_scorpion': return { rig: 'scorp', P: { color: c, shell: 0xd8a84c, eye: 0x1a0a0a, venom: 0xb0ff50 }, style: 'insect' };
+      case 'szyrix': return { rig: 'scorp', P: { color: c, shell: 0x5a1a12, eye: 0xff4020, eyeGlow: true, venom: 0x90ff40, bulb: 0x3a1a10 }, style: 'insect', glow: 0x90ff40 };
+      case 'bandit': case 'rahzik': {
+        const boss = type === 'rahzik';
+        const P = H({ skin: 0xb07850, hair: 0x1a1410, ears: 'round', eyes: boss ? 0xff4040 : 0x2a1a0a, eyeGlow: boss, angryBrow: true, pants: boss ? 0x2a2230 : 0x8a7050, boots: 0x3a2a1a, belt: 0x5a2a1a, buckle: 0xc8a040 });
+        outfit(P, 'leather'); P.shirt = boss ? 0x2e2238 : 0xb89a6a; P.shirtLow = shade(P.shirt, 0.85); P.sleeve = shade(P.shirt, 0.9); P.trim = boss ? 0xc03030 : 0x8a2a2a;
+        P.turban = boss ? 0x1a1420 : 0xd8c8a0; P.veil = boss ? 0x1a1420 : 0x8a2a2a; P.gloves = 0x5a3a22; P.mantle = boss ? 0x3a1a2a : null; P.bracer = boss ? 0xc8a040 : null;
+        if (boss) P.turbanGem = 0xff3030;
+        const gear = { weapon: { kind: 'scimitar', o: { metal: boss ? METAL.dark : METAL.steel, glow: boss ? 0xff4040 : null } } };
+        if (boss) gear.offhand = { kind: 'scimitar', o: { metal: METAL.dark, glow: 0xff4040 } };
+        else gear.cloak = { color: 0x9a7a52, collar: 0x8a2a2a };
+        return { rig: 'human', P, gear, style: 'humanoid', glow: boss ? 0xff4040 : null };
+      }
+      case 'bandit_mystic': {
+        const P = H({ skin: 0xa87048, hair: 0x1a1410, ears: 'round', eyes: 0xffb040, eyeGlow: true, pants: 0x4a2a4a, boots: 0x3a2a1a, belt: 0xc8a040 });
+        outfit(P, 'robe', c); P.trim = 0xe8b040; P.turban = 0x3a1a4a; P.turbanGem = 0xffb040; P.veil = 0x2a1a3a; P.necklace = 0xe8b040;
+        return { rig: 'human', P, gear: { weapon: { kind: 'staff', o: { orb: 0xffb040, wood: 0x4a3020 } } }, style: 'humanoid', glow: 0xffb040 };
+      }
+      case 'mummy': {
+        const P = H({ skin: c, wraps: c, faceWraps: c, eyes: 0x60ffd0, eyeGlow: true, eyeWhite: 0x101010, bareChest: true, shirt: c, shirtLow: shade(c, 0.92), sleeve: c, longSleeve: true, pants: shade(c, 0.9), belt: shade(c, 0.75), buckle: shade(c, 0.75), feet: shade(c, 0.85), hunch: 0.18, hair: null, ears: null, mouth: 0x1a1410 });
+        return { rig: 'human', P, gear: {}, style: 'ghoul' };
+      }
+      case 'tomb_priest': case 'sethek': {
+        const boss = type === 'sethek';
+        const P = H({ skin: 0xc8b890, faceWraps: 0xc8b890, wraps: 0xc8b890, eyes: 0x60ffd0, eyeGlow: true, eyeWhite: 0x101010, pants: 0x1e2a30, belt: 0xd8b050, buckle: 0x60ffd0, hair: null, ears: null, hunch: 0.1 });
+        outfit(P, 'robe', c); P.trim = 0xd8b050; P.necklace = 0xd8b050; P.cuff = 0xd8b050;
+        if (boss) { P.nemes = [0x1e5a8a, 0xd8b050]; P.mantle = 0xd8b050; } else P.hood = shade(c, 0.8);
+        return { rig: 'human', P, gear: { weapon: { kind: 'staff', o: { orb: 0x60ffd0, wood: boss ? 0xd8b050 : 0x3a2a1a } } }, style: 'humanoid', glow: 0x60ffd0 };
+      }
+      case 'sand_giant': case 'gorukh': {
+        const boss = type === 'gorukh';
+        const P = H({ skin: c, hair: 0x2a1a10, hairStyle: boss ? 'mohawk' : 'wild', beard: 'long', beardColor: 0x3a2a18, ears: 'big', heavyBrow: true, jaw: true, bigNose: true, eyes: boss ? 0xffa040 : 0x2a1a0a, eyeGlow: boss, torsoW: 0.64, torsoD: 0.4, shoulderW: 0.41, armW: 0.21, legW: 0.25, bareChest: true, shirt: c, shirtLow: shade(c, 0.93), sleeve: c, pants: 0x7a5a3a, belt: 0x4a2a14, buckle: 0xd8b050, feet: shade(c, 0.8), loincloth: 0xa0703a, warpaint: 0xc05020 });
+        if (boss) { P.pauldron = 0xc08a4a; P.spikes = true; P.necklace = 0xd8b050; P.bracer = 0xc08a4a; P.crown = 0xe8c040; }
+        else P.headband = 0xa0703a;
+        return { rig: 'human', P, gear: { weapon: boss ? { kind: 'mace', o: { metal: METAL.bronze } } : { kind: 'club', o: { wood: 0x8a6a3a } } }, style: 'brute', glow: boss ? 0xffa040 : null };
+      }
+      case 'dust_djinn': {
+        const P = H({ djinn: true, skin: c, vortex: 0xd8c8a0, glowC: 0xc0f0ff, hair: 0xf0f8ff, hairStyle: 'topknot', ears: 'pointy', eyes: 0xc0f0ff, eyeGlow: true, eyeWhite: 0x80e0ff, angryBrow: true, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: c, belt: 0xd8b050, bracer: 0xd8b050, necklace: 0xd8b050, sash: 0xc04030, torsoW: 0.56, shoulderW: 0.37 });
+        return { rig: 'human', P, gear: {}, style: 'beast', glow: 0x80e0ff };
+      }
+      case 'ankhetra': {
+        const P = H({ skin: c, wraps: c, faceWraps: c, eyes: 0xffd040, eyeGlow: true, eyeWhite: 0x101010, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: 0xe8e0c8, belt: 0xd8b050, buckle: 0x3050c0, feet: shade(c, 0.85), hair: null, ears: null, torsoW: 0.54, shoulderW: 0.35 });
+        P.nemes = [0x2050a0, 0xe8c040]; P.collar = null; P.mantle = 0xe8c040; P.necklace = 0x3050c0; P.bracer = 0xe8c040; P.loincloth = 0xe8e0c8; P.tabard = 0xe8c040; P.emblem = 0x3050c0;
+        return { rig: 'human', P, gear: { weapon: { kind: 'staff', o: { orb: 0xffd040, wood: 0xe8c040 } }, cloak: { color: 0x2050a0, collar: 0xe8c040 } }, style: 'brute', glow: 0xffd040 };
+      }
       case 'rat': return { rig: 'quad', P: { color: c, belly: 0xb09070, bodyLen: 1.1, bodyW: 0.52, bodyH: 0.46, legLen: 0.34, headS: 0.36, snoutLen: 0.34, ears: 'round', whiskers: true, teeth: true, tailLen: 0.55, tailW: 0.07, tailColor: 0xd09a8a, paw: 0xd09a8a, nose: 0xe08080, eye: 0xff3030, eyeGlow: false, ribs: false }, style: 'rat' };
       case 'wolf': return { rig: 'quad', P: { color: c, belly: 0xc8c8c0, bodyLen: 1.15, bodyW: 0.46, bodyH: 0.46, legLen: 0.56, headS: 0.36, snoutLen: 0.3, fangs: true, bushy: true, tailLen: 0.36, tailW: 0.11, tailTip: 0xe0e0e0, ruff: shade(c, 1.12), ridge: shade(c, 0.75), claws: true, eye: 0xe8b030 }, style: 'wolf' };
       case 'frost_wolf': return { rig: 'quad', P: { color: c, belly: 0xffffff, bodyLen: 1.15, bodyW: 0.48, bodyH: 0.48, legLen: 0.58, headS: 0.37, snoutLen: 0.3, fangs: true, bushy: true, tailLen: 0.38, tailW: 0.12, tailTip: 0xffffff, ruff: 0xffffff, ridge: 0xa8c8e0, claws: true, eye: 0x60d0ff, eyeGlow: true }, style: 'wolf' };
@@ -1659,6 +2167,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     if (rig === 'quad') { tpl = quad(spec.P); height = 1.0 * s; width = 0.8 * s; model = 'quad'; }
     else if (rig === 'insect') { tpl = insect(spec.P); height = 1.0 * s; width = 0.8 * s; model = 'quad'; }
     else if (rig === 'snake') { tpl = snake(spec.P); height = 0.4 * s; width = 0.7 * s; model = 'snake'; }
+    else if (rig === 'scorp') { tpl = scorpion(spec.P); height = 0.9 * s; width = 0.9 * s; model = 'quad'; }
     else tpl = humanoid(spec.P);
     instantiate(tpl, inner, parts);
     inner.scale.setScalar(s);
@@ -1746,11 +2255,12 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     else if (M.rig === 'quad') poseQuad(M, a, st);
     else if (M.rig === 'insect') poseInsect(M, a, st);
     else if (M.rig === 'snake') poseSnake(M, a, st);
+    else if (M.rig === 'scorp') poseScorp(M, a, st);
     // death collapse / flinch shake on the inner group
     const inn = M.inner;
     if (st.dead) {
       const e = ease(st.deadT);
-      const flip = M.rig === 'insect' || M.rig === 'snake';
+      const flip = M.rig === 'insect' || M.rig === 'snake' || M.rig === 'scorp';
       inn.rotation.set(0, 0, (flip ? Math.PI : Math.PI / 2) * e);
       inn.position.set(0, (flip ? 0.25 : 0.12) * e * inn.scale.y, 0);
     } else {
@@ -1844,6 +2354,24 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     R(p.uarmL, uL[0], uL[1], uL[2]); R(p.uarmR, uR[0], uR[1], uR[2]); R(p.farmL, fL[0]); R(p.farmR, fR[0]);
     if (p.cloak) { R(p.cloak, 0.08 + 0.35 * mv + Math.sin(t * 2.3) * 0.03 + (a.sit ? 0.3 : 0), 0, 0); }
     if (p.tail) R(p.tail, 0.2 * mv, Math.sin(t * (4 + 6 * mv)) * 0.35, 0);
+    if (p.vortex) { R(p.vortex, 0.15 * mv, t * 4, 0); if (!st.dead) Pz(p.hips, 0, 0.18 + Math.sin(t * 1.7 + st.seed) * 0.07, 0); R(p.thighL); R(p.thighR); }
+  }
+  function poseScorp(M, a, st) {
+    const p = M.parts, t = st.t, mv = a.mv, ph = a.ph * 1.9;
+    for (let i = 0; i < 4; i++) for (const s of [-1, 1]) {
+      const n = 'leg' + i + (s < 0 ? 'L' : 'R'), off = ((i + (s < 0 ? 0 : 1)) % 2) * Math.PI;
+      R(p[n], 0, Math.sin(ph + off) * 0.4 * mv, Math.max(0, Math.cos(ph + off)) * 0.3 * mv * -s);
+    }
+    Pz(p.body, 0, Math.abs(Math.sin(ph)) * 0.02 * mv + Math.sin(t * 2) * 0.006, 0);
+    // pincers open/close idly; tail sways; strike arcs the tail over the head
+    const snap = Math.max(0, Math.sin(t * 2.3 + st.seed)) * 0.35;
+    let tl = 0, cl = 0;
+    if (a.atk >= 0) { const q = a.atk, k = Math.sin(q * Math.PI); tl = q < 0.35 ? -0.3 * ease(q / 0.35) : -0.3 + 1.1 * k; cl = 0.5 * k; Pz(p.body, 0, 0, 0.1 * k); }
+    for (const s of ['L', 'R']) { const m = s === 'L' ? -1 : 1; R(p['claw' + s], -0.1 - cl * 0.4, m * (0.35 - cl * 0.5 + Math.sin(t * 0.9 + m) * 0.08), 0); R(p['pin' + s], 0, m * -(0.1 + snap + cl), 0); }
+    const sway = Math.sin(t * 1.4 + st.seed) * 0.12 * (1 - mv);
+    for (let i = 0; i < 5; i++) R(p['tail' + i], 0.3 + 0.05 * i + tl * (i < 3 ? 0.45 : 0.25), sway * (i + 1) * 0.4, 0);
+    if (st.flinch > 0) p.body.rotation.z = Math.sin(t * 50) * 0.1 * st.flinch; else p.body.rotation.z = 0;
+    if (st.dead) { const e = ease(st.deadT); for (let i = 0; i < 4; i++) for (const s of [-1, 1]) R(p['leg' + i + (s < 0 ? 'L' : 'R')], 0, 0, -s * 0.9 * e); for (let i = 0; i < 5; i++) R(p['tail' + i], 0.3 * (1 - e) + 0.05, 0, 0); }
   }
   function poseQuad(M, a, st) {
     const p = M.parts, t = st.t, mv = a.mv, rat = M.style === 'rat';
@@ -2134,7 +2662,11 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   const ZONES = {
     everblock: { name: 'Everblock', area: 'The Everblock Wilds', sky: { day: 0x87b5e8, night: 0x0a0f24 } },
     frostfang: { name: 'The Frostfang Highlands', area: 'The Frostfang Highlands', sky: { day: 0xb8cce0, night: 0x0c1428 } },
+    desert: { name: 'The Sunscorched Expanse', area: 'The Sunscorched Expanse', sky: { day: 0xf2cf98, night: 0x160e24 } },
   };
+  // v5: zone 3 layout
+  const DS = { outpost: { x: 128, z: 222 }, oasis: { x: 62, z: 190, r: 14 }, hideout: { x: 196, z: 164 }, flats1: { x: 80, z: 132 }, flats2: { x: 188, z: 106 }, colossi: { x: 56, z: 62 }, djinn: { x: 206, z: 44 }, pyramid: { x: 128, z: 70 } };
+  const DUNGEON_ZONES = new Set(['The Sunken Crypt', 'Tomb of Ankhet-Ra']);
   const FF = { outpost: { x: 128, z: 236 }, warcamp: { x: 78, z: 118 }, keep: { x: 158, z: 52 }, lake: { x: 200, z: 196, r: 26 }, yetis: { x: 196, z: 112 } };
   const LAYOUT = {
     town: { x: 128, z: 128, half: 22, g: 24 },
@@ -2215,6 +2747,33 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     noiseTile(23, [44, 46, 58], 18, (x, y, c) => { const off = (Math.floor(y / 5) % 2) * 5; return (y % 5 === 0 || (x + off) % 10 === 0) ? [24, 26, 34] : (rnd() < 0.05 ? [90, 140, 180] : c); });
     // 24 warbanner (red hide with a white tusk sigil)
     noiseTile(24, [150, 30, 26], 20, (x, y, c) => ((Math.abs(x - 7.5) < 1.5 && y > 3 && y < 12) || (y === 4 && x > 4 && x < 11) ? [230, 220, 200] : c));
+    // ---- v5 desert tiles ----
+    // 25 sandstone top
+    noiseTile(25, [216, 188, 132], 16, (x, y, c) => (rnd() < 0.05 ? [c[0] - 22, c[1] - 22, c[2] - 18] : c));
+    // 26 sandstone side (layered strata)
+    noiseTile(26, [208, 176, 122], 14, (x, y, c) => (y % 5 === 0 ? [c[0] - 26, c[1] - 26, c[2] - 22] : y % 5 === 1 ? [c[0] + 10, c[1] + 8, c[2] + 6] : c));
+    // 27 carved sandstone (hieroglyph frieze)
+    noiseTile(27, [206, 174, 118], 12, (x, y, c) => {
+      if (y === 1 || y === 14) return [150, 110, 64];
+      if (y === 0 || y === 15) return [230, 200, 150];
+      const gx = x % 8, gy = y - 3;
+      if (gy < 0 || gy > 9) return c;
+      const glyph = Math.floor(x / 8);
+      const on = glyph === 0 ? ((gx === 3 || gx === 4) && gy > 2) || (gy === 3 && gx > 1 && gx < 6) || ((gx - 3.5) ** 2 + (gy - 1.2) ** 2 < 2.6 && (gx - 3.5) ** 2 + (gy - 1.2) ** 2 > 0.6) // ankh
+        : (gy === 4 && gx > 0 && gx < 7) || ((gx === 2 || gx === 5) && gy > 1 && gy < 7) || (gy === 1 && (gx === 1 || gx === 6)) || (gy === 8 && gx > 1 && gx < 6); // eye / bird
+      return on ? [96, 62, 34] : c;
+    });
+    // 28 gilded stone
+    noiseTile(28, [228, 184, 64], 26, (x, y, c) => ((x + y) % 6 === 0 ? [255, 236, 150] : (x % 8 === 0 || y % 8 === 0) ? [168, 124, 30] : c));
+    // 29 cactus top, 30 cactus side
+    noiseTile(29, [72, 136, 58], 20, (x, y, c) => { const d = Math.hypot(x - 7.5, y - 7.5); return d > 6.5 ? [48, 100, 40] : d < 2.5 ? [110, 170, 80] : c; });
+    noiseTile(30, [70, 132, 56], 18, (x, y, c) => (x % 4 === 0 ? [46, 96, 38] : (x % 4 === 2 && y % 4 === 1) ? [230, 226, 190] : c));
+    // 31 palm fronds
+    noiseTile(31, [70, 146, 50], 36, (x, y, c) => ((x + y) % 4 === 0 ? [40, 96, 30] : (x - y + 16) % 7 === 0 ? [120, 180, 70] : c));
+    // 32 dune sand (warm, rippled)
+    noiseTile(32, [226, 178, 112], 16, (x, y, c) => ((y + Math.round(Math.sin(x * 0.7) * 1.5)) % 5 === 0 ? [c[0] + 18, c[1] + 16, c[2] + 12] : c));
+    // 33 spirit brazier (emissive teal flame in a bronze bowl)
+    noiseTile(33, [120, 250, 220], 40, (x, y, c) => ((x < 2 || x > 13 || y > 12) ? [110, 80, 40] : y < 3 ? [60, 140, 130] : (Math.abs(x - 7.5) < 2 && y > 5) ? [230, 255, 250] : c));
     const tex = new THREE.CanvasTexture(cv);
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
     if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; else tex.encoding = THREE.sRGBEncoding;
@@ -2237,7 +2796,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       const ZI = ZONES[this.zoneId];
       this.zoneName = ZI.name; this.defaultArea = ZI.area; this.sky = ZI.sky;
       this.zoneLines = [];
-      this.seed = ((seed >>> 0) + (this.zoneId === 'everblock' ? 0 : 7777)) >>> 0;
+      this.seed = ((seed >>> 0) + (this.zoneId === 'everblock' ? 0 : this.zoneId === 'desert' ? 31337 : 7777)) >>> 0;
       this.scene = scene;
       this.data = new Uint8Array(W * D * H);
       this.height = new Int16Array(W * D);
@@ -2316,6 +2875,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     }
     generate() {
       if (this.zoneId === 'frostfang') { this.genFrostfang(); this.finish(); return; }
+      if (this.zoneId === 'desert') { this.genDesert(); this.finish(); return; }
       const s = this.seed;
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
         const h = this.terrainHeight(x, z);
@@ -2345,7 +2905,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.computeHeightColumn(x, z);
       // lantern positions for dynamic point lights
       this.lanterns = new Map();
-      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN) this.lanterns.set(i, this.idxPos(i));
+      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN || this.data[i] === B.BRAZIER) this.lanterns.set(i, this.idxPos(i));
       this.buildMapColors();
       this.renderMap();
     }
@@ -2417,6 +2977,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       let h = 24 + U.fbm(x / 60, z / 60, s, 4) * 24 + (U.fbm(x / 16, z / 16, s + 5, 2) - 0.5) * 6;
       let e = Math.min(x, z, W - 1 - x, D - 1 - z);
       if (Math.abs(x - 128) < 9 && z > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e);
+      if (Math.abs(x - 128) < 9 && z < 56) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e); // v5: north pass to the desert
       if (e < 22) h += Math.pow(22 - e, 1.35) * 1.2;
       const dl = Math.hypot(x - FF.lake.x, z - FF.lake.z);
       if (dl < FF.lake.r) h = Math.min(h, U.lerp(17, Math.max(h, 23), U.smoothstep(FF.lake.r * 0.5, FF.lake.r, dl)));
@@ -2425,7 +2986,29 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       flat(FF.warcamp.x, FF.warcamp.z, 20, 30, 28);
       flat(FF.keep.x, FF.keep.z, 22, 32, 30);
       if (Math.abs(x - 128) < 6 && z > 212) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(x - 128)));
+      if (Math.abs(x - 128) < 6 && z < 46) h = U.lerp(h, 30, U.smoothstep(6, 3, Math.abs(x - 128)));
       return Math.max(3, Math.min(H - 6, Math.round(h)));
+    }
+    // v5: Frostfang north pass -> The Sunscorched Expanse
+    buildFrostPass() {
+      const s = this.seed;
+      for (let z = 0; z < 46; z++) for (let x = 118; x <= 138; x++) {
+        const edge = Math.abs(x - 128);
+        if (edge > 7) continue;
+        const target = 30, top = this.topY(x, z);
+        if (edge <= 4) {
+          for (let y = target + 1; y < H; y++) this.rawSet(x, y, z, B.AIR);
+          for (let y = 1; y <= target; y++) { const b = this.get(x, y, z); if (b === B.AIR || b === B.WATER || b === B.ICE) this.rawSet(x, y, z, B.STONE); }
+          this.rawSet(x, target, z, edge <= 1 ? B.GRAVEL : B.SNOW);
+        } else if (top > target + 5) {
+          for (let y = target + 1; y <= Math.min(top, target + 12); y++) if (U.hash2(x * 3 + y, z, s) < 0.9) this.rawSet(x, y, z, B.STONE);
+        } else if (top < target) {
+          for (let y = top + 1; y <= target + 2; y++) this.rawSet(x, y, z, B.STONE);
+        }
+      }
+      for (const z of [4, 16, 30]) { this.lanternPost(123, this.topY(123, z) + 1, z); this.lanternPost(133, this.topY(133, z) + 1, z); }
+      this.zoneLines.push({ x0: 123, x1: 134, z0: 0, z1: 2.2, to: 'desert', arrive: { x: 128.5, z: 246.5, yaw: Math.PI }, label: 'The Sunscorched Expanse', axis: 'z', at: 0.6 });
+      this.zones.push({ name: 'Frostfang North Pass', x0: 120, x1: 136, z0: 0, z1: 30 });
     }
     genFrostfang() {
       const s = this.seed, SEA2 = 22;
@@ -2449,12 +3032,13 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.ffRoad(128, 250, FF.outpost.x, FF.outpost.z);
       this.ffRoad(FF.outpost.x, FF.outpost.z - 6, FF.warcamp.x + 18, FF.warcamp.z + 10);
       this.ffRoad(FF.outpost.x, FF.outpost.z - 6, FF.keep.x, FF.keep.z + 24);
-      this.buildOutpost(); this.buildWarcamp(); this.buildFrozenKeep();
+      this.ffRoad(128, 4, 128, 44); this.ffRoad(128, 44, FF.keep.x - 18, FF.keep.z + 24);
+      this.buildOutpost(); this.buildWarcamp(); this.buildFrozenKeep(); this.buildFrostPass();
       this.zoneLines.push({ x0: 123, x1: 134, z0: D - 2.2, z1: D, to: 'everblock', arrive: { x: 128.5, z: 6.5, yaw: 0 }, label: 'Everblock', axis: 'z', at: D - 0.6 });
       this.zones.push({ name: 'Frostfang Pass', x0: 120, x1: 136, z0: 226, z1: 255 });
       // spawns
       const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
-      sp('frost_wolf', 170, 170, 3, 10, 90); sp('frost_wolf', 70, 200, 3, 10, 90); sp('frost_wolf', 110, 170, 2, 8, 90);
+      sp('frost_wolf', 170, 170, 3, 10, 90); sp('frost_wolf', 70, 200, 3, 10, 90); sp('frost_wolf', 110, 170, 2, 8, 90, { alt: 'whitefang', altChance: 0.15 });
       sp('orc_grunt', FF.warcamp.x, FF.warcamp.z, 4, 10, 100); sp('orc_grunt', FF.warcamp.x + 10, FF.warcamp.z - 8, 2, 4, 100);
       sp('orc_shaman', FF.warcamp.x - 6, FF.warcamp.z + 5, 2, 4, 110);
       sp('grimtusk', FF.warcamp.x, FF.warcamp.z - 3, 1, 1, 420);
@@ -2467,6 +3051,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (Math.hypot(x - FF.warcamp.x, z - FF.warcamp.z) < 22) return true;
       if (Math.max(Math.abs(x - FF.keep.x), Math.abs(z - FF.keep.z)) < 22) return true;
       if (Math.abs(x - 128) < 6 && z > 200) return true;
+      if (Math.abs(x - 128) < 9 && z < 50) return true;
       return false;
     }
     ffRoad(x0, z0, x1, z1) {
@@ -2552,6 +3137,242 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.rawSet(K.x, g + 4, hz0 + 1, B.LANTERN);
       this.keepFloor = g + 1;
       this.zones.push({ name: "Vorgath's Frozen Keep", x0: K.x - hf, x1: K.x + hf, z0: K.z - hf, z1: K.z + hf });
+    }
+    // ---------- Zone 3: The Sunscorched Expanse (v5) ----------
+    dsHeight(x, z) {
+      const s = this.seed;
+      let h = 25 + U.fbm(x / 90, z / 90, s, 3) * 9;
+      const w = U.fbm(x / 40, z / 40, s + 11, 2) * 6;
+      const dune = Math.pow(Math.abs(Math.sin((x * 0.6 + z) * 0.07 + w)), 1.6) * 4.5;
+      h += dune;
+      let e = Math.min(x, z, W - 1 - x, D - 1 - z);
+      if (Math.abs(x - 128) < 9 && z > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e);
+      if (e < 20) h += Math.pow(20 - e, 1.3) * 1.3;
+      const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
+      if (dl < DS.oasis.r) h = Math.min(h, U.lerp(18, Math.max(h, 24), U.smoothstep(DS.oasis.r * 0.45, DS.oasis.r, dl)));
+      const flat = (c, r0, r1, target, cheb) => { const d = cheb ? Math.max(Math.abs(x - c.x), Math.abs(z - c.z)) : Math.hypot(x - c.x, z - c.z); if (d < r1) h = U.lerp(target, h, U.smoothstep(r0, r1, d)); };
+      flat(DS.outpost, 14, 24, 27, true); flat(DS.hideout, 13, 22, 27); flat(DS.pyramid, 27, 38, 27, true);
+      flat(DS.colossi, 14, 24, 27); flat(DS.djinn, 11, 19, 28); flat(DS.flats1, 10, 20, 26); flat(DS.flats2, 10, 20, 26);
+      if (Math.abs(x - 128) < 6 && z > 206) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(x - 128)));
+      this._dune = dune;
+      return Math.max(3, Math.min(H - 6, Math.round(h)));
+    }
+    dsProtected(x, z) {
+      for (const k of ['outpost', 'hideout', 'colossi', 'djinn']) if (Math.hypot(x - DS[k].x, z - DS[k].z) < 20) return true;
+      if (Math.max(Math.abs(x - DS.pyramid.x), Math.abs(z - DS.pyramid.z)) < 30) return true;
+      if (Math.abs(x - 128) < 6 && z > 200) return true;
+      return false;
+    }
+    dsRoad(x0, z0, x1, z1) {
+      const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, cx = Math.round(x0 + (x1 - x0) * t), cz = Math.round(z0 + (z1 - z0) * t);
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+          const x = cx + dx, z = cz + dz; if (!this.inBounds(x, 1, z)) continue;
+          const y = this.topY(x, z), b = this.get(x, y, z);
+          if (b === B.SAND || b === B.DUNE) this.rawSet(x, y, z, (dx === 0 && dz === 0) || U.hash2(x, z, 5) < 0.6 ? B.SANDSTONE : B.GRAVEL);
+        }
+      }
+    }
+    palm(x, y, z, r) {
+      const th = 5 + Math.floor(r * 3);
+      for (let i = 0; i < th; i++) this.rawSet(x + (i > th - 3 && r > 0.5 ? 1 : 0), y + i, z, B.LOG);
+      const tx = x + (r > 0.5 ? 1 : 0), ty = y + th;
+      this.rawSet(tx, ty, z, B.PALM);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (let k = 1; k <= 3; k++) this.rawSet(tx + dx * k, ty - (k === 3 ? 1 : 0), z + dz * k, B.PALM);
+      for (const [dx, dz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { this.rawSet(tx + dx, ty, z + dz, B.PALM); this.rawSet(tx + dx * 2, ty - 1, z + dz * 2, B.PALM); }
+    }
+    cactus(x, y, z, r) {
+      const th = 2 + Math.floor(r * 3);
+      for (let i = 0; i < th; i++) this.rawSet(x, y + i, z, B.CACTUS);
+      if (th >= 3 && r > 0.4) { const dx = r > 0.7 ? 1 : 0, dz = dx ? 0 : 1; this.rawSet(x + dx, y + 1, z + dz, B.CACTUS); this.rawSet(x + dx, y + 2, z + dz, B.CACTUS); }
+    }
+    genDesert() {
+      const s = this.seed;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const h = this.dsHeight(x, z), dune = this._dune;
+        const e = Math.min(x, z, W - 1 - x, D - 1 - z);
+        const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 5 ? B.STONE : y < h - 1 ? B.SANDSTONE : B.SAND;
+          if (y === h) b = (e < 16 && h > 36) ? B.SANDSTONE : dune > 3.2 && dl > DS.oasis.r + 6 ? B.DUNE : B.SAND;
+          if (y === h && dl < DS.oasis.r + 5 && dl > DS.oasis.r * 0.7 && h > 20) b = B.GRASS;
+          if (y === h - 1 && e < 16 && h > 34) b = B.SANDSTONE;
+          this.rawSet(x, y, z, b);
+        }
+        for (let y = h + 1; y <= 21; y++) this.rawSet(x, y, z, B.WATER);
+      }
+      // oasis palms, cacti and scattered ruin pillars
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        if (this.dsProtected(x, z)) continue;
+        const y = this.topY(x, z), b = this.get(x, y, z), r = U.hash2(x, z, s + 3);
+        const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
+        if (b === B.GRASS && U.hash2(x, z, s + 99) < 0.07) this.palm(x, y + 1, z, r);
+        else if ((b === B.SAND || b === B.DUNE) && U.hash2(x, z, s + 98) < 0.004 && dl > DS.oasis.r + 8) this.cactus(x, y + 1, z, r);
+        else if (b === B.SAND && U.hash2(x, z, s + 97) < 0.0012) { const hh = 1 + Math.floor(r * 4); for (let i = 1; i <= hh; i++) this.rawSet(x, y + i, z, i === hh && r > 0.7 ? B.GOLD : B.CARVED); }
+      }
+      const P = DS.pyramid;
+      this.dsRoad(128, 252, DS.outpost.x, DS.outpost.z + 8);
+      this.dsRoad(DS.outpost.x, DS.outpost.z - 10, P.x, P.z + 34);
+      this.dsRoad(DS.outpost.x + 12, DS.outpost.z - 4, DS.hideout.x - 12, DS.hideout.z + 6);
+      this.dsRoad(DS.outpost.x - 12, DS.outpost.z - 2, DS.oasis.x + 16, DS.oasis.z + 4);
+      this.buildSunwardOutpost(); this.buildHideout(); this.buildColossi(); this.buildDjinnRest(); this.buildPyramid();
+      this.zoneLines.push({ x0: 123, x1: 134, z0: D - 2.2, z1: D, to: 'frostfang', arrive: { x: 128.5, z: 6.5, yaw: 0 }, label: 'The Frostfang Highlands', axis: 'z', at: D - 0.6 });
+      this.zones.push({ name: 'Frostfang Road', x0: 120, x1: 136, z0: 236, z1: 255 });
+      this.zones.push({ name: 'Oasis of Sahra', x0: DS.oasis.x - 20, x1: DS.oasis.x + 20, z0: DS.oasis.z - 20, z1: DS.oasis.z + 20 });
+      this.zones.push({ name: 'The Scorpion Flats', x0: DS.flats1.x - 18, x1: DS.flats1.x + 18, z0: DS.flats1.z - 18, z1: DS.flats1.z + 18 });
+      this.zones.push({ name: 'The Scorpion Flats', x0: DS.flats2.x - 18, x1: DS.flats2.x + 18, z0: DS.flats2.z - 18, z1: DS.flats2.z + 18 });
+      // spawns
+      const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
+      sp('sand_scorpion', DS.flats1.x, DS.flats1.z, 4, 12, 100, { alt: 'szyrix', altChance: 0.18 }); sp('sand_scorpion', DS.flats2.x, DS.flats2.z, 3, 12, 100);
+      sp('sand_scorpion', 160, 190, 2, 10, 100); sp('sand_scorpion', 96, 176, 2, 10, 100);
+      sp('bandit', DS.hideout.x, DS.hideout.z, 4, 9, 110, { alt: 'rahzik', altChance: 0.2 }); sp('bandit', DS.hideout.x + 8, DS.hideout.z - 8, 1, 3, 110);
+      sp('bandit_mystic', DS.hideout.x - 5, DS.hideout.z - 3, 2, 4, 120);
+      sp('sand_giant', DS.colossi.x, DS.colossi.z, 3, 12, 150, { alt: 'gorukh', altChance: 0.18 });
+      sp('dust_djinn', DS.djinn.x, DS.djinn.z, 3, 9, 130);
+      sp('dust_djinn', 110, 128, 1, 6, 130); sp('sand_giant', 190, 214, 1, 8, 150);
+      const fy = this.tombFloor, R = this.tombRooms;
+      sp('mummy', R.entry.x, R.entry.z, 2, 3, 150, { y: fy });
+      sp('mummy', R.embalm.x, R.embalm.z, 2, 3, 150, { y: fy }); sp('tomb_priest', R.embalm.x + 2, R.embalm.z - 2, 1, 1, 160, { y: fy });
+      sp('mummy', R.treasury.x, R.treasury.z, 2, 3, 150, { y: fy }); sp('tomb_priest', R.treasury.x - 2, R.treasury.z - 2, 1, 1, 160, { y: fy });
+      sp('dust_djinn', R.prison.x, R.prison.z, 2, 3, 150, { y: fy });
+      sp('sand_scorpion', R.pit.x, R.pit.z, 3, 3, 150, { y: fy, lvl: [18, 20] });
+      sp('sethek', R.vizier.x, R.vizier.z - 2, 1, 1, 480, { y: fy }); sp('tomb_priest', R.vizier.x - 3, R.vizier.z + 1, 2, 1, 160, { y: fy });
+      sp('ankhetra', R.sanctum.x, R.sanctum.z, 1, 1, 900, { y: fy + 1 }); sp('mummy', R.sanctum.x - 6, R.sanctum.z + 2, 1, 1, 160, { y: fy, lvl: [22, 23] }); sp('mummy', R.sanctum.x + 6, R.sanctum.z + 2, 1, 1, 160, { y: fy, lvl: [22, 23] });
+    }
+    sandPost(x, y, z) { this.rawSet(x, y, z, B.SANDSTONE); this.rawSet(x, y + 1, z, B.CARVED); this.rawSet(x, y + 2, z, B.LANTERN); }
+    buildSunwardOutpost() {
+      const O = DS.outpost, g = 27, hx = 17, hz = 13;
+      this.fill(O.x - hx - 2, g + 1, O.z - hz - 2, O.x + hx + 2, H - 1, O.z + hz + 2, B.AIR);
+      this.fill(O.x - hx - 2, g - 3, O.z - hz - 2, O.x + hx + 2, g - 1, O.z + hz + 2, B.SANDSTONE);
+      for (let z = O.z - hz; z <= O.z + hz; z++) for (let x = O.x - hx; x <= O.x + hx; x++) this.rawSet(x, g, z, (x + z) % 7 === 0 ? B.CARVED : B.SANDSTONE);
+      // low crenellated walls with north + south gates
+      for (let i = -hx; i <= hx; i++) for (const z of [O.z - hz, O.z + hz]) { if (Math.abs(i) <= 2) continue; this.fill(O.x + i, g + 1, z, O.x + i, g + 3, z, B.SANDSTONE); if ((i & 1) === 0) this.rawSet(O.x + i, g + 4, z, B.CARVED); }
+      for (let i = -hz; i <= hz; i++) for (const x of [O.x - hx, O.x + hx]) { if (Math.abs(i) <= 1) continue; this.fill(x, g + 1, O.z + i, x, g + 3, O.z + i, B.SANDSTONE); if ((i & 1) === 0) this.rawSet(x, g + 4, O.z + i, B.CARVED); }
+      for (const [x, z] of [[O.x - 3, O.z - hz - 1], [O.x + 3, O.z - hz - 1], [O.x - 3, O.z + hz + 1], [O.x + 3, O.z + hz + 1]]) this.sandPost(x, g + 1, z);
+      const shop = this.building(O.x - 15, O.z - 11, O.x - 7, O.z - 4, 4, B.SANDSTONE, B.CARVED, 's', g);
+      const temple = this.building(O.x + 7, O.z - 11, O.x + 15, O.z - 3, 5, B.CARVED, B.GOLD, 's', g);
+      // fountain well + palms
+      this.fill(O.x - 2, g + 1, O.z - 2, O.x + 2, g + 1, O.z + 2, B.CARVED); this.fill(O.x - 1, g + 1, O.z - 1, O.x + 1, g + 1, O.z + 1, B.WATER);
+      this.rawSet(O.x, g, O.z, B.SANDSTONE);
+      for (const [x, z] of [[O.x - 13, O.z + 9], [O.x + 13, O.z + 9], [O.x - 5, O.z + 10], [O.x + 5, O.z + 10]]) this.palm(x, g + 1, z, U.hash2(x, z, 7));
+      // fence's awning
+      this.fill(O.x + 9, g + 1, O.z + 3, O.x + 9, g + 3, O.z + 3, B.LOG); this.fill(O.x + 14, g + 1, O.z + 3, O.x + 14, g + 3, O.z + 3, B.LOG);
+      this.fill(O.x + 9, g + 4, O.z + 2, O.x + 14, g + 4, O.z + 6, B.WOOL);
+      for (const [x, z] of [[O.x - 7, O.z + 2], [O.x + 7, O.z + 2], [O.x - 7, O.z - 1], [O.x + 7, O.z - 1]]) this.sandPost(x, g + 1, z);
+      const y = g + 1, T = { color: 0xd8c8a0 };
+      this.npcs.push({ kind: 'binder', name: 'Sunpriestess Nefa', x: temple.x, y, z: temple.z, color: 0xe8d8a0, sub: '<Soulbinder>', turban: 0xe8e0c8 });
+      this.npcs.push({ kind: 'merchant', name: 'Trader Hamid', x: shop.x, y, z: shop.z, color: 0x2a6a8a, stock: 'desert', faction: 'sunward', turban: 0xe0e0e0 });
+      this.npcs.push({ kind: 'merchant', name: 'Fence Jabari', x: O.x + 11.5, y, z: O.z + 4.5, color: 0x4a3a5a, stock: 'fence', faction: 'bandit', sub: '<Sandreaver Fence>', turban: 0x2a2a3a, veil: 0x2a2a3a });
+      this.npcs.push({ kind: 'quest', name: 'Caravan Master Idris', x: O.x - 4.5, y, z: O.z + 4.5, color: 0x9a5a2a, sub: '<Caravan Master>', turban: 0xc04030 });
+      this.npcs.push({ kind: 'guard', name: 'Captain Asha', x: O.x + 3.5, y, z: O.z - hz + 2.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
+      this.npcs.push({ kind: 'quest', name: 'Loremaster Kheti', x: O.x - 10.5, y, z: O.z + 1.5, color: 0x3a4a8a, sub: '<Loremaster>', turban: 0x3a4a8a });
+      this.npcs.push({ kind: 'guard', name: 'Sunward Guard Tamit', x: O.x - 3.5, y, z: O.z + hz - 1.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
+      this.npcs.push({ kind: 'guard', name: 'Sunward Guard Omari', x: O.x - 3.5, y, z: O.z - hz + 2.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
+      void T;
+      this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 5.5 };
+      this.zones.push({ name: 'Sunward Outpost', x0: O.x - hx, x1: O.x + hx, z0: O.z - hz, z1: O.z + hz });
+    }
+    buildHideout() {
+      const C = DS.hideout, g = this.topY(C.x, C.z);
+      this.fill(C.x - 15, g + 1, C.z - 15, C.x + 15, H - 1, C.z + 15, B.AIR);
+      for (let a = 0; a < 70; a++) {
+        const ang = (a / 70) * Math.PI * 2; if (ang > 2.2 && ang < 2.7) continue;
+        const x = Math.round(C.x + Math.cos(ang) * 14), z = Math.round(C.z + Math.sin(ang) * 14), top = this.topY(x, z);
+        const hh = 1 + Math.floor(U.hash2(x, z, 3) * 3); for (let y = top + 1; y <= top + hh; y++) this.rawSet(x, y, z, U.hash2(x, y, 4) < 0.3 ? B.CARVED : B.SANDSTONE);
+      }
+      const tent = (tx, tz, c) => { const ty = this.topY(tx, tz) + 1; for (let l = 0; l < 3; l++) for (let dz = -2; dz <= 2; dz++) { this.rawSet(tx - 2 + l, ty + l, tz + dz, c); this.rawSet(tx + 2 - l, ty + l, tz + dz, c); } for (let dz = -2; dz <= 2; dz++) this.rawSet(tx, ty + 3, tz + dz, B.LOG); };
+      tent(C.x - 8, C.z - 6, B.WOOL); tent(C.x + 7, C.z - 7, B.BANNER); tent(C.x - 7, C.z + 7, B.WOOL); tent(C.x + 8, C.z + 6, B.WOOL);
+      this.rawSet(C.x, g + 1, C.z, B.COBBLE); this.rawSet(C.x, g + 2, C.z, B.LANTERN);
+      this.zones.push({ name: 'Sandreaver Hideout', x0: C.x - 15, x1: C.x + 15, z0: C.z - 15, z1: C.z + 15 });
+    }
+    buildColossi() {
+      const C = DS.colossi, g = this.topY(C.x, C.z);
+      const statue = (sx, sz, h, broken) => {
+        for (const dx of [-2, 2]) this.fill(sx + dx - 1, g + 1, sz - 1, sx + dx, g + 6, sz, B.SANDSTONE);
+        if (!broken) { this.fill(sx - 3, g + 7, sz - 1, sx + 3, g + 7 + h, sz + 1, B.SANDSTONE); this.fill(sx - 1, g + 8 + h, sz - 1, sx + 1, g + 10 + h, sz + 1, B.CARVED); this.rawSet(sx, g + 11 + h, sz, B.GOLD); }
+        else { this.fill(sx - 3, g + 7, sz - 1, sx + 1, g + 8, sz + 1, B.SANDSTONE); this.fill(sx + 4, g + 1, sz + 2, sx + 7, g + 3, sz + 4, B.CARVED); }
+      };
+      statue(C.x - 7, C.z - 4, 5, false); statue(C.x + 8, C.z + 3, 0, true);
+      for (let i = 0; i < 8; i++) { const a = i * 0.8, x = Math.round(C.x + Math.cos(a) * 12), z = Math.round(C.z + Math.sin(a) * 12), t = this.topY(x, z); const hh = 2 + (i % 3) * 2; this.fill(x, t + 1, z, x, t + hh, z, B.CARVED); }
+      this.zones.push({ name: 'The Shattered Colossi', x0: C.x - 18, x1: C.x + 18, z0: C.z - 18, z1: C.z + 18 });
+    }
+    buildDjinnRest() {
+      const C = DS.djinn, g = this.topY(C.x, C.z);
+      this.fill(C.x - 5, g, C.z - 5, C.x + 5, g, C.z + 5, B.CARVED);
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2, x = Math.round(C.x + Math.cos(a) * 8), z = Math.round(C.z + Math.sin(a) * 8), t = this.topY(x, z); this.fill(x, t + 1, z, x, t + 6, z, B.CARVED); this.rawSet(x, t + 7, z, B.GOLD); }
+      this.rawSet(C.x, g + 1, C.z, B.BRAZIER);
+      this.zones.push({ name: "Djinn's Rest", x0: C.x - 12, x1: C.x + 12, z0: C.z - 12, z1: C.z + 12 });
+    }
+    // The Great Pyramid with an entrance hall; stairs descend into the multi-room Tomb of Ankhet-Ra
+    buildPyramid() {
+      const P = DS.pyramid, g = 27, HB = 20;
+      this.fill(P.x - HB - 6, g + 1, P.z - HB - 6, P.x + HB + 6, H - 1, P.z + HB + 6, B.AIR);
+      for (let z = P.z - HB - 6; z <= P.z + HB + 6; z++) for (let x = P.x - HB - 6; x <= P.x + HB + 6; x++) { this.fill(x, g - 2, z, x, g - 1, z, B.SANDSTONE); this.rawSet(x, g, z, B.SAND); }
+      for (let L = 0; L <= HB; L++) {
+        const hf = HB - L, y = g + 1 + L;
+        for (let z = P.z - hf; z <= P.z + hf; z++) for (let x = P.x - hf; x <= P.x + hf; x++) {
+          const edge = Math.max(Math.abs(x - P.x), Math.abs(z - P.z)) === hf;
+          this.rawSet(x, y, z, L >= HB - 1 ? B.GOLD : edge && L % 4 === 3 ? B.CARVED : B.SANDSTONE);
+        }
+      }
+      // entrance corridor from the south face
+      const ez = P.z + HB;
+      this.fill(P.x - 1, g + 1, P.z + 8, P.x + 1, g + 4, ez + 1, B.AIR);
+      this.fill(P.x - 1, g, P.z + 8, P.x + 1, g, ez + 1, B.CARVED);
+      for (const dx of [-2, 2]) this.fill(P.x + dx, g + 1, ez - 3, P.x + dx, g + 4, ez, B.CARVED);
+      this.fill(P.x - 2, g + 5, ez - 3, P.x + 2, g + 5, ez, B.GOLD);
+      this.rawSet(P.x - 3, g + 3, ez + 1, B.BRAZIER); this.rawSet(P.x + 3, g + 3, ez + 1, B.BRAZIER);
+      // entrance hall
+      const hx0 = P.x - 5, hx1 = P.x + 5, hz0 = P.z + 4, hz1 = P.z + 12;
+      this.fill(hx0 - 1, g, hz0 - 1, hx1 + 1, g + 6, hz1 + 1, B.CARVED);
+      this.fill(hx0, g + 1, hz0, hx1, g + 5, hz1, B.AIR);
+      this.fill(P.x - 1, g + 1, hz1 + 1, P.x + 1, g + 4, hz1 + 1, B.AIR);
+      for (const [x, z] of [[hx0, hz0], [hx1, hz0], [hx0, hz1], [hx1, hz1]]) this.fill(x, g + 1, z, x, g + 5, z, B.SANDSTONE);
+      for (const [x, z] of [[hx0 + 1, hz0], [hx1 - 1, hz0], [hx0, hz1 - 3], [hx1, hz1 - 3]]) this.rawSet(x, g + 3, z, B.BRAZIER);
+      // lower complex: 3x3 grid, north row merged into the Pharaoh's sanctum
+      const x0 = P.x - 17, z0 = P.z - 37, fy = g - 9;
+      const z1 = z0 + 33, x1 = x0 + 34;
+      this.fill(x0, fy, z0, x1, g - 1, z1, B.SANDSTONE);
+      for (let z = z0 - 1; z <= z1 + 1; z++) for (let x = x0 - 1; x <= x1 + 1; x++) if (this.get(x, g, z) === B.AIR) this.rawSet(x, g, z, B.SAND);
+      for (let y = fy; y <= g - 1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const edge = x === x0 || x === x1 || z === z0 || z === z1; if (edge && U.hash2(x * 5 + y, z, 17) < 0.5) this.rawSet(x, y, z, B.CARVED); }
+      const room = (i, j) => ({ rx: x0 + 1 + i * 11, rz: z0 + 1 + j * 11, x: x0 + 1 + i * 11 + 5, z: z0 + 1 + j * 11 + 5 });
+      // sanctum (north row)
+      this.fill(x0 + 1, fy + 1, z0 + 1, x1 - 1, fy + 7, z0 + 10, B.AIR);
+      for (let x = x0 + 3; x <= x1 - 3; x += 5) for (const z of [z0 + 2, z0 + 9]) { this.fill(x, fy + 1, z, x, fy + 7, z, B.CARVED); this.rawSet(x, fy + 4, z + (z === z0 + 2 ? 1 : -1), B.BRAZIER); }
+      const sx = P.x, sz = z0 + 5;
+      this.fill(sx - 3, fy + 1, sz - 3, sx + 3, fy + 1, sz + 2, B.GOLD);
+      this.fill(sx - 1, fy + 2, sz - 3, sx + 1, fy + 3, sz - 3, B.GOLD); // throne
+      this.fill(sx - 5, fy + 1, sz - 4, sx - 5, fy + 1, sz - 3, B.CARVED); this.fill(sx + 5, fy + 1, sz - 4, sx + 5, fy + 1, sz - 3, B.CARVED); // sarcophagi
+      for (let j = 1; j <= 2; j++) for (let i = 0; i < 3; i++) {
+        const r = room(i, j);
+        this.fill(r.rx, fy + 1, r.rz, r.rx + 9, fy + 5, r.rz + 9, B.AIR);
+        this.rawSet(r.rx + 4, fy + 3, r.rz - 1 + (j === 1 ? 0 : 0), B.BRAZIER);
+        this.rawSet(r.rx - 1, fy + 3, r.rz + 4, B.BRAZIER);
+        for (const [px, pz] of [[r.rx + 1, r.rz + 1], [r.rx + 8, r.rz + 1], [r.rx + 1, r.rz + 8], [r.rx + 8, r.rz + 8]]) if (U.hash2(px, pz, 9) < 0.55) this.fill(px, fy + 1, pz, px, fy + 5, pz, B.CARVED);
+      }
+      const door = (xa, za, xb, zb) => this.fill(xa, fy + 1, za, xb, fy + 3, zb, B.AIR);
+      const r = (i, j) => room(i, j);
+      door(x0 + 11, r(0, 2).rz + 3, x0 + 11, r(0, 2).rz + 5); door(x0 + 22, r(0, 2).rz + 3, x0 + 22, r(0, 2).rz + 5);
+      door(r(0, 2).rx + 3, z0 + 22, r(0, 2).rx + 5, z0 + 22); door(r(2, 2).rx + 3, z0 + 22, r(2, 2).rx + 5, z0 + 22);
+      door(x0 + 11, r(0, 1).rz + 3, x0 + 11, r(0, 1).rz + 5); door(x0 + 22, r(0, 1).rz + 3, x0 + 22, r(0, 1).rz + 5);
+      door(P.x - 1, z0 + 11, P.x + 1, z0 + 11);
+      // treasury gold piles, embalming slabs
+      const tr = r(2, 2); for (let k = 0; k < 6; k++) this.rawSet(tr.rx + 2 + (k % 3) * 2, fy + 1, tr.rz + 6 + Math.floor(k / 3), B.GOLD);
+      const em = r(0, 2); for (const dz of [2, 6]) this.fill(em.rx + 3, fy + 1, em.rz + dz, em.rx + 6, fy + 1, em.rz + dz, B.CARVED);
+      // stairs from the hall (north wall) down to the entry room (1,2)
+      for (let k = 1; k <= 9; k++) {
+        const z = hz0 - k, fl = g - k;
+        this.fill(P.x - 1, fl + 1, z, P.x + 1, fl + 5, z, B.AIR);
+        this.fill(P.x - 1, fl - 1, z, P.x + 1, fl, z, B.CARVED);
+        for (const dx of [-2, 2]) this.fill(P.x + dx, fl - 1, z, P.x + dx, fl + 5, z, B.SANDSTONE);
+      }
+      this.tombFloor = fy + 1; this.tombY = fy + 1;
+      this.tombRooms = { sanctum: { x: sx + 0.5, z: sz + 0.5 }, entry: r(1, 2), embalm: r(0, 2), treasury: r(2, 2), prison: r(0, 1), pit: r(2, 1), vizier: r(1, 1) };
+      for (const k of ['entry', 'embalm', 'treasury', 'prison', 'pit', 'vizier']) { this.tombRooms[k].x += 0.5; this.tombRooms[k].z += 0.5; }
+      this.tombEntrance = { x: P.x + 0.5, z: ez + 3.5 };
+      this.zones.push({ name: 'Tomb of Ankhet-Ra', x0, x1, z0, z1: hz0 - 1, yMax: g - 1 });
+      this.zones.push({ name: 'The Great Pyramid', x0: P.x - HB, x1: P.x + HB, z0: P.z - HB, z1: P.z + HB });
     }
     topY(x, z) { for (let y = H - 1; y > 0; y--) if (this.get(x, y, z) !== B.AIR) return y; return 0; }
     road(x0, z0, x1, z1, w) {
@@ -2799,7 +3620,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       sp('gnoll_pup', L.gnollCamp.x, L.gnollCamp.z, 4, 8, 70);
       sp('gnoll', L.gnollCamp.x - 5, L.gnollCamp.z - 2, 2, 4, 90);
       sp('gnoll_pup', T.x - 40, T.z + 8, 1, 3, 90, { alt: 'fippy', altChance: 0.35 });
-      sp('wolf', L.forest.x, L.forest.z, 3, 14, 70); sp('wolf', L.forest.x - 36, L.forest.z + 10, 2, 10, 70);
+      sp('wolf', L.forest.x, L.forest.z, 3, 14, 70, { alt: 'greymane', altChance: 0.12 }); sp('wolf', L.forest.x - 36, L.forest.z + 10, 2, 10, 70);
       const fy = this.dungeonFloor;
       for (const r of this.dungeonRooms) {
         if (r.i === 0 && r.j === 1) { sp('skeleton', r.x, r.z, 2, 3, 90, { y: fy, lvl: [3, 4] }); continue; }
@@ -2882,7 +3703,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     setBlock(x, y, z, b, record = true) {
       if (!this.inBounds(x, y, z)) return false;
       this.data[this.idx(x, y, z)] = b;
-      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
+      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN || b === B.BRAZIER) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
       if (record) this.edits[this.idx(x, y, z)] = b;
       const oldH = this.height[x + z * W];
       this.computeHeightColumn(x, z);
@@ -2952,7 +3773,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
   }
 
   EB.World = World;
-  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES };
+  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES, DS, DUNGEON_ZONES };
 })();
 
 </script>
@@ -3283,7 +4104,51 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.refreshPlate(game);
       if (this.spawn) this.spawn.respawnAt = game.time + this.spawn.def.respawn * (0.85 + Math.random() * 0.3);
     }
-    goHome() { this.state = 'return'; this.target = null; this.hate.clear(); this.casting = null; this.nav.reset(); }
+    goHome() { this.state = 'return'; this.target = null; this.hate.clear(); this.casting = null; this.nav.reset(); this.fledOnce = false; this.helper = null; }
+    // mobs flee when flagged, or when they are much weaker than the player (EQ style); undead and named never flee
+    canFlee(game) {
+      if (this.def.faction === 'undead' || this.def.named || this.def.noFlee) return false;
+      if (this.def.flee) return true;
+      const c = this.con(game); return c === 'green' || c === 'grey';
+    }
+    findHelper(game) {
+      let best = null, bd = 42;
+      for (const m of game.mobs) {
+        if (m === this || !m.alive || m.def.faction !== this.def.faction || m.state === 'chase' || m.state === 'flee' || m.state === 'return') continue;
+        const d = m.pos.distanceTo(this.pos); if (d < bd) { bd = d; best = m; }
+      }
+      return best;
+    }
+    trySupport(game) {
+      const heals = this.def.heals, buffs = this.def.buffs, now = game.time;
+      if (heals && (this.nextHeal || 0) <= now) {
+        let tg = null, low = 0.6;
+        if (heals.self !== false && this.hp < this.maxHp * low) { tg = this; low = this.hp / this.maxHp; }
+        if (!heals.self) for (const m of game.mobs) {
+          if (m === this || !m.alive || m.def.faction !== this.def.faction || m.state === 'dead') continue;
+          const f = m.hp / m.maxHp; if (f < low && m.pos.distanceTo(this.pos) < heals.range) { low = f; tg = m; }
+        }
+        if (tg) {
+          this.casting = { support: heals, type: 'heal', target: tg, t: heals.cast }; this.nextHeal = now + heals.cd;
+          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} begins to cast a spell. <${heals.name}>`, 'spell');
+          return true;
+        }
+      }
+      if (buffs && (this.nextBuff || 0) <= now) {
+        let tg = null;
+        for (const m of game.mobs) {
+          if (!m.alive || m.def.faction !== this.def.faction || m.state !== 'chase' || m.pos.distanceTo(this.pos) > buffs.range) continue;
+          if (now < (buffs.ward ? m.wardUntil || 0 : m.hasteUntil || 0)) continue;
+          tg = m; if (m !== this) break;
+        }
+        if (tg) {
+          this.casting = { support: buffs, type: 'buff', target: tg, t: buffs.cast }; this.nextBuff = now + buffs.cd;
+          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} begins to cast a spell. <${buffs.name}>`, 'spell');
+          return true;
+        }
+      }
+      return false;
+    }
     update(dt, game) {
       const world = game.world, pl = game.player;
       if (!this.alive) {
@@ -3313,7 +4178,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           for (const t of cands) {
             const d = this.pos.distanceTo(t.pos);
             const c = this.con(game);
-            const ignores = (c === 'grey' || c === 'green') && this.def.faction !== 'undead';
+            const ignores = ((c === 'grey' || c === 'green') && this.def.faction !== 'undead') || !game.factionKOS(this);
             if (d < this.def.aggro && !ignores && game.lineOfSight(this, t)) {
               this.aggroOn(t, game);
               if (this.def.named) game.log(`${U.cap(this.name)} says, 'You dare trespass here? Die!'`, 'say');
@@ -3328,12 +4193,17 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         const t = this.target;
         if (!t || (t === pl && !pl.alive) || this.pos.distanceTo(this.home) > 120) this.goHome();
         else {
-          if (this.def.flee && this.hp < this.maxHp * 0.18 && t.kind !== 'npc') { this.state = 'flee'; game.log(`${U.cap(this.name)} turns to flee!`, 'other'); }
+          if (this.canFlee(game) && this.hp < this.maxHp * 0.18 && t.kind !== 'npc' && !this.fledOnce) { this.state = 'flee'; this.fledOnce = true; this.casting = null; this.fleeT = 0; this.helper = this.findHelper(game); game.log(`${U.cap(this.name)} turns to flee!`, 'other'); }
+          // v5 support AI: casters heal wounded allies (or themselves) and buff allies in the fight
+          if (!this.casting && this.state === 'chase') this.trySupport(game);
           const d = this.dist(t);
           const reach = 1.35 + this.hw + (t.hw || 0.3) + (this.def.scale > 1.2 ? 0.3 + this.def.scale * 0.3 : 0);
           // spell casting mobs
           const cs = this.def.caster;
-          if (this.casting) {
+          if (this.casting && this.casting.support) {
+            const c = this.casting, tg = c.target; c.t -= dt; if (tg !== this) this.faceTo(tg.pos.x, tg.pos.z);
+            if (c.t <= 0) { this.casting = null; if (tg.alive && tg.pos.distanceTo(this.pos) < c.support.range + 6) game.mobSupport(this, tg, c.support, c.type); }
+          } else if (this.casting) {
             this.casting.t -= dt; this.faceTo(t.pos.x, t.pos.z);
             if (this.casting.t <= 0) { const sp = this.casting.sp; this.casting = null; if (d < sp.range + 6) game.mobSpell(this, t, sp); }
           } else if (cs && this.nextCast <= game.time && d < cs.range && d > 2 && game.lineOfSight(this, t)) {
@@ -3345,7 +4215,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
             if (!dir) this.faceTo(t.pos.x, t.pos.z);
             this.swing -= dt;
             if (d <= reach + 0.4 && this.swing <= 0) {
-              this.swing = this.def.delay * (0.9 + Math.random() * 0.2) * (game.time < (this.slowedUntil || 0) ? 1.65 : 1);
+              this.swing = this.def.delay * (0.9 + Math.random() * 0.2) * (game.time < (this.slowedUntil || 0) ? 1.65 : 1) * (game.time < (this.hasteUntil || 0) ? 1 - (this.haste || 0) : 1);
               this.attackT = 0.01;
               game.mobAttack(this, t);
             }
@@ -3353,9 +4223,21 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         }
       } else if (this.state === 'flee') {
         const t = this.target || pl;
-        const ang = Math.atan2(this.pos.x - t.pos.x, this.pos.z - t.pos.z);
-        dir = { x: Math.sin(ang), z: Math.cos(ang) }; speed *= 0.65;
-        if (this.pos.distanceTo(t.pos) > 45 || !pl.alive) this.goHome();
+        this.fleeT = (this.fleeT || 0) + dt;
+        const h = this.helper;
+        if (h && h.alive && h.state !== 'chase' && h.state !== 'flee') {
+          // run to the nearest idle friend and bring it back
+          dir = this.nav.steer(this, h.pos.x, h.pos.y, h.pos.z, game, 3, dt) || null; speed *= 0.8;
+          if (this.pos.distanceTo(h.pos) < 4.5) {
+            if (pl.pos.distanceTo(this.pos) < 70) game.log(`${U.cap(this.name)} shouts for help! ${U.cap(h.name)} comes to ${this.def.faction === 'bandit' ? 'the call' : 'its aid'}!`, 'shout');
+            this.helper = null; h.aggroOn(t, game); for (const [e, v] of this.hate) h.addHate(e, v * 0.5);
+            this.state = 'chase'; this.recruited = true;
+          }
+        } else {
+          const ang = Math.atan2(this.pos.x - t.pos.x, this.pos.z - t.pos.z);
+          dir = { x: Math.sin(ang), z: Math.cos(ang) }; speed *= 0.65;
+        }
+        if (this.pos.distanceTo(t.pos) > 45 || !pl.alive || this.fleeT > 30) this.goHome();
         if (this.hp > this.maxHp * 0.4) this.state = 'chase';
       } else if (this.state === 'return') {
         dir = this.nav.steer(this, this.home.x, this.home.y, this.home.z, game, 1.2, dt);
@@ -3399,6 +4281,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     constructor(d) {
       super('npc', d.name);
       this.npcKind = d.kind; this.level = d.kind === 'guard' ? 35 : 30;
+      this.faction = d.faction || null; this.stock = d.stock || null; this.data = d;
       this.pos.set(d.x, d.y, d.z); this.home = this.pos.clone();
       this.model = buildModel(EB.models.npcOpts(d));
       this.hw = 0.3; this.h = this.model.height;
@@ -3506,6 +4389,23 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.hp = saved && saved.hp > 0 ? Math.min(saved.hp, this.maxHp) : this.maxHp;
       this.mana = saved && saved.mana != null ? saved.mana : this.maxMana;
       this.eyeH = this.h * 0.9;
+      // v5 pet commands: follow / guard / sit modes, explicit attack target, back off
+      this.petMode = isPet && saved && ['follow', 'guard', 'sit'].includes(saved.petMode) ? saved.petMode : 'follow';
+      this.guardPos = isPet && saved && saved.guardPos ? new THREE.Vector3(saved.guardPos[0], saved.guardPos[1], saved.guardPos[2]) : null;
+      this.petTarget = null; this.backoffUntil = 0;
+    }
+    petFoe(game) {
+      if (game.time < this.backoffUntil) return null;
+      if (this.petTarget) { if (this.petTarget.alive && this.petTarget.kind === 'mob') return this.petTarget; this.petTarget = null; }
+      const attacker = game.mobs.find((m) => m.alive && m.state === 'chase' && m.target === this && !game.isMezzed(m));
+      if (this.petMode === 'sit') return attacker || null;
+      const foe = game.mercFoe(this);
+      if (this.petMode === 'guard') {
+        const gp = this.guardPos || this.pos;
+        if (foe && foe.pos.distanceTo(gp) < 14) return foe;
+        return attacker && attacker.pos.distanceTo(gp) < 18 ? attacker : null;
+      }
+      return foe;
     }
     get alive() { return !this.dead; }
     modelSpec() { return this.isPet ? EB.models.petOpts(this.petLvl) : EB.models.mercOpts(this.role, this.equip); }
@@ -3531,7 +4431,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     get maxMana() { return this.role === 'healer' ? EB.calc.maxMana('cleric', this.level, [0, 0, 0, 0, 110 + this.statSum('WIS'), 0, 0]) + this.itemSum('mana') : 0; }
     get ac() { if (this.isPet) return 10 + this.level * 3; return (this.role === 'tank' ? 20 + this.level * 4 : 8 + this.level * 2) + this.buffSum('ac') + this.itemSum('ac') + Math.floor(this.statSum('AGI') / 4); }
     healSpell() { const L = this.level; return L >= 9 ? 'healing' : L >= 4 ? 'light_healing' : 'minor_healing'; }
-    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs, stance: this.stance, healAt: this.healAt, equip: this.equip, dead: this.dead, petLvl: this.petLvl || undefined }; }
+    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs, stance: this.stance, healAt: this.healAt, equip: this.equip, dead: this.dead, petLvl: this.petLvl || undefined,
+      petMode: this.isPet ? this.petMode : undefined, guardPos: this.isPet && this.guardPos ? [this.guardPos.x, this.guardPos.y, this.guardPos.z] : undefined }; }
     startCast(id, target, game) {
       const sp = SPELLS[id];
       this.casting = { id, sp, target, t: sp.cast };
@@ -3564,8 +4465,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       let dir = null, speed = 5.9;
       if (!this.isPet && this.level !== pl.level) { const pct = this.hp / this.maxHp; this.level = pl.level; this.hp = Math.ceil(this.maxHp * pct); }
       if (!pl.alive) { this.vel.set(0, this.vel.y, 0); physicsMove(game.world, this, dt, true); this.syncModel(); return; }
-      if (this.pos.distanceTo(pl.pos) > 60) { this.pos.set(pl.pos.x + 1.5, pl.pos.y + 0.2, pl.pos.z + 1.5); this.nav.reset(); }
-      const foe = game.mercFoe(this);
+      if (this.pos.distanceTo(pl.pos) > 60 && !(this.isPet && this.petMode === 'guard' && this.pos.distanceTo(pl.pos) < 120)) { this.pos.set(pl.pos.x + 1.5, pl.pos.y + 0.2, pl.pos.z + 1.5); this.nav.reset(); }
+      const foe = this.isPet ? this.petFoe(game) : game.mercFoe(this);
       const distPl = this.pos.distanceTo(pl.pos);
       if (this.casting) {
         this.casting.t -= dt;
@@ -3600,11 +4501,14 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
               game.log(`${this.name} taunts ${foe.name} to ignore others and attack him!`, 'other');
             }
           }
-        } else if (distPl > 4.5) dir = this.nav.steer(this, pl.pos.x, pl.pos.y, pl.pos.z, game, 3, dt);
+        } else if (this.isPet && this.petMode === 'sit') { /* stay put */ }
+        else if (this.isPet && this.petMode === 'guard') { const gp = this.guardPos || (this.guardPos = this.pos.clone()); if (this.pos.distanceTo(gp) > 1.5) dir = this.nav.steer(this, gp.x, gp.y, gp.z, game, 1.2, dt); }
+        else if (distPl > 4.5) dir = this.nav.steer(this, pl.pos.x, pl.pos.y, pl.pos.z, game, 3, dt);
       }
       if (distPl > 12) speed = 7;
       if (dir) { this.yaw = Math.atan2(dir.x, dir.z); this.vel.x = dir.x * speed; this.vel.z = dir.z * speed; }
-      else { this.vel.x = this.vel.z = 0; if (!foe && !this.casting && distPl < 8) this.faceTo(pl.pos.x, pl.pos.z); }
+      else { this.vel.x = this.vel.z = 0; if (!foe && !this.casting && distPl < 8 && !(this.isPet && this.petMode === 'guard')) this.faceTo(pl.pos.x, pl.pos.z); }
+      this.sitting = this.isPet && this.petMode === 'sit' && !foe && !dir;
       const r = physicsMove(game.world, this, dt, true);
       if (dir && (r.blocked || dir.up) && this.onGround) this.vel.y = 7.5;
       if (this.inWater && dir) this.vel.y = Math.max(this.vel.y, 1.5);
@@ -3612,7 +4516,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (this.attackT > 0) { this.attackT += dt * 3; if (this.attackT >= 1) this.attackT = 0; }
       this.gearChk = (this.gearChk || 0) - dt;
       if (this.gearChk <= 0) { this.gearChk = 0.5; this.refreshModel(); }
-      animateModel(this.model, this.walkPhase, !!dir, this.casting ? 0 : this.attackT, false, { dt, cast: !!this.casting, speed });
+      animateModel(this.model, this.walkPhase, !!dir, this.casting ? 0 : this.attackT, this.sitting, { dt, cast: !!this.casting, speed });
       this.syncModel();
     }
     melee(foe, game, dt) {
@@ -3673,6 +4577,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     wild:  { bpm: 76, root: 174.6, scale: [0, 2, 3, 5, 7, 9, 10], prog: [0, 6, 3, 4], lead: [0, -1, 2, 4, -1, 3, 2, -1, 0, -1, 4, 6, -1, 4, 2, -1], wave: 'triangle' },
     frost: { bpm: 64, root: 146.8, scale: [0, 2, 3, 5, 7, 8, 10], prog: [0, 5, 2, 6], lead: [4, -1, -1, 3, 2, -1, 0, -1, 4, -1, 7, -1, 6, -1, 4, -1], wave: 'sine' },
     crypt: { bpm: 56, root: 110.0, scale: [0, 1, 3, 5, 6, 8, 10], prog: [0, 1, 0, 5], lead: [0, -1, -1, -1, 1, -1, -1, -1, 4, -1, 3, -1, 1, -1, -1, -1], wave: 'sine' },
+    // v5: Phrygian dominant (hijaz) over a low drone for the Sunscorched Expanse; a slow, hollow tomb theme
+    desert: { bpm: 92, root: 164.8, scale: [0, 1, 4, 5, 7, 8, 10], prog: [0, 1, 0, 6], lead: [0, 1, 2, -1, 1, 0, -1, 1, 4, -1, 3, 2, 1, -1, 0, -1], wave: 'triangle', drone: true },
+    tomb: { bpm: 50, root: 98.0, scale: [0, 1, 4, 5, 7, 8, 10], prog: [0, 1, 5, 1], lead: [0, -1, -1, 1, -1, -1, 0, -1, -1, -1, 4, -1, 5, -1, 1, -1], wave: 'sine', drone: true, quiet: true },
   };
   let musicOn = true, mood = null, musicGain = null, nextT = 0, step = 0, timer = null;
   const hz = (m, deg, oct) => { const n = m.scale.length, o = Math.floor(deg / n); const d = ((deg % n) + n) % n; return m.root * Math.pow(2, (m.scale[d] + 12 * (o + (oct || 0))) / 12); };
@@ -3693,9 +4600,11 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         note(hz(m, ch, -2), nextT, beat * 8, 'triangle', 0.07, musicGain);
       }
       if (pos === 8) note(hz(m, ch, -2), nextT, beat * 8, 'triangle', 0.06, musicGain);
+      if (m.drone && pos === 0 && bar % 2 === 0) note(m.root / 4, nextT, beat * 32, 'sawtooth', 0.018, musicGain);
+      if (m.drone && !m.quiet && (pos === 0 || pos === 3 || pos === 6 || pos === 10)) note(pos === 0 ? 90 : 180, nextT, 0.09, 'sine', pos === 0 ? 0.06 : 0.03, musicGain); // frame-drum pulse
       const l = m.lead[pos];
       if (l >= 0 && (bar % 2 === 0 || pos % 4 === 0)) note(hz(m, ch + l, 0), nextT, beat * 1.8, m.wave, 0.035, musicGain);
-      if (mood !== 'crypt' && pos % 4 === 2) note(hz(m, ch + 4, 1), nextT, beat * 0.6, 'sine', 0.012, musicGain);
+      if (mood !== 'crypt' && mood !== 'tomb' && pos % 4 === 2) note(hz(m, ch + 4, 1), nextT, beat * 0.6, 'sine', 0.012, musicGain);
       nextT += beat; step++;
     }
   }
@@ -3931,6 +4840,10 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.gems = pad(c.gems || known.filter(isSpell));
       this.hotbar = pad(c.hotbar || known);
       this.title = c.title || '';
+      // v5: EQ-style faction standings (older saves start at the defaults)
+      this.faction = Object.assign({}, c.faction || {});
+      for (const f in D.FACTIONS) if (typeof this.faction[f] !== 'number') this.faction[f] = D.FACTIONS[f].start;
+      this.petMode = c.petMode || 'follow';
       this.memorizing = null;
       this.buffs = (c.buffs || []).filter((b) => b.left > 0);
       this.bind = c.bind || null;
@@ -3965,7 +4878,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
       return { name: this.name, race: this.race, cls: this.cls, level: this.level, xp: this.xp, stats: this.base, coins: this.coins, inv: this.inv, equip: this.equip,
-        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
+        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
     }
   }
 
@@ -4009,7 +4922,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.ring = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({ map: rtex, color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
       this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; this.ring.renderOrder = 2; this.scene.add(this.ring);
       EB.fx.init(this.scene);
-      this.gfxPref = localStorage.getItem('everblock_gfx') || 'high';
+      this.gfxPref = localStorage.getItem('everblock_gfx') || (EB.phone && EB.phone.on ? 'low' : 'high'); // v5: phones default to low
+      if (EB.phone && EB.phone.on) r.setPixelRatio(1);
       this.applyGfx(this.gfxPref, true);
       this.raycaster = new THREE.Raycaster();
       // v3: a fixed pool of point lights reassigned to the nearest lanterns (+1 player torch) so shaders never recompile
@@ -4076,7 +4990,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       $('hud').classList.remove('hidden');
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`MOTD: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
+      ui.log(`MOTD: Greetings, ${pl.name}. New in v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      if (false) ui.log(`MOTD: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guildmaster Aldric says, 'Welcome, young ${RACES[pl.race].name.toLowerCase()}. Hunt the rats and snakes outside the walls to start. Return to me as you grow in power.'`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
       this.last = performance.now();
@@ -4168,7 +5083,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         if (this.time < s.respawnAt) continue;
         const def = s.def;
         let type = def.type;
-        if (def.alt && Math.random() < def.altChance) type = def.alt;
+        // placeholder spawns: a rare named may pop instead of the PH, but only one of each named is ever up
+        if (def.alt && Math.random() < def.altChance && !this.mobs.some((m) => m.alive && m.type === def.alt)) type = def.alt;
         let x = def.x + (Math.random() * 2 - 1) * def.radius * 0.6, z = def.z + (Math.random() * 2 - 1) * def.radius * 0.6;
         let y = def.y != null ? this.world.floorBelow(x, def.y + 1, z) : this.world.surfaceY(x, z);
         if (def.y == null && this.world.isWater(x, y, z)) { x = def.x; z = def.z; y = this.world.surfaceY(x, z); }
@@ -4220,7 +5136,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     }
     locked() { return document.pointerLockElement === this.renderer.domElement; }
     requestLock() { try { const p = this.renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
-    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive); }
+    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive || !!(EB.phone && EB.phone.on)); }
     onKey(e, down) {
       if ($('hud').classList.contains('hidden')) return;
       if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
@@ -4238,6 +5154,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       if (k === 'KeyN') { this.showMap = !this.showMap; $('minimap').classList.toggle('hidden', !this.showMap); return; }
       if (k === 'Enter' || k === 'Slash') { const ci = $('chatInput'); ci.classList.remove('hidden'); if (k === 'Slash') ci.value = '/'; setTimeout(() => ci.focus(), 0); if (this.locked()) document.exitPointerLock(); e.preventDefault(); return; }
       if (k === 'KeyI') { this.toggleWin('invWin'); return; }
+      if (k === 'KeyP') { this.toggleWin('petWin'); return; }
       if (k === 'KeyM' && e.shiftKey) { this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); return; }
       if (k === 'KeyM') { this.log(EB.audio.toggle() ? 'Sound on.' : 'Sound off.', 'sys'); return; }
       if (!pl.alive) return;
@@ -4264,7 +5181,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.raycaster.setFromCamera(ndc, this.camera);
       const hit = this.pickEntity(this.raycaster.ray.origin, this.raycaster.ray.direction);
       if (hit && e.button === 0) { this.setTarget(hit); return; }
-      if (e.button === 0) this.requestLock();
+      if (e.button === 0 && !(EB.phone && EB.phone.on)) this.requestLock();
     }
     camDir() { const p = this.player; return new THREE.Vector3(Math.sin(p.yaw) * Math.cos(p.pitch), Math.sin(p.pitch), Math.cos(p.yaw) * Math.cos(p.pitch)); }
     eyePos() { return new THREE.Vector3(this.player.pos.x, this.player.pos.y + this.player.eyeH, this.player.pos.z); }
@@ -4315,6 +5232,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       else if (id === 'mercWin') this.renderMercWin();
       else if (id === 'bookWin') this.renderBook();
       else if (id === 'mercCfgWin') this.renderMercCfg();
+      else if (id === 'petWin') this.renderPetWin();
     }
 
     // ---------- targeting ----------
@@ -4331,13 +5249,36 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       i = i < 0 ? 0 : (i + (rev ? -1 : 1) + list.length) % list.length;
       this.setTarget(list[i]);
     }
+    // ---------- v5 factions ----------
+    npcFaction(n) { return n.faction || { everblock: 'guards', frostfang: 'hollis', desert: 'sunward' }[this.world.zoneId] || 'guards'; }
+    entFaction(e) { if (!e) return null; if (e.kind === 'npc') return this.npcFaction(e); if (e.kind === 'mob' && D.FACTIONS[e.def.faction]) return e.def.faction; return null; }
+    standing(f) { const v = this.player.faction[f]; return v == null ? 0 : v; }
+    // tracked-faction mobs only attack on sight when you are threatening (KOS) or worse
+    factionKOS(m) { const f = m.def.faction; if (!D.FACTIONS[f]) return true; return this.standing(f) < -750; }
+    adjustFaction(f, delta, silent) {
+      const pl = this.player; if (!D.FACTIONS[f] || !delta) return;
+      const old = this.standing(f), nv = U.clamp(old + delta, -2000, 2000), name = D.FACTIONS[f].name;
+      pl.faction[f] = nv;
+      if (silent) return;
+      if (nv === old) this.log(`Your faction standing with ${name} could not possibly get any ${delta > 0 ? 'better' : 'worse'}.`, 'faction');
+      else this.log(`Your faction standing with ${name} got ${delta > 0 ? 'better' : 'worse'}.`, 'faction');
+      const a = D.standingOf(old).label, b = D.standingOf(nv).label;
+      if (a !== b) this.log(`${name} now ${D.standingOf(nv).con.replace(/ you.*$/, '')} you. (${b})`, 'faction');
+    }
+    factionHitsFor(m) { return (D.KILL_FACTION[m.def.faction] || []).concat(m.def.factionHits || []); }
+    priceMult(npc) { return D.factionPriceMult(this.standing(this.npcFaction(npc))); }
     consider() {
       const t = this.target;
       if (!t) { this.log('You must first select a target to consider.', 'sys'); return; }
-      if (t.kind === 'npc') { this.log(`${t.name} regards you as an ally -- looks like it would wipe the floor with you!`, 'sys'); return; }
+      if (t.kind === 'npc') {
+        const st = D.standingOf(this.standing(this.npcFaction(t)));
+        this.log(`${t.name} ${st.con} -- looks like it would wipe the floor with you!`, 'sys');
+        return;
+      }
+      if (t.kind === 'merc') { this.log(`${t.name} regards you as an ally.`, 'sys'); return; }
       if (t.kind !== 'mob' || !t.alive) { this.log('That is a corpse.', 'sys'); return; }
-      const c = t.con(this);
-      const attitude = t.def.aggressive ? 'glares at you threateningly' : 'regards you indifferently';
+      const c = t.con(this), f = this.entFaction(t);
+      const attitude = f ? D.standingOf(this.standing(f)).con : t.def.aggressive ? 'glares at you threateningly' : 'regards you indifferently';
       this.log(`${U.cap(t.name)} ${attitude} -- ${CON_MSG[c]}`, 'sys');
       const last = $('chatLog').lastChild; if (last) last.style.color = CON_HEX[c];
     }
@@ -4356,7 +5297,15 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         binder: t.name === 'Scout Hollis' ? `Careful out here, ${pl.name}. The orcs of the Frostfang Warcamp to the northwest raid us nightly, and the giants of Vorgath's keep to the north are worse. Press E and I'll bind your soul to this camp.` : `Greetings, ${pl.name}. Should you fall, your spirit will return to where it is bound. Press E and I shall bind your soul here.`,
         guard: ['Move along, citizen.', `Hail, ${pl.name}. Keep your eyes open, the Darkpaw gnolls have been seen near the west gate. Some say Fippy Darkpaw himself leads them.`, "I don't have time to chat. Gnolls, you know.", 'The undead of the Sunken Crypt grow restless at night.'][Math.floor(Math.random() * 4)],
       };
-      setTimeout(() => this.log(`${t.name} says, '${lines[t.npcKind]}'`, 'say'), 400);
+      const special = {
+        'Sunpriestess Nefa': `The sun watches over all who walk the Expanse, ${pl.name}. Press E and I shall bind your soul to this outpost.`,
+        'Trader Hamid': `Water, blades and potions, ${pl.name}! Friends of the Sunward Caravan pay less. (Press E to trade)`,
+        'Fence Jabari': `Psst. The Sandreavers pay well for what they need... if they trust you. (Press E to trade)`,
+        'Sunward Guard Tamit': `The Sandreavers hide in the rocks to the east. Their mystics mend their wounds - kill those first.`,
+        'Sunward Guard Omari': `The Great Pyramid lies to the north. The dead there do not rest, and Pharaoh Ankhet-Ra still sits upon his throne.`,
+      };
+      if (this.world.zoneId === 'desert' && t.npcKind === 'guard' && !special[t.name]) special[t.name] = 'Keep your waterskin full and your blade sharp.';
+      setTimeout(() => this.log(`${t.name} says, '${special[t.name] || lines[t.npcKind]}'`, 'say'), 400);
     }
     updateTargetWin() {
       const t = this.target;
@@ -4364,9 +5313,9 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       $('targetWin').classList.remove('hidden');
       let color = '#ffffff', name = t.name, info = '';
       if (t.kind === 'mob') {
-        if (t.alive) { color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : t.def.aggressive ? 'Threatening' : 'Indifferent'}`; }
+        if (t.alive) { const f = this.entFaction(t); color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : f ? D.standingOf(this.standing(f)).label : t.def.aggressive ? 'Threatening' : 'Indifferent'}`; }
         else { name = t.corpseName(); color = '#b0a080'; info = 'Press E to loot'; }
-      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = { merchant: 'Merchant - press E to trade', trainer: 'Guildmaster - press E to train', binder: 'Soulbinder - press E to bind', guard: 'Everblock Guard' }[t.npcKind]; }
+      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guildmaster - press E to train', binder: 'Soulbinder - press E to bind', guard: 'Guard', quest: 'Quest giver - press E' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
       else if (t.kind === 'pcorpse') { color = '#ffcc66'; info = 'Your corpse - press E to loot'; }
       else if (t.kind === 'merc') { color = '#70ff70'; info = `Group member - Level ${t.level} ${t.role === 'healer' ? 'Cleric' : 'Warrior'} Mercenary`; }
       $('tName').textContent = name; $('tName').style.color = color;
@@ -4422,8 +5371,26 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * CLASSES[pl.cls].dmgMult * (1 + pl.level / 12) * (1 + pl.buffSum('dmgPct') / 100)));
       return U.randInt(Math.max(1, Math.floor(max / 4)), max);
     }
+    // v5: mob casters heal and buff their allies
+    mobSupport(m, tg, s, type) {
+      const near = this.player.pos.distanceTo(m.pos) < 50;
+      if (type === 'heal') {
+        const before = tg.hp; const amt = Array.isArray(s.amt) ? U.randInt(s.amt[0], s.amt[1]) : (s.amt || 0); tg.hp = Math.min(tg.maxHp, tg.hp + amt + Math.floor(tg.maxHp * 0.04)); const got = Math.round(tg.hp - before);
+        EB.fx.heal(tg);
+        if (near) this.log(tg === m ? `${U.cap(m.name)} glows with renewed vigor. (${s.name}, +${got})` : `${U.cap(tg.name)} is healed by ${m.name}'s ${s.name}. (+${got})`, 'other');
+        if (tg === this.target) this.updateTargetWin();
+      } else {
+        if (s.ward) { tg.wardUntil = this.time + s.dur; tg.ward = s.ward; }
+        if (s.haste) { tg.hasteUntil = this.time + s.dur; tg.haste = s.haste; }
+        EB.fx.buff(tg, s.color || 0xffd070);
+        if (near) this.log(`${U.cap(tg.name)} ${s.ward ? 'is surrounded by a shimmering ward' : 'moves with unnatural speed'}. (${s.name})`, 'other');
+      }
+      // heals/buffs on a fighting mob add hate to the healer from whoever the target is fighting
+      for (const [e, v] of tg.hate) if (e !== m) m.addHate(e, 1);
+    }
     damageMob(m, dmg, src) {
       if (!m.alive) return;
+      if (dmg > 0 && this.time < (m.wardUntil || 0)) dmg = Math.max(1, Math.round(dmg * (1 - (m.ward || 0))));
       m.hp -= dmg; if (dmg > 0) EB.models.flinch(m.model);
       if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} has been awakened by ${src === this.player ? 'you' : src.name}.`, 'spell'); }
       if (src === this.player || (src && src.kind === 'merc')) m.grpDamage += dmg;
@@ -4448,6 +5415,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           this.gainXP(xp, true);
         } else if (xp > 0) this.gainXP(xp); else this.log('You gain no experience from that kill.', 'other');
         this.questKillHook && this.questKillHook(m);
+        for (const [f, d] of this.factionHitsFor(m)) this.adjustFaction(f, d);
       }
       if (this.target === m) { pl.autoAttack = false; this.updateTargetWin(); }
       if (pl.casting && pl.casting.target === m) this.interruptCast('Your target has died.');
@@ -4671,7 +5639,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         }
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
-          const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          let dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          if (sp.undead && t.def.faction === 'undead') { dmg = Math.floor(dmg * sp.undead); this.log(`${U.cap(t.name)} is seared by holy fire!`, 'spell'); }
           const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
           this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
@@ -4747,6 +5716,14 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           break;
         }
         case 'skill': {
+          if (sp.taunt) {
+            if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this);
+            let top = 0; for (const [, v] of t.hate) top = Math.max(top, v);
+            t.hate.set(pl, top + 50 + L * 5); t.target = pl; t.hateT = 1.5;
+            this.log(`You taunt ${t.name} to attack you!`, 'melee'); this.pAttackAnim = 0.01; this.pAttackKind = 'bash';
+            if (t.def.named && Math.random() < 0.25) this.log(`${U.cap(t.name)} is not impressed by your taunt.`, 'sys');
+            break;
+          }
           if (sp.backstab) {
             const w = pl.weapon();
             if (w.verb !== 'pierce') { this.log('You need a piercing weapon to backstab!', 'sys'); pl.cooldowns[id] = this.time + 1; return; }
@@ -4790,7 +5767,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     applyGfx(mode, silent) {
       const high = mode !== 'low';
       this.gfxPref = high ? 'high' : 'low';
-      localStorage.setItem('everblock_gfx', this.gfxPref);
+      if (!silent) localStorage.setItem('everblock_gfx', this.gfxPref); // only explicit choices are remembered (phones default to low)
       EB.models.setQuality(high); EB.fx.setHigh(high);
       if (this.renderer) { this.renderer.setPixelRatio(high ? Math.min(window.devicePixelRatio, 1.5) : 1); this.renderer.setSize(window.innerWidth, window.innerHeight); }
       if (!silent) this.log(`Graphics quality: ${high ? 'HIGH (textured models, rim light, shadows, full particles)' : 'LOW (flat models, no blob shadows, fewer particles, 1x pixel ratio)'}.`, 'sys');
@@ -4825,6 +5802,12 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       }
       if (t.kind === 'pcorpse') return this.lootOwnCorpse(t);
       if (t.kind === 'mob') return this.openLoot(t);
+      if (t.npcKind === 'merchant' && this.priceMult(t) == null) {
+        const st = D.standingOf(this.standing(this.npcFaction(t)));
+        this.log(`${t.name} ${st.con}. ${t.name} says, 'I will not trade with the likes of you, ${pl.name}! Begone!'`, 'say');
+        this.log(`(Your standing with ${D.FACTIONS[this.npcFaction(t)].name} is too low: ${st.label}.)`, 'faction');
+        return;
+      }
       if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says, 'Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}'`, 'say'); this.openWin('merchantWin'); }
       else if (t.npcKind === 'trainer') this.openWin('trainerWin');
       else if (t.npcKind === 'liaison') this.openWin('mercWin');
@@ -4951,13 +5934,15 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       ui.hideTip(); this.renderInv();
     }
     chaMod() { return (this.player.stats().CHA - 75) / 600; }
-    buyPrice(id) { return Math.max(1, Math.round(ITEMS[id].value * (1.25 - this.chaMod()))); }
-    sellPrice(id) { return Math.max(1, Math.floor(ITEMS[id].value * (0.5 + this.chaMod() / 2))); }
+    fMult() { return (this.merchant && this.priceMult(this.merchant)) || 1; }
+    buyPrice(id) { return Math.max(1, Math.round(ITEMS[id].value * (1.25 - this.chaMod()) * this.fMult())); }
+    sellPrice(id) { return Math.max(1, Math.floor(ITEMS[id].value * (0.5 + this.chaMod() / 2) / this.fMult())); }
     renderMerchant() {
       const m = this.merchant; if (!m) return;
       $('merchTitle').firstChild.textContent = `${m.name} `;
-      const list = $('merchList'); list.innerHTML = `<div class="sub">Your coin: ${U.coinStr(this.player.coins)}</div>`;
-      for (const id of MERCHANT_STOCK) {
+      const f = this.npcFaction(m), st = D.standingOf(this.standing(f)), pm = this.fMult();
+      const list = $('merchList'); list.innerHTML = `<div class="sub">Your coin: ${U.coinStr(this.player.coins)}</div><div class="sub fstand">${D.FACTIONS[f].name}: <b>${st.label}</b>${pm !== 1 ? ` (prices ${pm < 1 ? '-' : '+'}${Math.round(Math.abs(pm - 1) * 100)}%)` : ''}</div>`;
+      for (const id of (D.STOCKS[m.stock] || MERCHANT_STOCK)) {
         const row = document.createElement('div'); row.className = 'row';
         row.innerHTML = `<span>${ITEMS[id].icon}</span><span class="n">${ITEMS[id].name}</span><span>${U.coinShort(this.buyPrice(id))}</span>`;
         const b = document.createElement('button'); b.textContent = 'Buy'; b.className = 'small';
@@ -4965,6 +5950,17 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         b.onclick = () => this.buyItem(id);
         row.appendChild(b); ui.tooltipFor(row, () => ui.itemTip(id));
         list.appendChild(row);
+      }
+      // v5: sell list (touch friendly alternative to right-clicking bag items)
+      const inv = this.player.inv.map((it, i) => [it, i]).filter(([it]) => it);
+      if (inv.length) {
+        const h = document.createElement('h4'); h.textContent = 'Sell your items'; h.className = 'sellHdr'; list.appendChild(h);
+        for (const [it, i] of inv) {
+          const I = ITEMS[it.id], row = document.createElement('div'); row.className = 'row sellRow';
+          row.innerHTML = `<span>${I.icon || '•'}</span><span class="n">${I.name}${it.count > 1 ? ' x' + it.count : ''}</span><span>${U.coinShort(this.sellPrice(it.id) * it.count)}</span>`;
+          const b = document.createElement('button'); b.textContent = 'Sell'; b.className = 'small'; b.onclick = () => this.sellItem(i);
+          row.appendChild(b); list.appendChild(row);
+        }
       }
     }
     buyItem(id) {
@@ -5129,6 +6125,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       }
     }
     renderGroup() {
+      this.renderPetBar();
       const gw = $('groupWin');
       if (!this.mercs.length) { gw.classList.add('hidden'); return; }
       gw.classList.remove('hidden');
@@ -5286,6 +6283,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       pl.coins += q.coins; this.log(`You receive ${U.coinStr(q.coins)}.`, 'loot');
       if (q.reward) { this.addItem(q.reward, q.rewardCount || 1, true); this.log(`You receive ${q.rewardCount > 1 ? q.rewardCount + 'x ' : 'a '}${ITEMS[q.reward].name}.`, ITEMS[q.reward].rare ? 'ding' : 'loot'); }
       if (q.title) { pl.title = q.title; this.log(`You have earned the title: ${q.title}!`, 'ding'); ui.center(q.title, `${pl.name}, ${q.title}`, 4); }
+      for (const [f, d] of q.faction || []) this.adjustFaction(f, d);
       this.log(`You have completed the quest: ${q.name}!`, 'ding');
       this.gainXP(Math.floor(q.xp * (1 + pl.level / 10)));
       EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
@@ -5404,6 +6402,19 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       };
       sect('Spells (drag or click, then click a gem to memorize; double-click to memorize)', known.filter(isSpell));
       sect('Abilities (drag or click, then click a hotbar slot)', known.filter((id) => !isSpell(id)));
+      // v5: explicit buttons for the selected spell (touch friendly: no drag / double-click / right-click needed)
+      // always present with a constant height, so selecting a spell never shifts the list (keeps double-click working)
+      {
+        const id = this.bookSel && SPELLS[this.bookSel] ? this.bookSel : null, act = document.createElement('div'); act.className = 'bookActions';
+        const gemOk = id && isSpell(id), dis = (ok) => (ok ? '' : ' disabled');
+        let h = `<div class="bdesc">${id ? this.spellTip(id) : '<span class="hint">Tap or click a spell or ability to select it, then choose a gem or hotbar slot below.</span>'}</div>`;
+        h += `<div class="brow"><span>Memorize in gem:</span>${[0, 1, 2, 3, 4, 5, 6, 7].map((g) => `<button class="small" data-gem="${g}"${dis(gemOk)}>${g + 1}</button>`).join('')}</div>`;
+        h += `<div class="brow"><span>Put on hotbar:</span>${[0, 1, 2, 3, 4, 5, 6, 7].map((s) => `<button class="small" data-hot="${s}"${dis(id)}>${s + 1}</button>`).join('')}</div>`;
+        act.innerHTML = h;
+        act.querySelectorAll('[data-gem]').forEach((b) => { b.onclick = () => { this.bookSel = null; this.memorize(id, +b.dataset.gem); this.renderBook(); }; });
+        act.querySelectorAll('[data-hot]').forEach((b) => { b.onclick = () => { this.bookSel = null; this.assignHotbar(+b.dataset.hot, id); this.renderBook(); }; });
+        box.insertBefore(act, box.firstChild);
+      }
       $('bookHint').textContent = pl.memorizing ? `Memorizing ${SPELLS[pl.memorizing.id].name}...` : this.bookSel ? `Selected: ${SPELLS[this.bookSel].name}` : `Gems: ${pl.gems.filter(Boolean).length}/8 memorized. Memorizing takes a few seconds and makes you sit.`;
     }
 
@@ -5496,9 +6507,64 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         case 'book': case 'spellbook': this.openWin('bookWin'); break;
         case 'dismiss': { const m = this.mercs[this.mercs.length - 1]; if (m) this.dismissMerc(m); else this.log('You have no mercenaries.', 'sys'); break; }
         case 'zone': this.log(`You are in ${this.world.zoneName}.`, 'sys'); break;
-        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand /music /book /lights /gfx. Press ? for key bindings.', 'help'); break;
+        case 'faction': case 'factions': {
+          this.log('Your faction standings:', 'sys');
+          for (const f in D.FACTIONS) { const v = this.standing(f), st = D.standingOf(v); this.log(`  ${D.FACTIONS[f].name}: ${st.label} (${v})`, 'faction'); }
+          break;
+        }
+        case 'pet': { const a = (v.split(/\s+/)[1] || '').toLowerCase().replace(/[^a-z]/g, ''); if (a === 'window' || a === '') this.toggleWin('petWin'); else this.petCommand(a === 'back' || a === 'backoff' ? 'backoff' : a); break; }
+        case 'phone': { const a = (v.split(/\s+/)[1] || '').toLowerCase(); EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}.`, 'sys'); break; }
+        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /faction /pet attack|backoff|follow|guard|sit|window /dismiss /zone /sit /stand /music /book /lights /gfx /phone. Press ? for key bindings.', 'help'); break;
         default: this.log('That is not a valid command. Try /help.', 'sys');
       }
+    }
+
+    // ---------- v5 pet commands ----------
+    pet() { return this.mercs.find((m) => m.isPet && !m.dead) || null; }
+    petCommand(cmd) {
+      const pet = this.pet(), t = this.target;
+      if (!pet) { this.log('You do not have a pet.', 'sys'); return; }
+      const say = (s) => this.log(`${pet.name} says, '${s}'`, 'say');
+      switch (cmd) {
+        case 'attack':
+          if (!t || t.kind !== 'mob' || !t.alive) { this.log('You must first target something for your pet to attack.', 'sys'); return; }
+          if (t.pos.distanceTo(pet.pos) > 60) { this.log(`${t.name} is too far away for your pet.`, 'sys'); return; }
+          pet.petTarget = t; pet.backoffUntil = 0; if (pet.petMode === 'sit') pet.petMode = 'follow';
+          say(`Attacking ${t.name}, Master.`); break;
+        case 'backoff':
+          pet.petTarget = null; pet.backoffUntil = this.time + 6;
+          for (const m of this.mobs) if (m.target === pet && m.hate.has(this.player)) m.target = this.player;
+          say('Backing off, Master.'); break;
+        case 'follow': pet.petMode = 'follow'; pet.guardPos = null; say('Following you, Master.'); break;
+        case 'guard': pet.petMode = 'guard'; pet.guardPos = pet.pos.clone(); pet.petTarget = null; say('Guarding with my life... oh splendid one.'); break;
+        case 'sit': pet.petMode = pet.petMode === 'sit' ? 'follow' : 'sit'; pet.petTarget = null; say(pet.petMode === 'sit' ? 'Changing position, Master. (sitting)' : 'Changing position, Master. (standing)'); break;
+        default: this.log('Pet commands: /pet attack, backoff, follow, guard, sit, window.', 'sys'); return;
+      }
+      this.player.petMode = pet.petMode;
+      this.renderPetBar(); if (this.windows.has('petWin')) this.renderPetWin();
+    }
+    renderPetBar() {
+      const bar = $('petBar'); if (!bar) return;
+      const pet = this.pet();
+      bar.classList.toggle('hidden', !pet);
+      if (!pet) return;
+      if (!bar.dataset.built) {
+        bar.dataset.built = '1';
+        bar.innerHTML = '<span class="plabel">Pet</span>' + [['attack', '⚔', 'Attack'], ['backoff', '✋', 'Back off'], ['follow', '👣', 'Follow'], ['guard', '🛡', 'Guard'], ['sit', '💤', 'Sit']].map(([c, ic, n]) => `<button class="petBtn" data-pc="${c}" title="Pet: ${n}"><span>${ic}</span><small>${n}</small></button>`).join('');
+        bar.querySelectorAll('.petBtn').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); this.petCommand(b.dataset.pc); }; });
+      }
+      bar.querySelectorAll('.petBtn').forEach((b) => b.classList.toggle('on', b.dataset.pc === pet.petMode || (b.dataset.pc === 'attack' && !!pet.petTarget)));
+    }
+    renderPetWin() {
+      const body = $('petBody'), pet = this.pet(); if (!body) return;
+      if (!pet) { body.innerHTML = '<div class="sub">You have no pet. Necromancers summon one with a pet spell.</div>'; return; }
+      const foe = pet.petTarget && pet.petTarget.alive ? pet.petTarget.name : 'none';
+      body.innerHTML = `<div><b>${pet.name}</b> - level ${pet.level} ${D.PETS[pet.petLvl] ? D.PETS[pet.petLvl].desc : ''}</div>
+        <div class="bar hp"><div class="fill" style="width:${Math.round((pet.hp / pet.maxHp) * 100)}%"></div><span>${Math.ceil(pet.hp)} / ${pet.maxHp}</span></div>
+        <div class="sub">Mode: <b>${pet.petMode}</b> &nbsp; Attacking: <b>${foe}</b></div>
+        <div class="btnRow petCmds">${['attack', 'backoff', 'follow', 'guard', 'sit'].map((c) => `<button data-pc="${c}" class="${pet.petMode === c ? 'on' : ''}">${{ attack: 'Attack', backoff: 'Back Off', follow: 'Follow', guard: 'Guard Here', sit: pet.petMode === 'sit' ? 'Stand' : 'Sit' }[c]}</button>`).join('')}</div>
+        <div class="sub">Also: /pet attack | backoff | follow | guard | sit</div>`;
+      body.querySelectorAll('button[data-pc]').forEach((b) => { b.onclick = () => this.petCommand(b.dataset.pc); });
     }
 
     // ---------- HUD ----------
@@ -5556,6 +6622,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       $('autoInd').classList.toggle('on', pl.autoAttack);
       $('sitInd').classList.toggle('on', pl.sitting);
       $('buildInd').classList.toggle('on', this.buildMode);
+      this.renderPetBar();
+      this.petWinT = (this.petWinT || 0) + 1; if (this.windows.has('petWin') && this.petWinT % 5 === 0) this.renderPetWin();
       const at = $('atkSlot'); if (at) at.classList.toggle('active', pl.autoAttack);
       for (const h of this.hotbarEls || []) {
         const sp = SPELLS[h.id], left = (pl.cooldowns[h.id] || 0) - this.time;
@@ -5608,7 +6676,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
     updateLights() {
       const pl = this.player, w = this.world, lights = this.lampLights; if (!lights || !w.lanterns || !this.lightsOn) { this.litCount = 0; return; }
       const night = this.nightF != null ? this.nightF : 0.5;
-      const underground = this.lastZone === 'The Sunken Crypt' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
+      const underground = this.lastZone === 'The Sunken Crypt' || this.lastZone === 'Tomb of Ankhet-Ra' || this.lastZone === 'The Great Pyramid' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
       const near = [];
       for (const p of w.lanterns.values()) {
         const dx = p.x + 0.5 - pl.pos.x, dz = p.z + 0.5 - pl.pos.z, dy = p.y - pl.pos.y;
@@ -5670,14 +6738,20 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
           if (this.keys.ArrowLeft) pl.yaw += 2.2 * dt;
           if (this.keys.ArrowRight) pl.yaw -= 2.2 * dt;
         }
+        let analog = 1;
+        if (EB.phone && EB.phone.on && !typing) { // v5: virtual joystick (analog)
+          const j = EB.phone.move, m = Math.hypot(j.x, j.y);
+          if (m > 0.18) { fx += j.x; fz += j.y; analog = Math.min(1, 0.35 + m * 0.75); }
+        }
         if (fx || fz) { moving = true; this.stand(); }
         const f = pl.forward(), r = new THREE.Vector3(-Math.cos(pl.yaw), 0, Math.sin(pl.yaw));
         let mx = f.x * fz + r.x * fx, mz = f.z * fz + r.z * fx;
         const l = Math.hypot(mx, mz);
-        const speed = (fz < 0 && !fx ? 3.2 : 5.6) * (1 + pl.buffSum('speed'));
+        const speed = (fz < 0 && Math.abs(fx) < 0.3 ? 3.2 : 5.6) * (1 + pl.buffSum('speed')) * analog;
         if (l > 0) { mx = (mx / l) * speed; mz = (mz / l) * speed; }
         pl.vel.x = mx; pl.vel.z = mz;
-        if (this.keys.Space && !typing) {
+        const jumpQ = EB.phone && EB.phone.jumpQ; if (jumpQ) EB.phone.jumpQ = false; // v5: a quick tap on the touch jump button still jumps
+        if ((this.keys.Space || jumpQ) && !typing) {
           if (pl.inWater) pl.vel.y = 3.2;
           else if (pl.onGround) { pl.vel.y = 8.2; moving = true; this.stand(); }
         }
@@ -5757,7 +6831,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
         this.drawMinimap();
         if (this.questDirty || (this.questT = (this.questT || 0) + 1) % 10 === 0) { this.questDirty = false; this.renderQuests(); }
         this.updateLights();
-        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
+        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.world.zoneId === 'desert' ? (this.lastZone === 'Tomb of Ankhet-Ra' ? 'tomb' : 'desert') : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
         const z = this.world.zoneAt(pl.pos.x, pl.pos.y, pl.pos.z);
         if (z !== this.lastZone) { if (this.lastZone) { this.log(`You have entered ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
       }
@@ -5840,7 +6914,7 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       this.moonLight.position.copy(cam).addScaledVector(sunDir, -100); this.moonLight.target.position.copy(cam);
       this.sun.intensity = 0.85 * day;
       this.moonLight.intensity = 0.22 * (1 - day);
-      const inDungeon = this.lastZone === 'The Sunken Crypt';
+      const inDungeon = this.lastZone === 'The Sunken Crypt' || this.lastZone === 'Tomb of Ankhet-Ra' || this.lastZone === 'The Great Pyramid';
       this.hemi.intensity = inDungeon ? 0.4 : 0.13 + 0.62 * day;
       const sky = new THREE.Color(this.world.sky.night).lerp(new THREE.Color(this.world.sky.day), day).lerp(new THREE.Color(0xf08a50), dusk * 0.6);
       if (inDungeon) { sky.set(0x07070c); this.scene.fog.near = 6; this.scene.fog.far = 42; }
@@ -5862,6 +6936,162 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
       EB.game = g;
       g.start(newChar);
     });
+  });
+})();
+
+</script>
+<script>
+// Everblock v5 - Phone Mode: touch controls (virtual joystick, drag-to-look, tap-to-target, pinch zoom,
+// action buttons) and a compact responsive layout. Toggled on the start screen; remembered in localStorage.
+(function () {
+  const EB = window.EB, $ = EB.$;
+  const KEY = 'everblock_phone';
+  const touchCapable = () => ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  const phone = EB.phone = { on: false, move: { x: 0, y: 0 }, suggested: false, touchCapable };
+
+  function updateToggles() {
+    for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) { b.classList.toggle('on', phone.on); b.innerHTML = `📱 Phone Mode: <b>${phone.on ? 'ON' : 'OFF'}</b>`; } }
+    const s = $('phoneSuggest'); if (s && !phone.suggested) s.classList.add('hidden');
+  }
+  phone.set = (on, persist) => {
+    phone.on = !!on;
+    document.body.classList.toggle('phone', phone.on);
+    if (persist !== false) localStorage.setItem(KEY, phone.on ? '1' : '0');
+    phone.move.x = phone.move.y = 0;
+    updateToggles();
+    const g = EB.game;
+    if (g && g.player && g.renderer) {
+      if (phone.on) {
+        if (g.locked()) document.exitPointerLock();
+        if (!localStorage.getItem('everblock_gfx')) g.applyGfx('low', true);
+        g.renderer.setPixelRatio(1); g.renderer.setSize(window.innerWidth, window.innerHeight);
+        phone.setChat(false);
+      } else phone.setChat(true);
+      g.updateClickPrompt();
+    }
+  };
+  phone.setChat = (open) => { document.body.classList.toggle('chatOpen', !!open); const b = document.querySelector('#phoneTop [data-act="chat"]'); if (b) b.classList.toggle('on', !!open); };
+
+  // prevent page scroll / pinch-zoom / double-tap zoom while playing in phone mode (panels still scroll)
+  const scrollable = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { if (e.id === 'title' || e.classList.contains('panelwin') || e.id === 'chatLog' || e.id === 'tooltip') return true; } return false; };
+  document.addEventListener('touchmove', (e) => { if (phone.on && (e.touches.length > 1 || !scrollable(e.target))) e.preventDefault(); }, { passive: false });
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => { if (phone.on) e.preventDefault(); }, { passive: false });
+
+  document.addEventListener('touchstart', () => { if (EB.ui && EB.ui.hideTip) EB.ui.hideTip(); }, { passive: true });
+
+  // ---------------- in-game touch controls ----------------
+  function bindGame(g) {
+    const cv = g.renderer.domElement;
+    const pts = new Map(); let pinch = null;
+    const ndcPick = (x, y) => {
+      const ndc = new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+      g.raycaster.setFromCamera(ndc, g.camera);
+      return g.pickEntity(g.raycaster.ray.origin, g.raycaster.ray.direction);
+    };
+    phone.tapAt = (x, y) => { // tap-to-target; tapping your current NPC / corpse target interacts with it
+      const pl = g.player; if (!pl || !pl.alive) return null;
+      const hit = ndcPick(x, y);
+      if (hit) {
+        if (hit === g.target && (hit.kind === 'npc' || hit.kind === 'pcorpse' || (hit.kind === 'mob' && !hit.alive)) && hit.pos.distanceTo(pl.pos) < 5) g.interact();
+        else g.setTarget(hit);
+      }
+      return hit;
+    };
+    const pinchDist = () => { const a = [...pts.values()]; return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; };
+    cv.addEventListener('touchstart', (e) => {
+      if (!phone.on) return;
+      e.preventDefault(); EB.audio.unlock();
+      for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX, y: t.clientY, sx: t.clientX, sy: t.clientY, t0: performance.now(), moved: false });
+      if (pts.size >= 2) { pinch = { d: pinchDist(), cam: g.camDist }; for (const p of pts.values()) p.moved = true; }
+    }, { passive: false });
+    cv.addEventListener('touchmove', (e) => {
+      if (!phone.on) return;
+      e.preventDefault();
+      const pl = g.player;
+      for (const t of e.changedTouches) {
+        const p = pts.get(t.identifier); if (!p) continue;
+        const dx = t.clientX - p.x, dy = t.clientY - p.y;
+        p.x = t.clientX; p.y = t.clientY;
+        if (Math.hypot(p.x - p.sx, p.y - p.sy) > 10) p.moved = true;
+        if (!pinch && pl) { pl.yaw -= dx * 0.0062; pl.pitch = Math.max(-1.5, Math.min(1.5, pl.pitch - dy * 0.005)); }
+      }
+      if (pinch && pts.size >= 2) { let d = pinch.cam * (pinch.d / pinchDist()); d = Math.max(0, Math.min(14, d)); g.camDist = d < 1.2 ? 0 : d; }
+    }, { passive: false });
+    const end = (e) => {
+      if (!phone.on) return;
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const p = pts.get(t.identifier); pts.delete(t.identifier);
+        if (p && !p.moved && !pinch && performance.now() - p.t0 < 400) phone.tapAt(t.clientX, t.clientY);
+      }
+      if (pts.size < 2) pinch = null;
+    };
+    cv.addEventListener('touchend', end, { passive: false });
+    cv.addEventListener('touchcancel', end, { passive: false });
+
+    // joystick
+    const zone = $('joyZone'), base = $('joyBase'), knob = $('joyKnob');
+    let jid = null, cx = 0, cy = 0;
+    const R = () => base.offsetWidth * 0.5 || 55;
+    const setKnob = (x, y) => {
+      const r = R(); let dx = x - cx, dy = y - cy; const m = Math.hypot(dx, dy);
+      if (m > r) { dx *= r / m; dy *= r / m; }
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      phone.move.x = dx / r; phone.move.y = -dy / r;
+    };
+    zone.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation(); EB.audio.unlock();
+      const t = e.changedTouches[0]; jid = t.identifier;
+      const b = base.getBoundingClientRect(); cx = b.left + b.width / 2; cy = b.top + b.height / 2;
+      zone.classList.add('active'); setKnob(t.clientX, t.clientY);
+    }, { passive: false });
+    zone.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === jid) setKnob(t.clientX, t.clientY); }, { passive: false });
+    const jend = (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === jid) { jid = null; phone.move.x = phone.move.y = 0; knob.style.transform = ''; zone.classList.remove('active'); } };
+    zone.addEventListener('touchend', jend, { passive: false }); zone.addEventListener('touchcancel', jend, { passive: false });
+
+    // action buttons
+    const acts = {
+      attack: () => g.toggleAuto(), interact: () => g.interact(), sit: () => g.toggleSit(), consider: () => g.consider(), tab: () => g.tabTarget(false), hail: () => g.hail(),
+      inv: () => g.toggleWin('invWin'), book: () => g.toggleWin('bookWin'), pet: () => g.toggleWin('petWin'), help: () => g.toggleWin('helpWin'),
+      map: () => { g.showMap = !g.showMap; $('minimap').classList.toggle('hidden', !g.showMap); },
+      chat: () => phone.setChat(!document.body.classList.contains('chatOpen')),
+      cam: () => { g.camDist = g.camDist > 0 ? 0 : 5.5; },
+      say: () => { const ci = $('chatInput'); phone.setChat(true); ci.classList.remove('hidden'); setTimeout(() => ci.focus(), 0); },
+    };
+    document.querySelectorAll('#phoneUI [data-act]').forEach((b) => {
+      const a = b.dataset.act;
+      if (a === 'jump') {
+        const down = (e) => { e.preventDefault(); e.stopPropagation(); g.keys.Space = true; phone.jumpQ = true; b.classList.add('on'); };
+        const up = (e) => { e.preventDefault(); g.keys.Space = false; b.classList.remove('on'); };
+        b.addEventListener('touchstart', down, { passive: false }); b.addEventListener('touchend', up, { passive: false }); b.addEventListener('touchcancel', up, { passive: false });
+        b.addEventListener('mousedown', down); b.addEventListener('mouseup', up); b.addEventListener('mouseleave', up);
+        return;
+      }
+      b.addEventListener('click', (e) => { e.stopPropagation(); EB.audio.unlock(); if (acts[a] && g.player) acts[a](); });
+    });
+    const upd = () => { // live button states
+      if (!phone.on || !g.player) return;
+      const set = (a, on) => { const el = document.querySelector(`#phoneUI [data-act="${a}"]`); if (el) el.classList.toggle('on', !!on); };
+      set('attack', g.player.autoAttack); set('sit', g.player.sitting); set('map', g.showMap); set('inv', g.windows.has('invWin')); set('book', g.windows.has('bookWin')); set('pet', g.windows.has('petWin'));
+      const pb = document.querySelector('#phoneUI [data-act="pet"]'); if (pb) pb.classList.toggle('hidden', !g.pet());
+    };
+    setInterval(upd, 250);
+    if (phone.on) phone.set(true, false);
+  }
+  phone.bindGame = bindGame;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const st = localStorage.getItem(KEY);
+    let on = st === '1';
+    if (st == null && touchCapable()) { on = true; phone.suggested = true; }
+    phone.set(on, false);
+    if (phone.suggested) { const s = $('phoneSuggest'); if (s) s.classList.remove('hidden'); }
+    for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) b.onclick = () => { phone.suggested = false; phone.set(!phone.on); }; }
+    const keep = $('btnPhoneKeep'), no = $('btnPhoneNo');
+    if (keep) keep.onclick = () => { phone.suggested = false; phone.set(true); };
+    if (no) no.onclick = () => { phone.suggested = false; phone.set(false); };
+    // hook into the game once the player enters the world
+    const iv = setInterval(() => { const g = EB.game; if (g && g.player && g.renderer && g.pickEntity && document.getElementById('hud') && !$('hud').classList.contains('hidden')) { clearInterval(iv); bindGame(g); } }, 200);
   });
 })();
 

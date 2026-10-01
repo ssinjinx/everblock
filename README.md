@@ -1,12 +1,36 @@
 # Everblock
 
-![Everblock v4: every playable race in class gear, built from detailed rigged voxel models](screenshots/v4-races-lineup.png)
+![Everblock v5: the monsters of the Sunscorched Expanse and the Tomb of Ankhet-Ra](screenshots/v5-hero.png)
 
 **[▶ Play in your browser](https://ssinjinx.github.io/everblock/)**
 
-A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999)**. You roll a character (race, class, stat points), bind at Everblock Keep, hunt rats and gnolls outside the walls, then work your way through the Sunken Crypt and on to the Frostfang Highlands. There are con colors, auto attack, spell gems and a spellbook, med/sit regen, corpse runs, named mobs and camps. You can also break and place blocks anywhere.
+A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999)**. You roll a character (race, class, stat points), bind at Everblock Keep, hunt rats and gnolls outside the walls, then work your way through the Sunken Crypt, the Frostfang Highlands and the Sunscorched Expanse, all the way down to the Pharaoh's tomb. It also plays on phones, with touch controls. There are con colors, auto attack, spell gems and a spellbook, med/sit regen, corpse runs, named mobs and camps. You can also break and place blocks anywhere.
 
 Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Progress saves to localStorage.
+
+## New in v5: the desert, factions, smarter mobs, and Phone Mode
+- **Phone Mode (touch controls)**: there is a **📱 Phone Mode** button on the start screen and the character-creation screen. It is suggested automatically on touch devices, and your choice is remembered (localStorage). You can also switch it with `/phone on|off`.
+  - Layout: works in portrait and landscape on small screens, with a compact HUD, a collapsible chat log (💬), smaller full-width windows and larger touch targets. There is no pointer lock, and the browser's page scroll, pinch-zoom and double-tap zoom are blocked inside the game.
+  - **Left thumb**: a virtual joystick for analog movement. **Right side of the screen**: drag to turn the camera, tap a monster or NPC to target it (tap your current NPC or corpse target again to talk or loot), and pinch to zoom the camera.
+  - Buttons: Jump, Auto-attack, Talk/Loot (E), Sit, Consider, Next target, Hail. The top bar has Chat, Inventory, Spellbook, Map, Pet window, 1st/3rd person, Say/commands and Help. Hotbar slots, spell gems and pet commands are all tappable.
+  - Graphics default to **low** on phones, with a 1x pixel ratio. The merchant (with a new tap-to-sell list), quest, merc settings, spellbook (with Gem/Hotbar buttons instead of drag and drop) and pet windows all work by touch.
+- **The Sunscorched Expanse (levels 15-25)** lies north through the Frostfang pass.
+  - It has dunes, mesas, cactus, an oasis and the walled **Sunward Outpost**: bind point, merchant, a Sandreaver fence, guards and three quests.
+  - Out in the desert you'll find sand scorpion flats, a Sandreaver bandit hideout, the sand-giant colossi and a dust-djinn ruin.
+  - The **Great Pyramid** has a torch-lit hall that leads down into the **Tomb of Ankhet-Ra**: embalming chamber, treasury, prison, pit and the Grand Vizier's room, with the Pharaoh's sanctum at the end.
+  - New blocks: sandstone, carved hieroglyph stone, gold, cactus, palm, dune sand and braziers (lit at night and in the dungeon). The zone has its own music: a hijaz-scale desert theme and a darker tomb drone.
+- **12 new detailed monsters**: sand scorpions and **Szyrix the Venomqueen**, Sandreaver bandits and mystics plus **Rahzik the Sand Viper**, wrapped mummies, tomb priests, **Grand Vizier Sethek**, sand giants and **Gorukh the Dune Titan**, dust djinn, and the boss **Pharaoh Ankhet-Ra the Eternal**.
+- **Level cap 25**: every class gets new spells and abilities up to level 25, for example Taunt and Ward Undead (double damage against undead), with new tiers of heals, nukes, DoTs, buffs, mez and slows. Necromancers get level 18 and 23 pets. There is desert loot (scimitars, khopeshes, sunforged and pharaoh gear) and level 15-25 merchant stock.
+- **EQ faction standing**: Guards of Everblock, Hollis Rangers, Sunward Caravan, Darkpaw Gnolls, Frostfang Orcs and Sandreaver Bandits.
+  - Kills and quests move your standing, and you get EQ messages ("Your faction standing with ... got worse.").
+  - Consider shows the attitude (*glares at you threateningly*, *regards you indifferently*, ...). Faction mobs only attack on sight while you're KOS.
+  - Merchants charge more or less depending on your standing and refuse to trade when you're Dubious or worse. `/faction` lists your standings.
+- **Pet commands**: a pet bar and `/pet attack|backoff|follow|guard|sit|window` (window also opens with **P**). Guard holds a spot, sit stays put, back off drops the fight. The pet's mode is saved.
+- **Smarter mobs**:
+  - Casters heal hurt allies (or themselves) and buff them with wards and haste.
+  - Low-con mobs flee at low health, run to the nearest idle friend, shout for help and bring it back. Undead and named mobs never flee.
+  - Rare named mobs pop on placeholder spawns, and only one of each is ever up.
+- Saves from v1-v4 load unchanged. Factions start at their defaults.
 
 ## New in v4: character & monster graphics
 - **Detailed voxel models, rigged**: the player, mercenaries, NPCs and all 18 monster types are rebuilt from 50-90 small shaded boxes each (previously about 12) on hierarchical rigs: hips, torso, head, upper and lower arms, hands, thighs, shins, plus tails, jaws and snouts. Each race has its own proportions and features. Dwarves are short and stocky with big heads, long beards and big noses. Ogres are huge and hunched, with tusks, a heavy brow and a topknot. Elves are slim with pointy ears and long hair (Dark Elves have red eyes). Gnomes have oversized heads and tufts of hair. Barbarians are broad, with braids, a beard and warpaint. Faces have eyes with pupils and catch-lights, brows, a nose and a mouth.
@@ -39,7 +63,7 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 - **EQ combat**: con colors, auto attack, casting and fizzles, DoTs, snares, slows, mez and stuns, hate lists and social aggro, fleeing mobs, experience loss and corpse runs
 - **Mob pathfinding**: A* on the voxel grid with step-up and drop handling, so mobs chase you around walls and through dungeon doorways
 - **Group**: Cleric and Warrior mercenaries from the Mercenary Liaison and a necromancer pet, with EQ-style group XP split (pets don't take a share)
-- **Two zones**: the Everblock Wilds (levels 1-10: town, gnoll camp, graveyard, Sunken Crypt) and the Frostfang Highlands (levels 8-15: orc warcamp, yetis, frost giants, Vorgath's Frozen Keep), connected by a zone line
+- **Three zones**: the Everblock Wilds (levels 1-10: town, gnoll camp, graveyard, Sunken Crypt), the Frostfang Highlands (levels 8-15: orc warcamp, yetis, frost giants, Vorgath's Frozen Keep) and the Sunscorched Expanse (levels 15-25: Sunward Outpost, bandit hideout, the Great Pyramid and the Tomb of Ankhet-Ra), connected by zone lines
 - **Named mobs & loot**: Fippy Darkpaw, Grimbone, Warlord Grimtusk, Vorgath the Frostbound, and more
 - **Quests**, a **minimap**, a day/night cycle, and **building** (break and place blocks)
 
@@ -62,11 +86,19 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 | Inventory | I |
 | Build mode (break / place / pick block) | B (left click / right click / 1-9) |
 | Minimap / help / sound / music | N / ? or F10 / M / Shift+M |
-| Chat & commands | Enter or `/`: /who /loc /corpse /quests /dismiss /zone /save /music /lights /gfx /book /help |
+| Pet commands | Pet bar, P (pet window), `/pet attack\|backoff\|follow\|guard\|sit` |
+| Chat & commands | Enter or `/`: /who /loc /corpse /quests /faction /pet /dismiss /zone /save /music /lights /gfx /phone /book /help |
+
+**Phone Mode (touch)**: left joystick = move; drag on the right = look; tap = target (tap again to talk/loot); pinch = zoom; on-screen buttons for jump, attack, E, sit, consider, next target and hail; top bar for chat, bags, spellbook, map, pet, camera and help; tap hotbar slots and spell gems to use them.
 
 ## Screenshots
 | | |
 |---|---|
+| ![Phone Mode on iPhone 13 (portrait)](screenshots/v5-phone-iphone13-combat.png) | ![Phone Mode on Pixel 5 (landscape)](screenshots/v5-phone-pixel5-combat.png) |
+| ![phone spellbook](screenshots/v5-phone-iphone13-spellbook.png) | ![phone merchant with sell list](screenshots/v5-phone-pixel5-merchant.png) |
+| ![Sunward Outpost](screenshots/v5-desert-outpost.png) | ![the Great Pyramid](screenshots/v5-pyramid.png) |
+| ![Tomb of Ankhet-Ra](screenshots/v5-tomb.png) | ![Pharaoh Ankhet-Ra](screenshots/v5-boss.png) |
+| ![desert monsters](screenshots/v5-monsters.png) | ![pet commands](screenshots/v5-pet-commands.png) |
 | ![player with gear, third person](screenshots/v4-player-gear.png) | ![monster lineup](screenshots/v4-monster-gallery.png) |
 | ![gnolls and orcs close-up](screenshots/v4-monsters-gnolls-orcs.png) | ![giants and yeti](screenshots/v4-monsters-giants.png) |
 | ![undead close-up](screenshots/v4-monsters-undead.png) | ![vermin and wolves](screenshots/v4-monsters-vermin.png) |
@@ -93,4 +125,4 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 cd source
 python3 build.py     # inlines src/*.js, src/style.css and vendor/three.min.js into ../index.html (and source/dist/everblock.html)
 ```
-For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js` or `node test_v4.js`; they expect Chrome at `/usr/bin/google-chrome`).
+For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, or `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test; they expect Chrome at `/usr/bin/google-chrome`).

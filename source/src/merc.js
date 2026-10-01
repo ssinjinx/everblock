@@ -29,6 +29,23 @@
       this.hp = saved && saved.hp > 0 ? Math.min(saved.hp, this.maxHp) : this.maxHp;
       this.mana = saved && saved.mana != null ? saved.mana : this.maxMana;
       this.eyeH = this.h * 0.9;
+      // v5 pet commands: follow / guard / sit modes, explicit attack target, back off
+      this.petMode = isPet && saved && ['follow', 'guard', 'sit'].includes(saved.petMode) ? saved.petMode : 'follow';
+      this.guardPos = isPet && saved && saved.guardPos ? new THREE.Vector3(saved.guardPos[0], saved.guardPos[1], saved.guardPos[2]) : null;
+      this.petTarget = null; this.backoffUntil = 0;
+    }
+    petFoe(game) {
+      if (game.time < this.backoffUntil) return null;
+      if (this.petTarget) { if (this.petTarget.alive && this.petTarget.kind === 'mob') return this.petTarget; this.petTarget = null; }
+      const attacker = game.mobs.find((m) => m.alive && m.state === 'chase' && m.target === this && !game.isMezzed(m));
+      if (this.petMode === 'sit') return attacker || null;
+      const foe = game.mercFoe(this);
+      if (this.petMode === 'guard') {
+        const gp = this.guardPos || this.pos;
+        if (foe && foe.pos.distanceTo(gp) < 14) return foe;
+        return attacker && attacker.pos.distanceTo(gp) < 18 ? attacker : null;
+      }
+      return foe;
     }
     get alive() { return !this.dead; }
     modelSpec() { return this.isPet ? EB.models.petOpts(this.petLvl) : EB.models.mercOpts(this.role, this.equip); }
@@ -54,7 +71,8 @@
     get maxMana() { return this.role === 'healer' ? EB.calc.maxMana('cleric', this.level, [0, 0, 0, 0, 110 + this.statSum('WIS'), 0, 0]) + this.itemSum('mana') : 0; }
     get ac() { if (this.isPet) return 10 + this.level * 3; return (this.role === 'tank' ? 20 + this.level * 4 : 8 + this.level * 2) + this.buffSum('ac') + this.itemSum('ac') + Math.floor(this.statSum('AGI') / 4); }
     healSpell() { const L = this.level; return L >= 9 ? 'healing' : L >= 4 ? 'light_healing' : 'minor_healing'; }
-    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs, stance: this.stance, healAt: this.healAt, equip: this.equip, dead: this.dead, petLvl: this.petLvl || undefined }; }
+    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs, stance: this.stance, healAt: this.healAt, equip: this.equip, dead: this.dead, petLvl: this.petLvl || undefined,
+      petMode: this.isPet ? this.petMode : undefined, guardPos: this.isPet && this.guardPos ? [this.guardPos.x, this.guardPos.y, this.guardPos.z] : undefined }; }
     startCast(id, target, game) {
       const sp = SPELLS[id];
       this.casting = { id, sp, target, t: sp.cast };
@@ -87,8 +105,8 @@
       let dir = null, speed = 5.9;
       if (!this.isPet && this.level !== pl.level) { const pct = this.hp / this.maxHp; this.level = pl.level; this.hp = Math.ceil(this.maxHp * pct); }
       if (!pl.alive) { this.vel.set(0, this.vel.y, 0); physicsMove(game.world, this, dt, true); this.syncModel(); return; }
-      if (this.pos.distanceTo(pl.pos) > 60) { this.pos.set(pl.pos.x + 1.5, pl.pos.y + 0.2, pl.pos.z + 1.5); this.nav.reset(); }
-      const foe = game.mercFoe(this);
+      if (this.pos.distanceTo(pl.pos) > 60 && !(this.isPet && this.petMode === 'guard' && this.pos.distanceTo(pl.pos) < 120)) { this.pos.set(pl.pos.x + 1.5, pl.pos.y + 0.2, pl.pos.z + 1.5); this.nav.reset(); }
+      const foe = this.isPet ? this.petFoe(game) : game.mercFoe(this);
       const distPl = this.pos.distanceTo(pl.pos);
       if (this.casting) {
         this.casting.t -= dt;
@@ -123,11 +141,14 @@
               game.log(`${this.name} taunts ${foe.name} to ignore others and attack him!`, 'other');
             }
           }
-        } else if (distPl > 4.5) dir = this.nav.steer(this, pl.pos.x, pl.pos.y, pl.pos.z, game, 3, dt);
+        } else if (this.isPet && this.petMode === 'sit') { /* stay put */ }
+        else if (this.isPet && this.petMode === 'guard') { const gp = this.guardPos || (this.guardPos = this.pos.clone()); if (this.pos.distanceTo(gp) > 1.5) dir = this.nav.steer(this, gp.x, gp.y, gp.z, game, 1.2, dt); }
+        else if (distPl > 4.5) dir = this.nav.steer(this, pl.pos.x, pl.pos.y, pl.pos.z, game, 3, dt);
       }
       if (distPl > 12) speed = 7;
       if (dir) { this.yaw = Math.atan2(dir.x, dir.z); this.vel.x = dir.x * speed; this.vel.z = dir.z * speed; }
-      else { this.vel.x = this.vel.z = 0; if (!foe && !this.casting && distPl < 8) this.faceTo(pl.pos.x, pl.pos.z); }
+      else { this.vel.x = this.vel.z = 0; if (!foe && !this.casting && distPl < 8 && !(this.isPet && this.petMode === 'guard')) this.faceTo(pl.pos.x, pl.pos.z); }
+      this.sitting = this.isPet && this.petMode === 'sit' && !foe && !dir;
       const r = physicsMove(game.world, this, dt, true);
       if (dir && (r.blocked || dir.up) && this.onGround) this.vel.y = 7.5;
       if (this.inWater && dir) this.vel.y = Math.max(this.vel.y, 1.5);
@@ -135,7 +156,7 @@
       if (this.attackT > 0) { this.attackT += dt * 3; if (this.attackT >= 1) this.attackT = 0; }
       this.gearChk = (this.gearChk || 0) - dt;
       if (this.gearChk <= 0) { this.gearChk = 0.5; this.refreshModel(); }
-      animateModel(this.model, this.walkPhase, !!dir, this.casting ? 0 : this.attackT, false, { dt, cast: !!this.casting, speed });
+      animateModel(this.model, this.walkPhase, !!dir, this.casting ? 0 : this.attackT, this.sitting, { dt, cast: !!this.casting, speed });
       this.syncModel();
     }
     melee(foe, game, dt) {

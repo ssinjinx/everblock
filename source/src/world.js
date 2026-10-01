@@ -10,7 +10,11 @@
   const ZONES = {
     everblock: { name: 'Everblock', area: 'The Everblock Wilds', sky: { day: 0x87b5e8, night: 0x0a0f24 } },
     frostfang: { name: 'The Frostfang Highlands', area: 'The Frostfang Highlands', sky: { day: 0xb8cce0, night: 0x0c1428 } },
+    desert: { name: 'The Sunscorched Expanse', area: 'The Sunscorched Expanse', sky: { day: 0xf2cf98, night: 0x160e24 } },
   };
+  // v5: zone 3 layout
+  const DS = { outpost: { x: 128, z: 222 }, oasis: { x: 62, z: 190, r: 14 }, hideout: { x: 196, z: 164 }, flats1: { x: 80, z: 132 }, flats2: { x: 188, z: 106 }, colossi: { x: 56, z: 62 }, djinn: { x: 206, z: 44 }, pyramid: { x: 128, z: 70 } };
+  const DUNGEON_ZONES = new Set(['The Sunken Crypt', 'Tomb of Ankhet-Ra']);
   const FF = { outpost: { x: 128, z: 236 }, warcamp: { x: 78, z: 118 }, keep: { x: 158, z: 52 }, lake: { x: 200, z: 196, r: 26 }, yetis: { x: 196, z: 112 } };
   const LAYOUT = {
     town: { x: 128, z: 128, half: 22, g: 24 },
@@ -91,6 +95,33 @@
     noiseTile(23, [44, 46, 58], 18, (x, y, c) => { const off = (Math.floor(y / 5) % 2) * 5; return (y % 5 === 0 || (x + off) % 10 === 0) ? [24, 26, 34] : (rnd() < 0.05 ? [90, 140, 180] : c); });
     // 24 warbanner (red hide with a white tusk sigil)
     noiseTile(24, [150, 30, 26], 20, (x, y, c) => ((Math.abs(x - 7.5) < 1.5 && y > 3 && y < 12) || (y === 4 && x > 4 && x < 11) ? [230, 220, 200] : c));
+    // ---- v5 desert tiles ----
+    // 25 sandstone top
+    noiseTile(25, [216, 188, 132], 16, (x, y, c) => (rnd() < 0.05 ? [c[0] - 22, c[1] - 22, c[2] - 18] : c));
+    // 26 sandstone side (layered strata)
+    noiseTile(26, [208, 176, 122], 14, (x, y, c) => (y % 5 === 0 ? [c[0] - 26, c[1] - 26, c[2] - 22] : y % 5 === 1 ? [c[0] + 10, c[1] + 8, c[2] + 6] : c));
+    // 27 carved sandstone (hieroglyph frieze)
+    noiseTile(27, [206, 174, 118], 12, (x, y, c) => {
+      if (y === 1 || y === 14) return [150, 110, 64];
+      if (y === 0 || y === 15) return [230, 200, 150];
+      const gx = x % 8, gy = y - 3;
+      if (gy < 0 || gy > 9) return c;
+      const glyph = Math.floor(x / 8);
+      const on = glyph === 0 ? ((gx === 3 || gx === 4) && gy > 2) || (gy === 3 && gx > 1 && gx < 6) || ((gx - 3.5) ** 2 + (gy - 1.2) ** 2 < 2.6 && (gx - 3.5) ** 2 + (gy - 1.2) ** 2 > 0.6) // ankh
+        : (gy === 4 && gx > 0 && gx < 7) || ((gx === 2 || gx === 5) && gy > 1 && gy < 7) || (gy === 1 && (gx === 1 || gx === 6)) || (gy === 8 && gx > 1 && gx < 6); // eye / bird
+      return on ? [96, 62, 34] : c;
+    });
+    // 28 gilded stone
+    noiseTile(28, [228, 184, 64], 26, (x, y, c) => ((x + y) % 6 === 0 ? [255, 236, 150] : (x % 8 === 0 || y % 8 === 0) ? [168, 124, 30] : c));
+    // 29 cactus top, 30 cactus side
+    noiseTile(29, [72, 136, 58], 20, (x, y, c) => { const d = Math.hypot(x - 7.5, y - 7.5); return d > 6.5 ? [48, 100, 40] : d < 2.5 ? [110, 170, 80] : c; });
+    noiseTile(30, [70, 132, 56], 18, (x, y, c) => (x % 4 === 0 ? [46, 96, 38] : (x % 4 === 2 && y % 4 === 1) ? [230, 226, 190] : c));
+    // 31 palm fronds
+    noiseTile(31, [70, 146, 50], 36, (x, y, c) => ((x + y) % 4 === 0 ? [40, 96, 30] : (x - y + 16) % 7 === 0 ? [120, 180, 70] : c));
+    // 32 dune sand (warm, rippled)
+    noiseTile(32, [226, 178, 112], 16, (x, y, c) => ((y + Math.round(Math.sin(x * 0.7) * 1.5)) % 5 === 0 ? [c[0] + 18, c[1] + 16, c[2] + 12] : c));
+    // 33 spirit brazier (emissive teal flame in a bronze bowl)
+    noiseTile(33, [120, 250, 220], 40, (x, y, c) => ((x < 2 || x > 13 || y > 12) ? [110, 80, 40] : y < 3 ? [60, 140, 130] : (Math.abs(x - 7.5) < 2 && y > 5) ? [230, 255, 250] : c));
     const tex = new THREE.CanvasTexture(cv);
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
     if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; else tex.encoding = THREE.sRGBEncoding;
@@ -113,7 +144,7 @@
       const ZI = ZONES[this.zoneId];
       this.zoneName = ZI.name; this.defaultArea = ZI.area; this.sky = ZI.sky;
       this.zoneLines = [];
-      this.seed = ((seed >>> 0) + (this.zoneId === 'everblock' ? 0 : 7777)) >>> 0;
+      this.seed = ((seed >>> 0) + (this.zoneId === 'everblock' ? 0 : this.zoneId === 'desert' ? 31337 : 7777)) >>> 0;
       this.scene = scene;
       this.data = new Uint8Array(W * D * H);
       this.height = new Int16Array(W * D);
@@ -192,6 +223,7 @@
     }
     generate() {
       if (this.zoneId === 'frostfang') { this.genFrostfang(); this.finish(); return; }
+      if (this.zoneId === 'desert') { this.genDesert(); this.finish(); return; }
       const s = this.seed;
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
         const h = this.terrainHeight(x, z);
@@ -221,7 +253,7 @@
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.computeHeightColumn(x, z);
       // lantern positions for dynamic point lights
       this.lanterns = new Map();
-      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN) this.lanterns.set(i, this.idxPos(i));
+      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN || this.data[i] === B.BRAZIER) this.lanterns.set(i, this.idxPos(i));
       this.buildMapColors();
       this.renderMap();
     }
@@ -293,6 +325,7 @@
       let h = 24 + U.fbm(x / 60, z / 60, s, 4) * 24 + (U.fbm(x / 16, z / 16, s + 5, 2) - 0.5) * 6;
       let e = Math.min(x, z, W - 1 - x, D - 1 - z);
       if (Math.abs(x - 128) < 9 && z > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e);
+      if (Math.abs(x - 128) < 9 && z < 56) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e); // v5: north pass to the desert
       if (e < 22) h += Math.pow(22 - e, 1.35) * 1.2;
       const dl = Math.hypot(x - FF.lake.x, z - FF.lake.z);
       if (dl < FF.lake.r) h = Math.min(h, U.lerp(17, Math.max(h, 23), U.smoothstep(FF.lake.r * 0.5, FF.lake.r, dl)));
@@ -301,7 +334,29 @@
       flat(FF.warcamp.x, FF.warcamp.z, 20, 30, 28);
       flat(FF.keep.x, FF.keep.z, 22, 32, 30);
       if (Math.abs(x - 128) < 6 && z > 212) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(x - 128)));
+      if (Math.abs(x - 128) < 6 && z < 46) h = U.lerp(h, 30, U.smoothstep(6, 3, Math.abs(x - 128)));
       return Math.max(3, Math.min(H - 6, Math.round(h)));
+    }
+    // v5: Frostfang north pass -> The Sunscorched Expanse
+    buildFrostPass() {
+      const s = this.seed;
+      for (let z = 0; z < 46; z++) for (let x = 118; x <= 138; x++) {
+        const edge = Math.abs(x - 128);
+        if (edge > 7) continue;
+        const target = 30, top = this.topY(x, z);
+        if (edge <= 4) {
+          for (let y = target + 1; y < H; y++) this.rawSet(x, y, z, B.AIR);
+          for (let y = 1; y <= target; y++) { const b = this.get(x, y, z); if (b === B.AIR || b === B.WATER || b === B.ICE) this.rawSet(x, y, z, B.STONE); }
+          this.rawSet(x, target, z, edge <= 1 ? B.GRAVEL : B.SNOW);
+        } else if (top > target + 5) {
+          for (let y = target + 1; y <= Math.min(top, target + 12); y++) if (U.hash2(x * 3 + y, z, s) < 0.9) this.rawSet(x, y, z, B.STONE);
+        } else if (top < target) {
+          for (let y = top + 1; y <= target + 2; y++) this.rawSet(x, y, z, B.STONE);
+        }
+      }
+      for (const z of [4, 16, 30]) { this.lanternPost(123, this.topY(123, z) + 1, z); this.lanternPost(133, this.topY(133, z) + 1, z); }
+      this.zoneLines.push({ x0: 123, x1: 134, z0: 0, z1: 2.2, to: 'desert', arrive: { x: 128.5, z: 246.5, yaw: Math.PI }, label: 'The Sunscorched Expanse', axis: 'z', at: 0.6 });
+      this.zones.push({ name: 'Frostfang North Pass', x0: 120, x1: 136, z0: 0, z1: 30 });
     }
     genFrostfang() {
       const s = this.seed, SEA2 = 22;
@@ -325,12 +380,13 @@
       this.ffRoad(128, 250, FF.outpost.x, FF.outpost.z);
       this.ffRoad(FF.outpost.x, FF.outpost.z - 6, FF.warcamp.x + 18, FF.warcamp.z + 10);
       this.ffRoad(FF.outpost.x, FF.outpost.z - 6, FF.keep.x, FF.keep.z + 24);
-      this.buildOutpost(); this.buildWarcamp(); this.buildFrozenKeep();
+      this.ffRoad(128, 4, 128, 44); this.ffRoad(128, 44, FF.keep.x - 18, FF.keep.z + 24);
+      this.buildOutpost(); this.buildWarcamp(); this.buildFrozenKeep(); this.buildFrostPass();
       this.zoneLines.push({ x0: 123, x1: 134, z0: D - 2.2, z1: D, to: 'everblock', arrive: { x: 128.5, z: 6.5, yaw: 0 }, label: 'Everblock', axis: 'z', at: D - 0.6 });
       this.zones.push({ name: 'Frostfang Pass', x0: 120, x1: 136, z0: 226, z1: 255 });
       // spawns
       const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
-      sp('frost_wolf', 170, 170, 3, 10, 90); sp('frost_wolf', 70, 200, 3, 10, 90); sp('frost_wolf', 110, 170, 2, 8, 90);
+      sp('frost_wolf', 170, 170, 3, 10, 90); sp('frost_wolf', 70, 200, 3, 10, 90); sp('frost_wolf', 110, 170, 2, 8, 90, { alt: 'whitefang', altChance: 0.15 });
       sp('orc_grunt', FF.warcamp.x, FF.warcamp.z, 4, 10, 100); sp('orc_grunt', FF.warcamp.x + 10, FF.warcamp.z - 8, 2, 4, 100);
       sp('orc_shaman', FF.warcamp.x - 6, FF.warcamp.z + 5, 2, 4, 110);
       sp('grimtusk', FF.warcamp.x, FF.warcamp.z - 3, 1, 1, 420);
@@ -343,6 +399,7 @@
       if (Math.hypot(x - FF.warcamp.x, z - FF.warcamp.z) < 22) return true;
       if (Math.max(Math.abs(x - FF.keep.x), Math.abs(z - FF.keep.z)) < 22) return true;
       if (Math.abs(x - 128) < 6 && z > 200) return true;
+      if (Math.abs(x - 128) < 9 && z < 50) return true;
       return false;
     }
     ffRoad(x0, z0, x1, z1) {
@@ -428,6 +485,242 @@
       this.rawSet(K.x, g + 4, hz0 + 1, B.LANTERN);
       this.keepFloor = g + 1;
       this.zones.push({ name: "Vorgath's Frozen Keep", x0: K.x - hf, x1: K.x + hf, z0: K.z - hf, z1: K.z + hf });
+    }
+    // ---------- Zone 3: The Sunscorched Expanse (v5) ----------
+    dsHeight(x, z) {
+      const s = this.seed;
+      let h = 25 + U.fbm(x / 90, z / 90, s, 3) * 9;
+      const w = U.fbm(x / 40, z / 40, s + 11, 2) * 6;
+      const dune = Math.pow(Math.abs(Math.sin((x * 0.6 + z) * 0.07 + w)), 1.6) * 4.5;
+      h += dune;
+      let e = Math.min(x, z, W - 1 - x, D - 1 - z);
+      if (Math.abs(x - 128) < 9 && z > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e);
+      if (e < 20) h += Math.pow(20 - e, 1.3) * 1.3;
+      const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
+      if (dl < DS.oasis.r) h = Math.min(h, U.lerp(18, Math.max(h, 24), U.smoothstep(DS.oasis.r * 0.45, DS.oasis.r, dl)));
+      const flat = (c, r0, r1, target, cheb) => { const d = cheb ? Math.max(Math.abs(x - c.x), Math.abs(z - c.z)) : Math.hypot(x - c.x, z - c.z); if (d < r1) h = U.lerp(target, h, U.smoothstep(r0, r1, d)); };
+      flat(DS.outpost, 14, 24, 27, true); flat(DS.hideout, 13, 22, 27); flat(DS.pyramid, 27, 38, 27, true);
+      flat(DS.colossi, 14, 24, 27); flat(DS.djinn, 11, 19, 28); flat(DS.flats1, 10, 20, 26); flat(DS.flats2, 10, 20, 26);
+      if (Math.abs(x - 128) < 6 && z > 206) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(x - 128)));
+      this._dune = dune;
+      return Math.max(3, Math.min(H - 6, Math.round(h)));
+    }
+    dsProtected(x, z) {
+      for (const k of ['outpost', 'hideout', 'colossi', 'djinn']) if (Math.hypot(x - DS[k].x, z - DS[k].z) < 20) return true;
+      if (Math.max(Math.abs(x - DS.pyramid.x), Math.abs(z - DS.pyramid.z)) < 30) return true;
+      if (Math.abs(x - 128) < 6 && z > 200) return true;
+      return false;
+    }
+    dsRoad(x0, z0, x1, z1) {
+      const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, cx = Math.round(x0 + (x1 - x0) * t), cz = Math.round(z0 + (z1 - z0) * t);
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+          const x = cx + dx, z = cz + dz; if (!this.inBounds(x, 1, z)) continue;
+          const y = this.topY(x, z), b = this.get(x, y, z);
+          if (b === B.SAND || b === B.DUNE) this.rawSet(x, y, z, (dx === 0 && dz === 0) || U.hash2(x, z, 5) < 0.6 ? B.SANDSTONE : B.GRAVEL);
+        }
+      }
+    }
+    palm(x, y, z, r) {
+      const th = 5 + Math.floor(r * 3);
+      for (let i = 0; i < th; i++) this.rawSet(x + (i > th - 3 && r > 0.5 ? 1 : 0), y + i, z, B.LOG);
+      const tx = x + (r > 0.5 ? 1 : 0), ty = y + th;
+      this.rawSet(tx, ty, z, B.PALM);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (let k = 1; k <= 3; k++) this.rawSet(tx + dx * k, ty - (k === 3 ? 1 : 0), z + dz * k, B.PALM);
+      for (const [dx, dz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { this.rawSet(tx + dx, ty, z + dz, B.PALM); this.rawSet(tx + dx * 2, ty - 1, z + dz * 2, B.PALM); }
+    }
+    cactus(x, y, z, r) {
+      const th = 2 + Math.floor(r * 3);
+      for (let i = 0; i < th; i++) this.rawSet(x, y + i, z, B.CACTUS);
+      if (th >= 3 && r > 0.4) { const dx = r > 0.7 ? 1 : 0, dz = dx ? 0 : 1; this.rawSet(x + dx, y + 1, z + dz, B.CACTUS); this.rawSet(x + dx, y + 2, z + dz, B.CACTUS); }
+    }
+    genDesert() {
+      const s = this.seed;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const h = this.dsHeight(x, z), dune = this._dune;
+        const e = Math.min(x, z, W - 1 - x, D - 1 - z);
+        const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 5 ? B.STONE : y < h - 1 ? B.SANDSTONE : B.SAND;
+          if (y === h) b = (e < 16 && h > 36) ? B.SANDSTONE : dune > 3.2 && dl > DS.oasis.r + 6 ? B.DUNE : B.SAND;
+          if (y === h && dl < DS.oasis.r + 5 && dl > DS.oasis.r * 0.7 && h > 20) b = B.GRASS;
+          if (y === h - 1 && e < 16 && h > 34) b = B.SANDSTONE;
+          this.rawSet(x, y, z, b);
+        }
+        for (let y = h + 1; y <= 21; y++) this.rawSet(x, y, z, B.WATER);
+      }
+      // oasis palms, cacti and scattered ruin pillars
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        if (this.dsProtected(x, z)) continue;
+        const y = this.topY(x, z), b = this.get(x, y, z), r = U.hash2(x, z, s + 3);
+        const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
+        if (b === B.GRASS && U.hash2(x, z, s + 99) < 0.07) this.palm(x, y + 1, z, r);
+        else if ((b === B.SAND || b === B.DUNE) && U.hash2(x, z, s + 98) < 0.004 && dl > DS.oasis.r + 8) this.cactus(x, y + 1, z, r);
+        else if (b === B.SAND && U.hash2(x, z, s + 97) < 0.0012) { const hh = 1 + Math.floor(r * 4); for (let i = 1; i <= hh; i++) this.rawSet(x, y + i, z, i === hh && r > 0.7 ? B.GOLD : B.CARVED); }
+      }
+      const P = DS.pyramid;
+      this.dsRoad(128, 252, DS.outpost.x, DS.outpost.z + 8);
+      this.dsRoad(DS.outpost.x, DS.outpost.z - 10, P.x, P.z + 34);
+      this.dsRoad(DS.outpost.x + 12, DS.outpost.z - 4, DS.hideout.x - 12, DS.hideout.z + 6);
+      this.dsRoad(DS.outpost.x - 12, DS.outpost.z - 2, DS.oasis.x + 16, DS.oasis.z + 4);
+      this.buildSunwardOutpost(); this.buildHideout(); this.buildColossi(); this.buildDjinnRest(); this.buildPyramid();
+      this.zoneLines.push({ x0: 123, x1: 134, z0: D - 2.2, z1: D, to: 'frostfang', arrive: { x: 128.5, z: 6.5, yaw: 0 }, label: 'The Frostfang Highlands', axis: 'z', at: D - 0.6 });
+      this.zones.push({ name: 'Frostfang Road', x0: 120, x1: 136, z0: 236, z1: 255 });
+      this.zones.push({ name: 'Oasis of Sahra', x0: DS.oasis.x - 20, x1: DS.oasis.x + 20, z0: DS.oasis.z - 20, z1: DS.oasis.z + 20 });
+      this.zones.push({ name: 'The Scorpion Flats', x0: DS.flats1.x - 18, x1: DS.flats1.x + 18, z0: DS.flats1.z - 18, z1: DS.flats1.z + 18 });
+      this.zones.push({ name: 'The Scorpion Flats', x0: DS.flats2.x - 18, x1: DS.flats2.x + 18, z0: DS.flats2.z - 18, z1: DS.flats2.z + 18 });
+      // spawns
+      const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
+      sp('sand_scorpion', DS.flats1.x, DS.flats1.z, 4, 12, 100, { alt: 'szyrix', altChance: 0.18 }); sp('sand_scorpion', DS.flats2.x, DS.flats2.z, 3, 12, 100);
+      sp('sand_scorpion', 160, 190, 2, 10, 100); sp('sand_scorpion', 96, 176, 2, 10, 100);
+      sp('bandit', DS.hideout.x, DS.hideout.z, 4, 9, 110, { alt: 'rahzik', altChance: 0.2 }); sp('bandit', DS.hideout.x + 8, DS.hideout.z - 8, 1, 3, 110);
+      sp('bandit_mystic', DS.hideout.x - 5, DS.hideout.z - 3, 2, 4, 120);
+      sp('sand_giant', DS.colossi.x, DS.colossi.z, 3, 12, 150, { alt: 'gorukh', altChance: 0.18 });
+      sp('dust_djinn', DS.djinn.x, DS.djinn.z, 3, 9, 130);
+      sp('dust_djinn', 110, 128, 1, 6, 130); sp('sand_giant', 190, 214, 1, 8, 150);
+      const fy = this.tombFloor, R = this.tombRooms;
+      sp('mummy', R.entry.x, R.entry.z, 2, 3, 150, { y: fy });
+      sp('mummy', R.embalm.x, R.embalm.z, 2, 3, 150, { y: fy }); sp('tomb_priest', R.embalm.x + 2, R.embalm.z - 2, 1, 1, 160, { y: fy });
+      sp('mummy', R.treasury.x, R.treasury.z, 2, 3, 150, { y: fy }); sp('tomb_priest', R.treasury.x - 2, R.treasury.z - 2, 1, 1, 160, { y: fy });
+      sp('dust_djinn', R.prison.x, R.prison.z, 2, 3, 150, { y: fy });
+      sp('sand_scorpion', R.pit.x, R.pit.z, 3, 3, 150, { y: fy, lvl: [18, 20] });
+      sp('sethek', R.vizier.x, R.vizier.z - 2, 1, 1, 480, { y: fy }); sp('tomb_priest', R.vizier.x - 3, R.vizier.z + 1, 2, 1, 160, { y: fy });
+      sp('ankhetra', R.sanctum.x, R.sanctum.z, 1, 1, 900, { y: fy + 1 }); sp('mummy', R.sanctum.x - 6, R.sanctum.z + 2, 1, 1, 160, { y: fy, lvl: [22, 23] }); sp('mummy', R.sanctum.x + 6, R.sanctum.z + 2, 1, 1, 160, { y: fy, lvl: [22, 23] });
+    }
+    sandPost(x, y, z) { this.rawSet(x, y, z, B.SANDSTONE); this.rawSet(x, y + 1, z, B.CARVED); this.rawSet(x, y + 2, z, B.LANTERN); }
+    buildSunwardOutpost() {
+      const O = DS.outpost, g = 27, hx = 17, hz = 13;
+      this.fill(O.x - hx - 2, g + 1, O.z - hz - 2, O.x + hx + 2, H - 1, O.z + hz + 2, B.AIR);
+      this.fill(O.x - hx - 2, g - 3, O.z - hz - 2, O.x + hx + 2, g - 1, O.z + hz + 2, B.SANDSTONE);
+      for (let z = O.z - hz; z <= O.z + hz; z++) for (let x = O.x - hx; x <= O.x + hx; x++) this.rawSet(x, g, z, (x + z) % 7 === 0 ? B.CARVED : B.SANDSTONE);
+      // low crenellated walls with north + south gates
+      for (let i = -hx; i <= hx; i++) for (const z of [O.z - hz, O.z + hz]) { if (Math.abs(i) <= 2) continue; this.fill(O.x + i, g + 1, z, O.x + i, g + 3, z, B.SANDSTONE); if ((i & 1) === 0) this.rawSet(O.x + i, g + 4, z, B.CARVED); }
+      for (let i = -hz; i <= hz; i++) for (const x of [O.x - hx, O.x + hx]) { if (Math.abs(i) <= 1) continue; this.fill(x, g + 1, O.z + i, x, g + 3, O.z + i, B.SANDSTONE); if ((i & 1) === 0) this.rawSet(x, g + 4, O.z + i, B.CARVED); }
+      for (const [x, z] of [[O.x - 3, O.z - hz - 1], [O.x + 3, O.z - hz - 1], [O.x - 3, O.z + hz + 1], [O.x + 3, O.z + hz + 1]]) this.sandPost(x, g + 1, z);
+      const shop = this.building(O.x - 15, O.z - 11, O.x - 7, O.z - 4, 4, B.SANDSTONE, B.CARVED, 's', g);
+      const temple = this.building(O.x + 7, O.z - 11, O.x + 15, O.z - 3, 5, B.CARVED, B.GOLD, 's', g);
+      // fountain well + palms
+      this.fill(O.x - 2, g + 1, O.z - 2, O.x + 2, g + 1, O.z + 2, B.CARVED); this.fill(O.x - 1, g + 1, O.z - 1, O.x + 1, g + 1, O.z + 1, B.WATER);
+      this.rawSet(O.x, g, O.z, B.SANDSTONE);
+      for (const [x, z] of [[O.x - 13, O.z + 9], [O.x + 13, O.z + 9], [O.x - 5, O.z + 10], [O.x + 5, O.z + 10]]) this.palm(x, g + 1, z, U.hash2(x, z, 7));
+      // fence's awning
+      this.fill(O.x + 9, g + 1, O.z + 3, O.x + 9, g + 3, O.z + 3, B.LOG); this.fill(O.x + 14, g + 1, O.z + 3, O.x + 14, g + 3, O.z + 3, B.LOG);
+      this.fill(O.x + 9, g + 4, O.z + 2, O.x + 14, g + 4, O.z + 6, B.WOOL);
+      for (const [x, z] of [[O.x - 7, O.z + 2], [O.x + 7, O.z + 2], [O.x - 7, O.z - 1], [O.x + 7, O.z - 1]]) this.sandPost(x, g + 1, z);
+      const y = g + 1, T = { color: 0xd8c8a0 };
+      this.npcs.push({ kind: 'binder', name: 'Sunpriestess Nefa', x: temple.x, y, z: temple.z, color: 0xe8d8a0, sub: '<Soulbinder>', turban: 0xe8e0c8 });
+      this.npcs.push({ kind: 'merchant', name: 'Trader Hamid', x: shop.x, y, z: shop.z, color: 0x2a6a8a, stock: 'desert', faction: 'sunward', turban: 0xe0e0e0 });
+      this.npcs.push({ kind: 'merchant', name: 'Fence Jabari', x: O.x + 11.5, y, z: O.z + 4.5, color: 0x4a3a5a, stock: 'fence', faction: 'bandit', sub: '<Sandreaver Fence>', turban: 0x2a2a3a, veil: 0x2a2a3a });
+      this.npcs.push({ kind: 'quest', name: 'Caravan Master Idris', x: O.x - 4.5, y, z: O.z + 4.5, color: 0x9a5a2a, sub: '<Caravan Master>', turban: 0xc04030 });
+      this.npcs.push({ kind: 'guard', name: 'Captain Asha', x: O.x + 3.5, y, z: O.z - hz + 2.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
+      this.npcs.push({ kind: 'quest', name: 'Loremaster Kheti', x: O.x - 10.5, y, z: O.z + 1.5, color: 0x3a4a8a, sub: '<Loremaster>', turban: 0x3a4a8a });
+      this.npcs.push({ kind: 'guard', name: 'Sunward Guard Tamit', x: O.x - 3.5, y, z: O.z + hz - 1.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
+      this.npcs.push({ kind: 'guard', name: 'Sunward Guard Omari', x: O.x - 3.5, y, z: O.z - hz + 2.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
+      void T;
+      this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 5.5 };
+      this.zones.push({ name: 'Sunward Outpost', x0: O.x - hx, x1: O.x + hx, z0: O.z - hz, z1: O.z + hz });
+    }
+    buildHideout() {
+      const C = DS.hideout, g = this.topY(C.x, C.z);
+      this.fill(C.x - 15, g + 1, C.z - 15, C.x + 15, H - 1, C.z + 15, B.AIR);
+      for (let a = 0; a < 70; a++) {
+        const ang = (a / 70) * Math.PI * 2; if (ang > 2.2 && ang < 2.7) continue;
+        const x = Math.round(C.x + Math.cos(ang) * 14), z = Math.round(C.z + Math.sin(ang) * 14), top = this.topY(x, z);
+        const hh = 1 + Math.floor(U.hash2(x, z, 3) * 3); for (let y = top + 1; y <= top + hh; y++) this.rawSet(x, y, z, U.hash2(x, y, 4) < 0.3 ? B.CARVED : B.SANDSTONE);
+      }
+      const tent = (tx, tz, c) => { const ty = this.topY(tx, tz) + 1; for (let l = 0; l < 3; l++) for (let dz = -2; dz <= 2; dz++) { this.rawSet(tx - 2 + l, ty + l, tz + dz, c); this.rawSet(tx + 2 - l, ty + l, tz + dz, c); } for (let dz = -2; dz <= 2; dz++) this.rawSet(tx, ty + 3, tz + dz, B.LOG); };
+      tent(C.x - 8, C.z - 6, B.WOOL); tent(C.x + 7, C.z - 7, B.BANNER); tent(C.x - 7, C.z + 7, B.WOOL); tent(C.x + 8, C.z + 6, B.WOOL);
+      this.rawSet(C.x, g + 1, C.z, B.COBBLE); this.rawSet(C.x, g + 2, C.z, B.LANTERN);
+      this.zones.push({ name: 'Sandreaver Hideout', x0: C.x - 15, x1: C.x + 15, z0: C.z - 15, z1: C.z + 15 });
+    }
+    buildColossi() {
+      const C = DS.colossi, g = this.topY(C.x, C.z);
+      const statue = (sx, sz, h, broken) => {
+        for (const dx of [-2, 2]) this.fill(sx + dx - 1, g + 1, sz - 1, sx + dx, g + 6, sz, B.SANDSTONE);
+        if (!broken) { this.fill(sx - 3, g + 7, sz - 1, sx + 3, g + 7 + h, sz + 1, B.SANDSTONE); this.fill(sx - 1, g + 8 + h, sz - 1, sx + 1, g + 10 + h, sz + 1, B.CARVED); this.rawSet(sx, g + 11 + h, sz, B.GOLD); }
+        else { this.fill(sx - 3, g + 7, sz - 1, sx + 1, g + 8, sz + 1, B.SANDSTONE); this.fill(sx + 4, g + 1, sz + 2, sx + 7, g + 3, sz + 4, B.CARVED); }
+      };
+      statue(C.x - 7, C.z - 4, 5, false); statue(C.x + 8, C.z + 3, 0, true);
+      for (let i = 0; i < 8; i++) { const a = i * 0.8, x = Math.round(C.x + Math.cos(a) * 12), z = Math.round(C.z + Math.sin(a) * 12), t = this.topY(x, z); const hh = 2 + (i % 3) * 2; this.fill(x, t + 1, z, x, t + hh, z, B.CARVED); }
+      this.zones.push({ name: 'The Shattered Colossi', x0: C.x - 18, x1: C.x + 18, z0: C.z - 18, z1: C.z + 18 });
+    }
+    buildDjinnRest() {
+      const C = DS.djinn, g = this.topY(C.x, C.z);
+      this.fill(C.x - 5, g, C.z - 5, C.x + 5, g, C.z + 5, B.CARVED);
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2, x = Math.round(C.x + Math.cos(a) * 8), z = Math.round(C.z + Math.sin(a) * 8), t = this.topY(x, z); this.fill(x, t + 1, z, x, t + 6, z, B.CARVED); this.rawSet(x, t + 7, z, B.GOLD); }
+      this.rawSet(C.x, g + 1, C.z, B.BRAZIER);
+      this.zones.push({ name: "Djinn's Rest", x0: C.x - 12, x1: C.x + 12, z0: C.z - 12, z1: C.z + 12 });
+    }
+    // The Great Pyramid with an entrance hall; stairs descend into the multi-room Tomb of Ankhet-Ra
+    buildPyramid() {
+      const P = DS.pyramid, g = 27, HB = 20;
+      this.fill(P.x - HB - 6, g + 1, P.z - HB - 6, P.x + HB + 6, H - 1, P.z + HB + 6, B.AIR);
+      for (let z = P.z - HB - 6; z <= P.z + HB + 6; z++) for (let x = P.x - HB - 6; x <= P.x + HB + 6; x++) { this.fill(x, g - 2, z, x, g - 1, z, B.SANDSTONE); this.rawSet(x, g, z, B.SAND); }
+      for (let L = 0; L <= HB; L++) {
+        const hf = HB - L, y = g + 1 + L;
+        for (let z = P.z - hf; z <= P.z + hf; z++) for (let x = P.x - hf; x <= P.x + hf; x++) {
+          const edge = Math.max(Math.abs(x - P.x), Math.abs(z - P.z)) === hf;
+          this.rawSet(x, y, z, L >= HB - 1 ? B.GOLD : edge && L % 4 === 3 ? B.CARVED : B.SANDSTONE);
+        }
+      }
+      // entrance corridor from the south face
+      const ez = P.z + HB;
+      this.fill(P.x - 1, g + 1, P.z + 8, P.x + 1, g + 4, ez + 1, B.AIR);
+      this.fill(P.x - 1, g, P.z + 8, P.x + 1, g, ez + 1, B.CARVED);
+      for (const dx of [-2, 2]) this.fill(P.x + dx, g + 1, ez - 3, P.x + dx, g + 4, ez, B.CARVED);
+      this.fill(P.x - 2, g + 5, ez - 3, P.x + 2, g + 5, ez, B.GOLD);
+      this.rawSet(P.x - 3, g + 3, ez + 1, B.BRAZIER); this.rawSet(P.x + 3, g + 3, ez + 1, B.BRAZIER);
+      // entrance hall
+      const hx0 = P.x - 5, hx1 = P.x + 5, hz0 = P.z + 4, hz1 = P.z + 12;
+      this.fill(hx0 - 1, g, hz0 - 1, hx1 + 1, g + 6, hz1 + 1, B.CARVED);
+      this.fill(hx0, g + 1, hz0, hx1, g + 5, hz1, B.AIR);
+      this.fill(P.x - 1, g + 1, hz1 + 1, P.x + 1, g + 4, hz1 + 1, B.AIR);
+      for (const [x, z] of [[hx0, hz0], [hx1, hz0], [hx0, hz1], [hx1, hz1]]) this.fill(x, g + 1, z, x, g + 5, z, B.SANDSTONE);
+      for (const [x, z] of [[hx0 + 1, hz0], [hx1 - 1, hz0], [hx0, hz1 - 3], [hx1, hz1 - 3]]) this.rawSet(x, g + 3, z, B.BRAZIER);
+      // lower complex: 3x3 grid, north row merged into the Pharaoh's sanctum
+      const x0 = P.x - 17, z0 = P.z - 37, fy = g - 9;
+      const z1 = z0 + 33, x1 = x0 + 34;
+      this.fill(x0, fy, z0, x1, g - 1, z1, B.SANDSTONE);
+      for (let z = z0 - 1; z <= z1 + 1; z++) for (let x = x0 - 1; x <= x1 + 1; x++) if (this.get(x, g, z) === B.AIR) this.rawSet(x, g, z, B.SAND);
+      for (let y = fy; y <= g - 1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const edge = x === x0 || x === x1 || z === z0 || z === z1; if (edge && U.hash2(x * 5 + y, z, 17) < 0.5) this.rawSet(x, y, z, B.CARVED); }
+      const room = (i, j) => ({ rx: x0 + 1 + i * 11, rz: z0 + 1 + j * 11, x: x0 + 1 + i * 11 + 5, z: z0 + 1 + j * 11 + 5 });
+      // sanctum (north row)
+      this.fill(x0 + 1, fy + 1, z0 + 1, x1 - 1, fy + 7, z0 + 10, B.AIR);
+      for (let x = x0 + 3; x <= x1 - 3; x += 5) for (const z of [z0 + 2, z0 + 9]) { this.fill(x, fy + 1, z, x, fy + 7, z, B.CARVED); this.rawSet(x, fy + 4, z + (z === z0 + 2 ? 1 : -1), B.BRAZIER); }
+      const sx = P.x, sz = z0 + 5;
+      this.fill(sx - 3, fy + 1, sz - 3, sx + 3, fy + 1, sz + 2, B.GOLD);
+      this.fill(sx - 1, fy + 2, sz - 3, sx + 1, fy + 3, sz - 3, B.GOLD); // throne
+      this.fill(sx - 5, fy + 1, sz - 4, sx - 5, fy + 1, sz - 3, B.CARVED); this.fill(sx + 5, fy + 1, sz - 4, sx + 5, fy + 1, sz - 3, B.CARVED); // sarcophagi
+      for (let j = 1; j <= 2; j++) for (let i = 0; i < 3; i++) {
+        const r = room(i, j);
+        this.fill(r.rx, fy + 1, r.rz, r.rx + 9, fy + 5, r.rz + 9, B.AIR);
+        this.rawSet(r.rx + 4, fy + 3, r.rz - 1 + (j === 1 ? 0 : 0), B.BRAZIER);
+        this.rawSet(r.rx - 1, fy + 3, r.rz + 4, B.BRAZIER);
+        for (const [px, pz] of [[r.rx + 1, r.rz + 1], [r.rx + 8, r.rz + 1], [r.rx + 1, r.rz + 8], [r.rx + 8, r.rz + 8]]) if (U.hash2(px, pz, 9) < 0.55) this.fill(px, fy + 1, pz, px, fy + 5, pz, B.CARVED);
+      }
+      const door = (xa, za, xb, zb) => this.fill(xa, fy + 1, za, xb, fy + 3, zb, B.AIR);
+      const r = (i, j) => room(i, j);
+      door(x0 + 11, r(0, 2).rz + 3, x0 + 11, r(0, 2).rz + 5); door(x0 + 22, r(0, 2).rz + 3, x0 + 22, r(0, 2).rz + 5);
+      door(r(0, 2).rx + 3, z0 + 22, r(0, 2).rx + 5, z0 + 22); door(r(2, 2).rx + 3, z0 + 22, r(2, 2).rx + 5, z0 + 22);
+      door(x0 + 11, r(0, 1).rz + 3, x0 + 11, r(0, 1).rz + 5); door(x0 + 22, r(0, 1).rz + 3, x0 + 22, r(0, 1).rz + 5);
+      door(P.x - 1, z0 + 11, P.x + 1, z0 + 11);
+      // treasury gold piles, embalming slabs
+      const tr = r(2, 2); for (let k = 0; k < 6; k++) this.rawSet(tr.rx + 2 + (k % 3) * 2, fy + 1, tr.rz + 6 + Math.floor(k / 3), B.GOLD);
+      const em = r(0, 2); for (const dz of [2, 6]) this.fill(em.rx + 3, fy + 1, em.rz + dz, em.rx + 6, fy + 1, em.rz + dz, B.CARVED);
+      // stairs from the hall (north wall) down to the entry room (1,2)
+      for (let k = 1; k <= 9; k++) {
+        const z = hz0 - k, fl = g - k;
+        this.fill(P.x - 1, fl + 1, z, P.x + 1, fl + 5, z, B.AIR);
+        this.fill(P.x - 1, fl - 1, z, P.x + 1, fl, z, B.CARVED);
+        for (const dx of [-2, 2]) this.fill(P.x + dx, fl - 1, z, P.x + dx, fl + 5, z, B.SANDSTONE);
+      }
+      this.tombFloor = fy + 1; this.tombY = fy + 1;
+      this.tombRooms = { sanctum: { x: sx + 0.5, z: sz + 0.5 }, entry: r(1, 2), embalm: r(0, 2), treasury: r(2, 2), prison: r(0, 1), pit: r(2, 1), vizier: r(1, 1) };
+      for (const k of ['entry', 'embalm', 'treasury', 'prison', 'pit', 'vizier']) { this.tombRooms[k].x += 0.5; this.tombRooms[k].z += 0.5; }
+      this.tombEntrance = { x: P.x + 0.5, z: ez + 3.5 };
+      this.zones.push({ name: 'Tomb of Ankhet-Ra', x0, x1, z0, z1: hz0 - 1, yMax: g - 1 });
+      this.zones.push({ name: 'The Great Pyramid', x0: P.x - HB, x1: P.x + HB, z0: P.z - HB, z1: P.z + HB });
     }
     topY(x, z) { for (let y = H - 1; y > 0; y--) if (this.get(x, y, z) !== B.AIR) return y; return 0; }
     road(x0, z0, x1, z1, w) {
@@ -675,7 +968,7 @@
       sp('gnoll_pup', L.gnollCamp.x, L.gnollCamp.z, 4, 8, 70);
       sp('gnoll', L.gnollCamp.x - 5, L.gnollCamp.z - 2, 2, 4, 90);
       sp('gnoll_pup', T.x - 40, T.z + 8, 1, 3, 90, { alt: 'fippy', altChance: 0.35 });
-      sp('wolf', L.forest.x, L.forest.z, 3, 14, 70); sp('wolf', L.forest.x - 36, L.forest.z + 10, 2, 10, 70);
+      sp('wolf', L.forest.x, L.forest.z, 3, 14, 70, { alt: 'greymane', altChance: 0.12 }); sp('wolf', L.forest.x - 36, L.forest.z + 10, 2, 10, 70);
       const fy = this.dungeonFloor;
       for (const r of this.dungeonRooms) {
         if (r.i === 0 && r.j === 1) { sp('skeleton', r.x, r.z, 2, 3, 90, { y: fy, lvl: [3, 4] }); continue; }
@@ -758,7 +1051,7 @@
     setBlock(x, y, z, b, record = true) {
       if (!this.inBounds(x, y, z)) return false;
       this.data[this.idx(x, y, z)] = b;
-      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
+      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN || b === B.BRAZIER) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
       if (record) this.edits[this.idx(x, y, z)] = b;
       const oldH = this.height[x + z * W];
       this.computeHeightColumn(x, z);
@@ -828,5 +1121,5 @@
   }
 
   EB.World = World;
-  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES };
+  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES, DS, DUNGEON_ZONES };
 })();

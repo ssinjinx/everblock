@@ -122,7 +122,7 @@ const RACES = ['Human', 'Barbarian', 'Wood Elf', 'Dark Elf', 'Dwarf', 'Gnome', '
     return { out, sharedGeo, legacyH: EB.data.MOBS.frost_giant.scale * 1.95 };
   });
   const types = Object.keys(mobs.out);
-  check('all 18 mob types build detailed rigs', types.length === 18 && types.every((t) => mobs.out[t].boxes >= 25), Object.fromEntries(types.map((t) => [t, mobs.out[t].boxes])));
+  check('all 18+ mob types build detailed rigs', types.length >= 18 && types.every((t) => mobs.out[t].boxes >= 25), Object.fromEntries(types.map((t) => [t, mobs.out[t].boxes])));
   check('humanoid mobs are highly detailed (>=60 boxes) with few draw calls (<=40 meshes)', types.filter((t) => mobs.out[t].rig === 'human').every((t) => mobs.out[t].boxes >= 60 && mobs.out[t].meshes <= 40), Object.fromEntries(types.map((t) => [t, mobs.out[t].meshes])));
   check('armed mobs carry weapon models', ['skel_warrior', 'gnoll', 'orc_grunt', 'orc_shaman', 'grimtusk', 'vorgath', 'grimbone', 'frost_giant'].every((t) => mobs.out[t].gear));
   check('collision heights unchanged (biped 1.95*scale)', Math.abs(mobs.out.frost_giant.h - mobs.legacyH) < 0.01 && Math.abs(mobs.out.rat.h - 0.45) < 0.01, [mobs.out.frost_giant.h, mobs.out.rat.h]);

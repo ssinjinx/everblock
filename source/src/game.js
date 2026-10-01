@@ -36,6 +36,10 @@
       this.gems = pad(c.gems || known.filter(isSpell));
       this.hotbar = pad(c.hotbar || known);
       this.title = c.title || '';
+      // v5: EQ-style faction standings (older saves start at the defaults)
+      this.faction = Object.assign({}, c.faction || {});
+      for (const f in D.FACTIONS) if (typeof this.faction[f] !== 'number') this.faction[f] = D.FACTIONS[f].start;
+      this.petMode = c.petMode || 'follow';
       this.memorizing = null;
       this.buffs = (c.buffs || []).filter((b) => b.left > 0);
       this.bind = c.bind || null;
@@ -70,7 +74,7 @@
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
       return { name: this.name, race: this.race, cls: this.cls, level: this.level, xp: this.xp, stats: this.base, coins: this.coins, inv: this.inv, equip: this.equip,
-        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
+        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
     }
   }
 
@@ -114,7 +118,8 @@
       this.ring = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({ map: rtex, color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
       this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; this.ring.renderOrder = 2; this.scene.add(this.ring);
       EB.fx.init(this.scene);
-      this.gfxPref = localStorage.getItem('everblock_gfx') || 'high';
+      this.gfxPref = localStorage.getItem('everblock_gfx') || (EB.phone && EB.phone.on ? 'low' : 'high'); // v5: phones default to low
+      if (EB.phone && EB.phone.on) r.setPixelRatio(1);
       this.applyGfx(this.gfxPref, true);
       this.raycaster = new THREE.Raycaster();
       // v3: a fixed pool of point lights reassigned to the nearest lanterns (+1 player torch) so shaders never recompile
@@ -181,7 +186,8 @@
       $('hud').classList.remove('hidden');
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`MOTD: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
+      ui.log(`MOTD: Greetings, ${pl.name}. New in v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      if (false) ui.log(`MOTD: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guildmaster Aldric says, 'Welcome, young ${RACES[pl.race].name.toLowerCase()}. Hunt the rats and snakes outside the walls to start. Return to me as you grow in power.'`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
       this.last = performance.now();
@@ -273,7 +279,8 @@
         if (this.time < s.respawnAt) continue;
         const def = s.def;
         let type = def.type;
-        if (def.alt && Math.random() < def.altChance) type = def.alt;
+        // placeholder spawns: a rare named may pop instead of the PH, but only one of each named is ever up
+        if (def.alt && Math.random() < def.altChance && !this.mobs.some((m) => m.alive && m.type === def.alt)) type = def.alt;
         let x = def.x + (Math.random() * 2 - 1) * def.radius * 0.6, z = def.z + (Math.random() * 2 - 1) * def.radius * 0.6;
         let y = def.y != null ? this.world.floorBelow(x, def.y + 1, z) : this.world.surfaceY(x, z);
         if (def.y == null && this.world.isWater(x, y, z)) { x = def.x; z = def.z; y = this.world.surfaceY(x, z); }
@@ -325,7 +332,7 @@
     }
     locked() { return document.pointerLockElement === this.renderer.domElement; }
     requestLock() { try { const p = this.renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
-    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive); }
+    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive || !!(EB.phone && EB.phone.on)); }
     onKey(e, down) {
       if ($('hud').classList.contains('hidden')) return;
       if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
@@ -343,6 +350,7 @@
       if (k === 'KeyN') { this.showMap = !this.showMap; $('minimap').classList.toggle('hidden', !this.showMap); return; }
       if (k === 'Enter' || k === 'Slash') { const ci = $('chatInput'); ci.classList.remove('hidden'); if (k === 'Slash') ci.value = '/'; setTimeout(() => ci.focus(), 0); if (this.locked()) document.exitPointerLock(); e.preventDefault(); return; }
       if (k === 'KeyI') { this.toggleWin('invWin'); return; }
+      if (k === 'KeyP') { this.toggleWin('petWin'); return; }
       if (k === 'KeyM' && e.shiftKey) { this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); return; }
       if (k === 'KeyM') { this.log(EB.audio.toggle() ? 'Sound on.' : 'Sound off.', 'sys'); return; }
       if (!pl.alive) return;
@@ -369,7 +377,7 @@
       this.raycaster.setFromCamera(ndc, this.camera);
       const hit = this.pickEntity(this.raycaster.ray.origin, this.raycaster.ray.direction);
       if (hit && e.button === 0) { this.setTarget(hit); return; }
-      if (e.button === 0) this.requestLock();
+      if (e.button === 0 && !(EB.phone && EB.phone.on)) this.requestLock();
     }
     camDir() { const p = this.player; return new THREE.Vector3(Math.sin(p.yaw) * Math.cos(p.pitch), Math.sin(p.pitch), Math.cos(p.yaw) * Math.cos(p.pitch)); }
     eyePos() { return new THREE.Vector3(this.player.pos.x, this.player.pos.y + this.player.eyeH, this.player.pos.z); }
@@ -420,6 +428,7 @@
       else if (id === 'mercWin') this.renderMercWin();
       else if (id === 'bookWin') this.renderBook();
       else if (id === 'mercCfgWin') this.renderMercCfg();
+      else if (id === 'petWin') this.renderPetWin();
     }
 
     // ---------- targeting ----------
@@ -436,13 +445,36 @@
       i = i < 0 ? 0 : (i + (rev ? -1 : 1) + list.length) % list.length;
       this.setTarget(list[i]);
     }
+    // ---------- v5 factions ----------
+    npcFaction(n) { return n.faction || { everblock: 'guards', frostfang: 'hollis', desert: 'sunward' }[this.world.zoneId] || 'guards'; }
+    entFaction(e) { if (!e) return null; if (e.kind === 'npc') return this.npcFaction(e); if (e.kind === 'mob' && D.FACTIONS[e.def.faction]) return e.def.faction; return null; }
+    standing(f) { const v = this.player.faction[f]; return v == null ? 0 : v; }
+    // tracked-faction mobs only attack on sight when you are threatening (KOS) or worse
+    factionKOS(m) { const f = m.def.faction; if (!D.FACTIONS[f]) return true; return this.standing(f) < -750; }
+    adjustFaction(f, delta, silent) {
+      const pl = this.player; if (!D.FACTIONS[f] || !delta) return;
+      const old = this.standing(f), nv = U.clamp(old + delta, -2000, 2000), name = D.FACTIONS[f].name;
+      pl.faction[f] = nv;
+      if (silent) return;
+      if (nv === old) this.log(`Your faction standing with ${name} could not possibly get any ${delta > 0 ? 'better' : 'worse'}.`, 'faction');
+      else this.log(`Your faction standing with ${name} got ${delta > 0 ? 'better' : 'worse'}.`, 'faction');
+      const a = D.standingOf(old).label, b = D.standingOf(nv).label;
+      if (a !== b) this.log(`${name} now ${D.standingOf(nv).con.replace(/ you.*$/, '')} you. (${b})`, 'faction');
+    }
+    factionHitsFor(m) { return (D.KILL_FACTION[m.def.faction] || []).concat(m.def.factionHits || []); }
+    priceMult(npc) { return D.factionPriceMult(this.standing(this.npcFaction(npc))); }
     consider() {
       const t = this.target;
       if (!t) { this.log('You must first select a target to consider.', 'sys'); return; }
-      if (t.kind === 'npc') { this.log(`${t.name} regards you as an ally -- looks like it would wipe the floor with you!`, 'sys'); return; }
+      if (t.kind === 'npc') {
+        const st = D.standingOf(this.standing(this.npcFaction(t)));
+        this.log(`${t.name} ${st.con} -- looks like it would wipe the floor with you!`, 'sys');
+        return;
+      }
+      if (t.kind === 'merc') { this.log(`${t.name} regards you as an ally.`, 'sys'); return; }
       if (t.kind !== 'mob' || !t.alive) { this.log('That is a corpse.', 'sys'); return; }
-      const c = t.con(this);
-      const attitude = t.def.aggressive ? 'glares at you threateningly' : 'regards you indifferently';
+      const c = t.con(this), f = this.entFaction(t);
+      const attitude = f ? D.standingOf(this.standing(f)).con : t.def.aggressive ? 'glares at you threateningly' : 'regards you indifferently';
       this.log(`${U.cap(t.name)} ${attitude} -- ${CON_MSG[c]}`, 'sys');
       const last = $('chatLog').lastChild; if (last) last.style.color = CON_HEX[c];
     }
@@ -461,7 +493,15 @@
         binder: t.name === 'Scout Hollis' ? `Careful out here, ${pl.name}. The orcs of the Frostfang Warcamp to the northwest raid us nightly, and the giants of Vorgath's keep to the north are worse. Press E and I'll bind your soul to this camp.` : `Greetings, ${pl.name}. Should you fall, your spirit will return to where it is bound. Press E and I shall bind your soul here.`,
         guard: ['Move along, citizen.', `Hail, ${pl.name}. Keep your eyes open, the Darkpaw gnolls have been seen near the west gate. Some say Fippy Darkpaw himself leads them.`, "I don't have time to chat. Gnolls, you know.", 'The undead of the Sunken Crypt grow restless at night.'][Math.floor(Math.random() * 4)],
       };
-      setTimeout(() => this.log(`${t.name} says, '${lines[t.npcKind]}'`, 'say'), 400);
+      const special = {
+        'Sunpriestess Nefa': `The sun watches over all who walk the Expanse, ${pl.name}. Press E and I shall bind your soul to this outpost.`,
+        'Trader Hamid': `Water, blades and potions, ${pl.name}! Friends of the Sunward Caravan pay less. (Press E to trade)`,
+        'Fence Jabari': `Psst. The Sandreavers pay well for what they need... if they trust you. (Press E to trade)`,
+        'Sunward Guard Tamit': `The Sandreavers hide in the rocks to the east. Their mystics mend their wounds - kill those first.`,
+        'Sunward Guard Omari': `The Great Pyramid lies to the north. The dead there do not rest, and Pharaoh Ankhet-Ra still sits upon his throne.`,
+      };
+      if (this.world.zoneId === 'desert' && t.npcKind === 'guard' && !special[t.name]) special[t.name] = 'Keep your waterskin full and your blade sharp.';
+      setTimeout(() => this.log(`${t.name} says, '${special[t.name] || lines[t.npcKind]}'`, 'say'), 400);
     }
     updateTargetWin() {
       const t = this.target;
@@ -469,9 +509,9 @@
       $('targetWin').classList.remove('hidden');
       let color = '#ffffff', name = t.name, info = '';
       if (t.kind === 'mob') {
-        if (t.alive) { color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : t.def.aggressive ? 'Threatening' : 'Indifferent'}`; }
+        if (t.alive) { const f = this.entFaction(t); color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : f ? D.standingOf(this.standing(f)).label : t.def.aggressive ? 'Threatening' : 'Indifferent'}`; }
         else { name = t.corpseName(); color = '#b0a080'; info = 'Press E to loot'; }
-      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = { merchant: 'Merchant - press E to trade', trainer: 'Guildmaster - press E to train', binder: 'Soulbinder - press E to bind', guard: 'Everblock Guard' }[t.npcKind]; }
+      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guildmaster - press E to train', binder: 'Soulbinder - press E to bind', guard: 'Guard', quest: 'Quest giver - press E' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
       else if (t.kind === 'pcorpse') { color = '#ffcc66'; info = 'Your corpse - press E to loot'; }
       else if (t.kind === 'merc') { color = '#70ff70'; info = `Group member - Level ${t.level} ${t.role === 'healer' ? 'Cleric' : 'Warrior'} Mercenary`; }
       $('tName').textContent = name; $('tName').style.color = color;
@@ -527,8 +567,26 @@
       const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * CLASSES[pl.cls].dmgMult * (1 + pl.level / 12) * (1 + pl.buffSum('dmgPct') / 100)));
       return U.randInt(Math.max(1, Math.floor(max / 4)), max);
     }
+    // v5: mob casters heal and buff their allies
+    mobSupport(m, tg, s, type) {
+      const near = this.player.pos.distanceTo(m.pos) < 50;
+      if (type === 'heal') {
+        const before = tg.hp; const amt = Array.isArray(s.amt) ? U.randInt(s.amt[0], s.amt[1]) : (s.amt || 0); tg.hp = Math.min(tg.maxHp, tg.hp + amt + Math.floor(tg.maxHp * 0.04)); const got = Math.round(tg.hp - before);
+        EB.fx.heal(tg);
+        if (near) this.log(tg === m ? `${U.cap(m.name)} glows with renewed vigor. (${s.name}, +${got})` : `${U.cap(tg.name)} is healed by ${m.name}'s ${s.name}. (+${got})`, 'other');
+        if (tg === this.target) this.updateTargetWin();
+      } else {
+        if (s.ward) { tg.wardUntil = this.time + s.dur; tg.ward = s.ward; }
+        if (s.haste) { tg.hasteUntil = this.time + s.dur; tg.haste = s.haste; }
+        EB.fx.buff(tg, s.color || 0xffd070);
+        if (near) this.log(`${U.cap(tg.name)} ${s.ward ? 'is surrounded by a shimmering ward' : 'moves with unnatural speed'}. (${s.name})`, 'other');
+      }
+      // heals/buffs on a fighting mob add hate to the healer from whoever the target is fighting
+      for (const [e, v] of tg.hate) if (e !== m) m.addHate(e, 1);
+    }
     damageMob(m, dmg, src) {
       if (!m.alive) return;
+      if (dmg > 0 && this.time < (m.wardUntil || 0)) dmg = Math.max(1, Math.round(dmg * (1 - (m.ward || 0))));
       m.hp -= dmg; if (dmg > 0) EB.models.flinch(m.model);
       if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} has been awakened by ${src === this.player ? 'you' : src.name}.`, 'spell'); }
       if (src === this.player || (src && src.kind === 'merc')) m.grpDamage += dmg;
@@ -553,6 +611,7 @@
           this.gainXP(xp, true);
         } else if (xp > 0) this.gainXP(xp); else this.log('You gain no experience from that kill.', 'other');
         this.questKillHook && this.questKillHook(m);
+        for (const [f, d] of this.factionHitsFor(m)) this.adjustFaction(f, d);
       }
       if (this.target === m) { pl.autoAttack = false; this.updateTargetWin(); }
       if (pl.casting && pl.casting.target === m) this.interruptCast('Your target has died.');
@@ -776,7 +835,8 @@
         }
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
-          const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          let dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          if (sp.undead && t.def.faction === 'undead') { dmg = Math.floor(dmg * sp.undead); this.log(`${U.cap(t.name)} is seared by holy fire!`, 'spell'); }
           const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
           this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
@@ -852,6 +912,14 @@
           break;
         }
         case 'skill': {
+          if (sp.taunt) {
+            if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this);
+            let top = 0; for (const [, v] of t.hate) top = Math.max(top, v);
+            t.hate.set(pl, top + 50 + L * 5); t.target = pl; t.hateT = 1.5;
+            this.log(`You taunt ${t.name} to attack you!`, 'melee'); this.pAttackAnim = 0.01; this.pAttackKind = 'bash';
+            if (t.def.named && Math.random() < 0.25) this.log(`${U.cap(t.name)} is not impressed by your taunt.`, 'sys');
+            break;
+          }
           if (sp.backstab) {
             const w = pl.weapon();
             if (w.verb !== 'pierce') { this.log('You need a piercing weapon to backstab!', 'sys'); pl.cooldowns[id] = this.time + 1; return; }
@@ -895,7 +963,7 @@
     applyGfx(mode, silent) {
       const high = mode !== 'low';
       this.gfxPref = high ? 'high' : 'low';
-      localStorage.setItem('everblock_gfx', this.gfxPref);
+      if (!silent) localStorage.setItem('everblock_gfx', this.gfxPref); // only explicit choices are remembered (phones default to low)
       EB.models.setQuality(high); EB.fx.setHigh(high);
       if (this.renderer) { this.renderer.setPixelRatio(high ? Math.min(window.devicePixelRatio, 1.5) : 1); this.renderer.setSize(window.innerWidth, window.innerHeight); }
       if (!silent) this.log(`Graphics quality: ${high ? 'HIGH (textured models, rim light, shadows, full particles)' : 'LOW (flat models, no blob shadows, fewer particles, 1x pixel ratio)'}.`, 'sys');
@@ -930,6 +998,12 @@
       }
       if (t.kind === 'pcorpse') return this.lootOwnCorpse(t);
       if (t.kind === 'mob') return this.openLoot(t);
+      if (t.npcKind === 'merchant' && this.priceMult(t) == null) {
+        const st = D.standingOf(this.standing(this.npcFaction(t)));
+        this.log(`${t.name} ${st.con}. ${t.name} says, 'I will not trade with the likes of you, ${pl.name}! Begone!'`, 'say');
+        this.log(`(Your standing with ${D.FACTIONS[this.npcFaction(t)].name} is too low: ${st.label}.)`, 'faction');
+        return;
+      }
       if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says, 'Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}'`, 'say'); this.openWin('merchantWin'); }
       else if (t.npcKind === 'trainer') this.openWin('trainerWin');
       else if (t.npcKind === 'liaison') this.openWin('mercWin');
@@ -1056,13 +1130,15 @@
       ui.hideTip(); this.renderInv();
     }
     chaMod() { return (this.player.stats().CHA - 75) / 600; }
-    buyPrice(id) { return Math.max(1, Math.round(ITEMS[id].value * (1.25 - this.chaMod()))); }
-    sellPrice(id) { return Math.max(1, Math.floor(ITEMS[id].value * (0.5 + this.chaMod() / 2))); }
+    fMult() { return (this.merchant && this.priceMult(this.merchant)) || 1; }
+    buyPrice(id) { return Math.max(1, Math.round(ITEMS[id].value * (1.25 - this.chaMod()) * this.fMult())); }
+    sellPrice(id) { return Math.max(1, Math.floor(ITEMS[id].value * (0.5 + this.chaMod() / 2) / this.fMult())); }
     renderMerchant() {
       const m = this.merchant; if (!m) return;
       $('merchTitle').firstChild.textContent = `${m.name} `;
-      const list = $('merchList'); list.innerHTML = `<div class="sub">Your coin: ${U.coinStr(this.player.coins)}</div>`;
-      for (const id of MERCHANT_STOCK) {
+      const f = this.npcFaction(m), st = D.standingOf(this.standing(f)), pm = this.fMult();
+      const list = $('merchList'); list.innerHTML = `<div class="sub">Your coin: ${U.coinStr(this.player.coins)}</div><div class="sub fstand">${D.FACTIONS[f].name}: <b>${st.label}</b>${pm !== 1 ? ` (prices ${pm < 1 ? '-' : '+'}${Math.round(Math.abs(pm - 1) * 100)}%)` : ''}</div>`;
+      for (const id of (D.STOCKS[m.stock] || MERCHANT_STOCK)) {
         const row = document.createElement('div'); row.className = 'row';
         row.innerHTML = `<span>${ITEMS[id].icon}</span><span class="n">${ITEMS[id].name}</span><span>${U.coinShort(this.buyPrice(id))}</span>`;
         const b = document.createElement('button'); b.textContent = 'Buy'; b.className = 'small';
@@ -1070,6 +1146,17 @@
         b.onclick = () => this.buyItem(id);
         row.appendChild(b); ui.tooltipFor(row, () => ui.itemTip(id));
         list.appendChild(row);
+      }
+      // v5: sell list (touch friendly alternative to right-clicking bag items)
+      const inv = this.player.inv.map((it, i) => [it, i]).filter(([it]) => it);
+      if (inv.length) {
+        const h = document.createElement('h4'); h.textContent = 'Sell your items'; h.className = 'sellHdr'; list.appendChild(h);
+        for (const [it, i] of inv) {
+          const I = ITEMS[it.id], row = document.createElement('div'); row.className = 'row sellRow';
+          row.innerHTML = `<span>${I.icon || '•'}</span><span class="n">${I.name}${it.count > 1 ? ' x' + it.count : ''}</span><span>${U.coinShort(this.sellPrice(it.id) * it.count)}</span>`;
+          const b = document.createElement('button'); b.textContent = 'Sell'; b.className = 'small'; b.onclick = () => this.sellItem(i);
+          row.appendChild(b); list.appendChild(row);
+        }
       }
     }
     buyItem(id) {
@@ -1234,6 +1321,7 @@
       }
     }
     renderGroup() {
+      this.renderPetBar();
       const gw = $('groupWin');
       if (!this.mercs.length) { gw.classList.add('hidden'); return; }
       gw.classList.remove('hidden');
@@ -1391,6 +1479,7 @@
       pl.coins += q.coins; this.log(`You receive ${U.coinStr(q.coins)}.`, 'loot');
       if (q.reward) { this.addItem(q.reward, q.rewardCount || 1, true); this.log(`You receive ${q.rewardCount > 1 ? q.rewardCount + 'x ' : 'a '}${ITEMS[q.reward].name}.`, ITEMS[q.reward].rare ? 'ding' : 'loot'); }
       if (q.title) { pl.title = q.title; this.log(`You have earned the title: ${q.title}!`, 'ding'); ui.center(q.title, `${pl.name}, ${q.title}`, 4); }
+      for (const [f, d] of q.faction || []) this.adjustFaction(f, d);
       this.log(`You have completed the quest: ${q.name}!`, 'ding');
       this.gainXP(Math.floor(q.xp * (1 + pl.level / 10)));
       EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
@@ -1509,6 +1598,19 @@
       };
       sect('Spells (drag or click, then click a gem to memorize; double-click to memorize)', known.filter(isSpell));
       sect('Abilities (drag or click, then click a hotbar slot)', known.filter((id) => !isSpell(id)));
+      // v5: explicit buttons for the selected spell (touch friendly: no drag / double-click / right-click needed)
+      // always present with a constant height, so selecting a spell never shifts the list (keeps double-click working)
+      {
+        const id = this.bookSel && SPELLS[this.bookSel] ? this.bookSel : null, act = document.createElement('div'); act.className = 'bookActions';
+        const gemOk = id && isSpell(id), dis = (ok) => (ok ? '' : ' disabled');
+        let h = `<div class="bdesc">${id ? this.spellTip(id) : '<span class="hint">Tap or click a spell or ability to select it, then choose a gem or hotbar slot below.</span>'}</div>`;
+        h += `<div class="brow"><span>Memorize in gem:</span>${[0, 1, 2, 3, 4, 5, 6, 7].map((g) => `<button class="small" data-gem="${g}"${dis(gemOk)}>${g + 1}</button>`).join('')}</div>`;
+        h += `<div class="brow"><span>Put on hotbar:</span>${[0, 1, 2, 3, 4, 5, 6, 7].map((s) => `<button class="small" data-hot="${s}"${dis(id)}>${s + 1}</button>`).join('')}</div>`;
+        act.innerHTML = h;
+        act.querySelectorAll('[data-gem]').forEach((b) => { b.onclick = () => { this.bookSel = null; this.memorize(id, +b.dataset.gem); this.renderBook(); }; });
+        act.querySelectorAll('[data-hot]').forEach((b) => { b.onclick = () => { this.bookSel = null; this.assignHotbar(+b.dataset.hot, id); this.renderBook(); }; });
+        box.insertBefore(act, box.firstChild);
+      }
       $('bookHint').textContent = pl.memorizing ? `Memorizing ${SPELLS[pl.memorizing.id].name}...` : this.bookSel ? `Selected: ${SPELLS[this.bookSel].name}` : `Gems: ${pl.gems.filter(Boolean).length}/8 memorized. Memorizing takes a few seconds and makes you sit.`;
     }
 
@@ -1601,9 +1703,64 @@
         case 'book': case 'spellbook': this.openWin('bookWin'); break;
         case 'dismiss': { const m = this.mercs[this.mercs.length - 1]; if (m) this.dismissMerc(m); else this.log('You have no mercenaries.', 'sys'); break; }
         case 'zone': this.log(`You are in ${this.world.zoneName}.`, 'sys'); break;
-        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /dismiss /zone /sit /stand /music /book /lights /gfx. Press ? for key bindings.', 'help'); break;
+        case 'faction': case 'factions': {
+          this.log('Your faction standings:', 'sys');
+          for (const f in D.FACTIONS) { const v = this.standing(f), st = D.standingOf(v); this.log(`  ${D.FACTIONS[f].name}: ${st.label} (${v})`, 'faction'); }
+          break;
+        }
+        case 'pet': { const a = (v.split(/\s+/)[1] || '').toLowerCase().replace(/[^a-z]/g, ''); if (a === 'window' || a === '') this.toggleWin('petWin'); else this.petCommand(a === 'back' || a === 'backoff' ? 'backoff' : a); break; }
+        case 'phone': { const a = (v.split(/\s+/)[1] || '').toLowerCase(); EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}.`, 'sys'); break; }
+        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /faction /pet attack|backoff|follow|guard|sit|window /dismiss /zone /sit /stand /music /book /lights /gfx /phone. Press ? for key bindings.', 'help'); break;
         default: this.log('That is not a valid command. Try /help.', 'sys');
       }
+    }
+
+    // ---------- v5 pet commands ----------
+    pet() { return this.mercs.find((m) => m.isPet && !m.dead) || null; }
+    petCommand(cmd) {
+      const pet = this.pet(), t = this.target;
+      if (!pet) { this.log('You do not have a pet.', 'sys'); return; }
+      const say = (s) => this.log(`${pet.name} says, '${s}'`, 'say');
+      switch (cmd) {
+        case 'attack':
+          if (!t || t.kind !== 'mob' || !t.alive) { this.log('You must first target something for your pet to attack.', 'sys'); return; }
+          if (t.pos.distanceTo(pet.pos) > 60) { this.log(`${t.name} is too far away for your pet.`, 'sys'); return; }
+          pet.petTarget = t; pet.backoffUntil = 0; if (pet.petMode === 'sit') pet.petMode = 'follow';
+          say(`Attacking ${t.name}, Master.`); break;
+        case 'backoff':
+          pet.petTarget = null; pet.backoffUntil = this.time + 6;
+          for (const m of this.mobs) if (m.target === pet && m.hate.has(this.player)) m.target = this.player;
+          say('Backing off, Master.'); break;
+        case 'follow': pet.petMode = 'follow'; pet.guardPos = null; say('Following you, Master.'); break;
+        case 'guard': pet.petMode = 'guard'; pet.guardPos = pet.pos.clone(); pet.petTarget = null; say('Guarding with my life... oh splendid one.'); break;
+        case 'sit': pet.petMode = pet.petMode === 'sit' ? 'follow' : 'sit'; pet.petTarget = null; say(pet.petMode === 'sit' ? 'Changing position, Master. (sitting)' : 'Changing position, Master. (standing)'); break;
+        default: this.log('Pet commands: /pet attack, backoff, follow, guard, sit, window.', 'sys'); return;
+      }
+      this.player.petMode = pet.petMode;
+      this.renderPetBar(); if (this.windows.has('petWin')) this.renderPetWin();
+    }
+    renderPetBar() {
+      const bar = $('petBar'); if (!bar) return;
+      const pet = this.pet();
+      bar.classList.toggle('hidden', !pet);
+      if (!pet) return;
+      if (!bar.dataset.built) {
+        bar.dataset.built = '1';
+        bar.innerHTML = '<span class="plabel">Pet</span>' + [['attack', '⚔', 'Attack'], ['backoff', '✋', 'Back off'], ['follow', '👣', 'Follow'], ['guard', '🛡', 'Guard'], ['sit', '💤', 'Sit']].map(([c, ic, n]) => `<button class="petBtn" data-pc="${c}" title="Pet: ${n}"><span>${ic}</span><small>${n}</small></button>`).join('');
+        bar.querySelectorAll('.petBtn').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); this.petCommand(b.dataset.pc); }; });
+      }
+      bar.querySelectorAll('.petBtn').forEach((b) => b.classList.toggle('on', b.dataset.pc === pet.petMode || (b.dataset.pc === 'attack' && !!pet.petTarget)));
+    }
+    renderPetWin() {
+      const body = $('petBody'), pet = this.pet(); if (!body) return;
+      if (!pet) { body.innerHTML = '<div class="sub">You have no pet. Necromancers summon one with a pet spell.</div>'; return; }
+      const foe = pet.petTarget && pet.petTarget.alive ? pet.petTarget.name : 'none';
+      body.innerHTML = `<div><b>${pet.name}</b> - level ${pet.level} ${D.PETS[pet.petLvl] ? D.PETS[pet.petLvl].desc : ''}</div>
+        <div class="bar hp"><div class="fill" style="width:${Math.round((pet.hp / pet.maxHp) * 100)}%"></div><span>${Math.ceil(pet.hp)} / ${pet.maxHp}</span></div>
+        <div class="sub">Mode: <b>${pet.petMode}</b> &nbsp; Attacking: <b>${foe}</b></div>
+        <div class="btnRow petCmds">${['attack', 'backoff', 'follow', 'guard', 'sit'].map((c) => `<button data-pc="${c}" class="${pet.petMode === c ? 'on' : ''}">${{ attack: 'Attack', backoff: 'Back Off', follow: 'Follow', guard: 'Guard Here', sit: pet.petMode === 'sit' ? 'Stand' : 'Sit' }[c]}</button>`).join('')}</div>
+        <div class="sub">Also: /pet attack | backoff | follow | guard | sit</div>`;
+      body.querySelectorAll('button[data-pc]').forEach((b) => { b.onclick = () => this.petCommand(b.dataset.pc); });
     }
 
     // ---------- HUD ----------
@@ -1661,6 +1818,8 @@
       $('autoInd').classList.toggle('on', pl.autoAttack);
       $('sitInd').classList.toggle('on', pl.sitting);
       $('buildInd').classList.toggle('on', this.buildMode);
+      this.renderPetBar();
+      this.petWinT = (this.petWinT || 0) + 1; if (this.windows.has('petWin') && this.petWinT % 5 === 0) this.renderPetWin();
       const at = $('atkSlot'); if (at) at.classList.toggle('active', pl.autoAttack);
       for (const h of this.hotbarEls || []) {
         const sp = SPELLS[h.id], left = (pl.cooldowns[h.id] || 0) - this.time;
@@ -1713,7 +1872,7 @@
     updateLights() {
       const pl = this.player, w = this.world, lights = this.lampLights; if (!lights || !w.lanterns || !this.lightsOn) { this.litCount = 0; return; }
       const night = this.nightF != null ? this.nightF : 0.5;
-      const underground = this.lastZone === 'The Sunken Crypt' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
+      const underground = this.lastZone === 'The Sunken Crypt' || this.lastZone === 'Tomb of Ankhet-Ra' || this.lastZone === 'The Great Pyramid' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
       const near = [];
       for (const p of w.lanterns.values()) {
         const dx = p.x + 0.5 - pl.pos.x, dz = p.z + 0.5 - pl.pos.z, dy = p.y - pl.pos.y;
@@ -1775,14 +1934,20 @@
           if (this.keys.ArrowLeft) pl.yaw += 2.2 * dt;
           if (this.keys.ArrowRight) pl.yaw -= 2.2 * dt;
         }
+        let analog = 1;
+        if (EB.phone && EB.phone.on && !typing) { // v5: virtual joystick (analog)
+          const j = EB.phone.move, m = Math.hypot(j.x, j.y);
+          if (m > 0.18) { fx += j.x; fz += j.y; analog = Math.min(1, 0.35 + m * 0.75); }
+        }
         if (fx || fz) { moving = true; this.stand(); }
         const f = pl.forward(), r = new THREE.Vector3(-Math.cos(pl.yaw), 0, Math.sin(pl.yaw));
         let mx = f.x * fz + r.x * fx, mz = f.z * fz + r.z * fx;
         const l = Math.hypot(mx, mz);
-        const speed = (fz < 0 && !fx ? 3.2 : 5.6) * (1 + pl.buffSum('speed'));
+        const speed = (fz < 0 && Math.abs(fx) < 0.3 ? 3.2 : 5.6) * (1 + pl.buffSum('speed')) * analog;
         if (l > 0) { mx = (mx / l) * speed; mz = (mz / l) * speed; }
         pl.vel.x = mx; pl.vel.z = mz;
-        if (this.keys.Space && !typing) {
+        const jumpQ = EB.phone && EB.phone.jumpQ; if (jumpQ) EB.phone.jumpQ = false; // v5: a quick tap on the touch jump button still jumps
+        if ((this.keys.Space || jumpQ) && !typing) {
           if (pl.inWater) pl.vel.y = 3.2;
           else if (pl.onGround) { pl.vel.y = 8.2; moving = true; this.stand(); }
         }
@@ -1862,7 +2027,7 @@
         this.drawMinimap();
         if (this.questDirty || (this.questT = (this.questT || 0) + 1) % 10 === 0) { this.questDirty = false; this.renderQuests(); }
         this.updateLights();
-        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
+        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.world.zoneId === 'desert' ? (this.lastZone === 'Tomb of Ankhet-Ra' ? 'tomb' : 'desert') : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
         const z = this.world.zoneAt(pl.pos.x, pl.pos.y, pl.pos.z);
         if (z !== this.lastZone) { if (this.lastZone) { this.log(`You have entered ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
       }
@@ -1945,7 +2110,7 @@
       this.moonLight.position.copy(cam).addScaledVector(sunDir, -100); this.moonLight.target.position.copy(cam);
       this.sun.intensity = 0.85 * day;
       this.moonLight.intensity = 0.22 * (1 - day);
-      const inDungeon = this.lastZone === 'The Sunken Crypt';
+      const inDungeon = this.lastZone === 'The Sunken Crypt' || this.lastZone === 'Tomb of Ankhet-Ra' || this.lastZone === 'The Great Pyramid';
       this.hemi.intensity = inDungeon ? 0.4 : 0.13 + 0.62 * day;
       const sky = new THREE.Color(this.world.sky.night).lerp(new THREE.Color(this.world.sky.day), day).lerp(new THREE.Color(0xf08a50), dusk * 0.6);
       if (inDungeon) { sky.set(0x07070c); this.scene.fog.near = 6; this.scene.fog.far = 42; }
