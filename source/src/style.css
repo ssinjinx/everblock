@@ -333,3 +333,29 @@ body.phone #tInfo { white-space: nowrap; overflow: hidden; text-overflow: ellips
 .bookActions .bdesc { height: 66px; overflow-y: auto; }
 .bookActions .bdesc .hint { color: #a898c0; font-style: italic; }
 .bookActions button[disabled] { opacity: 0.35; }
+/* v5b: title screen scales to any width (not only in phone mode); never clipped at the top when taller than the screen */
+#title { align-items: flex-start; }
+.titleInner { margin: auto; padding: 12px 0; }
+.logo { font-size: clamp(30px, 12.5vw, 84px); letter-spacing: clamp(2px, 1.1vw, 10px); max-width: 100%; white-space: nowrap; text-shadow: 0 0 20px #a0601a, clamp(2px, 0.5vw, 4px) clamp(2px, 0.5vw, 4px) 0 #5a3000, clamp(3px, 1vw, 8px) clamp(3px, 1vw, 8px) 0 #2a1600; }
+#btnPhone.big { font-size: 18px; min-width: 260px; }
+@media (max-width: 700px) {
+  .tagline { font-size: 14px; margin-bottom: 14px; }
+  .menu { gap: 10px; }
+  #menuMain button.big, #menuMain .phoneToggle { min-height: 50px; min-width: min(300px, 88vw); font-size: 18px; }
+  #menuMain button.small { min-height: 44px; min-width: 180px; }
+  #phoneSuggest { max-width: 92vw; box-sizing: border-box; }
+  #phoneSuggest .btnRow { flex-wrap: wrap; gap: 8px; }
+  #phoneSuggest button.small { min-height: 44px; }
+  #continueBox { padding: 10px 14px; max-width: 92vw; box-sizing: border-box; }
+  .fine { margin-top: 8px; }
+}
+body.phone #title { padding: env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 20px); }
+body.phone .logo { font-size: clamp(30px, 12.5vw, 70px); letter-spacing: clamp(2px, 1.1vw, 4px); }
+body.phone #menuCreate button { min-height: 40px; }
+/* v5b: phone dialogs never cover the utility buttons */
+@media (orientation: landscape) {
+  body.phone .panelwin { top: 74px !important; left: 50% !important; transform: translateX(-50%) !important; max-height: calc(100% - 80px); }
+}
+@media (orientation: portrait) {
+  body.phone .panelwin { left: 6px !important; top: 50% !important; transform: translateY(-50%) !important; width: calc(100vw - 58px - env(safe-area-inset-right)) !important; max-width: none; max-height: calc(100% - 12px); }
+}

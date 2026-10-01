@@ -13,6 +13,7 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
   - Layout: works in portrait and landscape on small screens, with a compact HUD, a collapsible chat log (💬), smaller full-width windows and larger touch targets. There is no pointer lock, and the browser's page scroll, pinch-zoom and double-tap zoom are blocked inside the game.
   - **Left thumb**: a virtual joystick for analog movement. **Right side of the screen**: drag to turn the camera, tap a monster or NPC to target it (tap your current NPC or corpse target again to talk or loot), and pinch to zoom the camera.
   - Buttons: Jump, Auto-attack, Talk/Loot (E), Sit, Consider, Next target, Hail. The top bar has Chat, Inventory, Spellbook, Map, Pet window, 1st/3rd person, Say/commands and Help. Hotbar slots, spell gems and pet commands are all tappable.
+  - iPhone/iOS (Safari, Brave, Chrome on iOS) and iPadOS are detected reliably. Detection checks touch points, touch events, coarse pointer / no-hover media queries and the user agent, and the first tap also counts. The title scales to the screen width, and the Phone Mode toggle sits at the top of the start screen whether or not you have a saved character. Tested in WebKit at 390x844 and 430x932 (`tools/test_iphone.js`).
   - Graphics default to **low** on phones, with a 1x pixel ratio. The merchant (with a new tap-to-sell list), quest, merc settings, spellbook (with Gem/Hotbar buttons instead of drag and drop) and pet windows all work by touch.
 - **The Sunscorched Expanse (levels 15-25)** lies north through the Frostfang pass.
   - It has dunes, mesas, cactus, an oasis and the walled **Sunward Outpost**: bind point, merchant, a Sandreaver fence, guards and three quests.
@@ -95,6 +96,7 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 | | |
 |---|---|
 | ![Phone Mode on iPhone 13 (portrait)](screenshots/v5-phone-iphone13-combat.png) | ![Phone Mode on Pixel 5 (landscape)](screenshots/v5-phone-pixel5-combat.png) |
+| ![iPhone start screen with a saved character](screenshots/v5b-iphone-start.png) | ![iPhone in game](screenshots/v5b-iphone-ingame.png) |
 | ![phone spellbook](screenshots/v5-phone-iphone13-spellbook.png) | ![phone merchant with sell list](screenshots/v5-phone-pixel5-merchant.png) |
 | ![Sunward Outpost](screenshots/v5-desert-outpost.png) | ![the Great Pyramid](screenshots/v5-pyramid.png) |
 | ![Tomb of Ankhet-Ra](screenshots/v5-tomb.png) | ![Pharaoh Ankhet-Ra](screenshots/v5-boss.png) |
@@ -125,4 +127,4 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 cd source
 python3 build.py     # inlines src/*.js, src/style.css and vendor/three.min.js into ../index.html (and source/dist/everblock.html)
 ```
-For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, or `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test; they expect Chrome at `/usr/bin/google-chrome`).
+For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, or `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`); they expect Chrome at `/usr/bin/google-chrome`).

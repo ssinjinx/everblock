@@ -343,6 +343,32 @@ body.phone #tInfo { white-space: nowrap; overflow: hidden; text-overflow: ellips
 .bookActions .bdesc { height: 66px; overflow-y: auto; }
 .bookActions .bdesc .hint { color: #a898c0; font-style: italic; }
 .bookActions button[disabled] { opacity: 0.35; }
+/* v5b: title screen scales to any width (not only in phone mode); never clipped at the top when taller than the screen */
+#title { align-items: flex-start; }
+.titleInner { margin: auto; padding: 12px 0; }
+.logo { font-size: clamp(30px, 12.5vw, 84px); letter-spacing: clamp(2px, 1.1vw, 10px); max-width: 100%; white-space: nowrap; text-shadow: 0 0 20px #a0601a, clamp(2px, 0.5vw, 4px) clamp(2px, 0.5vw, 4px) 0 #5a3000, clamp(3px, 1vw, 8px) clamp(3px, 1vw, 8px) 0 #2a1600; }
+#btnPhone.big { font-size: 18px; min-width: 260px; }
+@media (max-width: 700px) {
+  .tagline { font-size: 14px; margin-bottom: 14px; }
+  .menu { gap: 10px; }
+  #menuMain button.big, #menuMain .phoneToggle { min-height: 50px; min-width: min(300px, 88vw); font-size: 18px; }
+  #menuMain button.small { min-height: 44px; min-width: 180px; }
+  #phoneSuggest { max-width: 92vw; box-sizing: border-box; }
+  #phoneSuggest .btnRow { flex-wrap: wrap; gap: 8px; }
+  #phoneSuggest button.small { min-height: 44px; }
+  #continueBox { padding: 10px 14px; max-width: 92vw; box-sizing: border-box; }
+  .fine { margin-top: 8px; }
+}
+body.phone #title { padding: env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 20px); }
+body.phone .logo { font-size: clamp(30px, 12.5vw, 70px); letter-spacing: clamp(2px, 1.1vw, 4px); }
+body.phone #menuCreate button { min-height: 40px; }
+/* v5b: phone dialogs never cover the utility buttons */
+@media (orientation: landscape) {
+  body.phone .panelwin { top: 74px !important; left: 50% !important; transform: translateX(-50%) !important; max-height: calc(100% - 80px); }
+}
+@media (orientation: portrait) {
+  body.phone .panelwin { left: 6px !important; top: 50% !important; transform: translateY(-50%) !important; width: calc(100vw - 58px - env(safe-area-inset-right)) !important; max-width: none; max-height: calc(100% - 12px); }
+}
 
 </style>
 </head>
@@ -355,16 +381,16 @@ body.phone #tInfo { white-space: nowrap; overflow: hidden; text-overflow: ellips
     <div class="logo">EVERBLOCK</div>
     <div class="tagline">~ An Age of Blocks and Legends ~</div>
     <div id="menuMain" class="menu">
+      <button id="btnPhone" class="phoneToggle big">📱 Phone Mode: <b>OFF</b></button>
+      <div id="phoneSuggest" class="hidden">📱 Touch screen detected &mdash; Phone Mode (touch controls) is recommended and has been turned on.
+        <div class="btnRow"><button id="btnPhoneKeep" class="small">Keep Phone Mode</button><button id="btnPhoneNo" class="small">Use keyboard &amp; mouse</button></div></div>
       <div id="continueBox" class="hidden">
         <div id="continueInfo"></div>
         <button id="btnContinue" class="big">Enter World</button>
         <button id="btnDelete" class="small">Delete Character</button>
       </div>
       <button id="btnNew" class="big">Create New Character</button>
-      <button id="btnPhone" class="phoneToggle">📱 Phone Mode: <b>OFF</b></button>
-      <div id="phoneSuggest" class="hidden">📱 Touch screen detected &mdash; Phone Mode (touch controls) is recommended and has been turned on.
-        <div class="btnRow"><button id="btnPhoneKeep" class="small">Keep Phone Mode</button><button id="btnPhoneNo" class="small">Use keyboard &amp; mouse</button></div></div>
-      <div class="fine">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
+      <div class="fine" id="fineText">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
     </div>
     <div id="menuCreate" class="menu hidden">
       <div class="createGrid">
@@ -6946,12 +6972,18 @@ body.phone #tInfo { white-space: nowrap; overflow: hidden; text-overflow: ellips
 (function () {
   const EB = window.EB, $ = EB.$;
   const KEY = 'everblock_phone';
-  const touchCapable = () => ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  const PROMPTED = 'everblock_phone_prompted';
+  const mq = (q) => { try { return !!(window.matchMedia && matchMedia(q).matches); } catch (e) { return false; } };
+  const mobileUA = () => { const ua = navigator.userAgent || '', pf = navigator.platform || '';
+    return /iPhone|iPad|iPod|Android|Mobile|Silk|Kindle|BlackBerry|IEMobile|Opera Mini/i.test(ua) || ((/Macintosh|MacIntel/.test(ua + pf)) && (navigator.maxTouchPoints || 0) > 1); };
+  // robust touch detection (Brave/Safari iOS, iPadOS reporting as a Mac, Android, touch laptops)
+  const touchCapable = () => (navigator.maxTouchPoints || 0) > 0 || ('ontouchstart' in window) || mq('(pointer: coarse)') || mq('(hover: none)') || mobileUA();
   const phone = EB.phone = { on: false, move: { x: 0, y: 0 }, suggested: false, touchCapable };
 
   function updateToggles() {
     for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) { b.classList.toggle('on', phone.on); b.innerHTML = `📱 Phone Mode: <b>${phone.on ? 'ON' : 'OFF'}</b>`; } }
-    const s = $('phoneSuggest'); if (s && !phone.suggested) s.classList.add('hidden');
+    const s = $('phoneSuggest'); if (s) s.classList.toggle('hidden', !phone.suggested);
+    const f = $('fineText'); if (f) f.innerHTML = phone.on || touchCapable() ? 'Tap to play &bull; Press ? in game for help' : 'Click to play &bull; Best in Chrome &bull; Press ? in game for help';
   }
   phone.set = (on, persist) => {
     phone.on = !!on;
@@ -7081,11 +7113,21 @@ body.phone #tInfo { white-space: nowrap; overflow: hidden; text-overflow: ellips
   phone.bindGame = bindGame;
 
   window.addEventListener('DOMContentLoaded', () => {
-    const st = localStorage.getItem(KEY);
+    const st = localStorage.getItem(KEY), touch = touchCapable();
     let on = st === '1';
-    if (st == null && touchCapable()) { on = true; phone.suggested = true; }
+    // touch device with no choice yet -> on + prompt; an old 'off' on a touch device -> prompt once more
+    if (touch && st !== '1' && (st == null || !localStorage.getItem(PROMPTED))) { on = true; phone.suggested = true; try { localStorage.setItem(PROMPTED, '1'); } catch (e) {} }
     phone.set(on, false);
-    if (phone.suggested) { const s = $('phoneSuggest'); if (s) s.classList.remove('hidden'); }
+    // the first input being a touch means a touch device, whatever the detection said
+    let firstInput = true;
+    const onFirst = (e) => {
+      if (!firstInput) return; firstInput = false;
+      window.removeEventListener('touchstart', onFirst, true); window.removeEventListener('mousedown', onFirst, true); window.removeEventListener('keydown', onFirst, true);
+      if (e.type === 'touchstart' && !phone.on && !touch && !(st === '0' && localStorage.getItem(PROMPTED))) {
+        phone.suggested = true; phone.set(true, false); try { localStorage.setItem(PROMPTED, '1'); } catch (err) {}
+      }
+    };
+    window.addEventListener('touchstart', onFirst, { capture: true, passive: true }); window.addEventListener('mousedown', onFirst, true); window.addEventListener('keydown', onFirst, true);
     for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) b.onclick = () => { phone.suggested = false; phone.set(!phone.on); }; }
     const keep = $('btnPhoneKeep'), no = $('btnPhoneNo');
     if (keep) keep.onclick = () => { phone.suggested = false; phone.set(true); };

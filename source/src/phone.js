@@ -3,12 +3,18 @@
 (function () {
   const EB = window.EB, $ = EB.$;
   const KEY = 'everblock_phone';
-  const touchCapable = () => ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  const PROMPTED = 'everblock_phone_prompted';
+  const mq = (q) => { try { return !!(window.matchMedia && matchMedia(q).matches); } catch (e) { return false; } };
+  const mobileUA = () => { const ua = navigator.userAgent || '', pf = navigator.platform || '';
+    return /iPhone|iPad|iPod|Android|Mobile|Silk|Kindle|BlackBerry|IEMobile|Opera Mini/i.test(ua) || ((/Macintosh|MacIntel/.test(ua + pf)) && (navigator.maxTouchPoints || 0) > 1); };
+  // robust touch detection (Brave/Safari iOS, iPadOS reporting as a Mac, Android, touch laptops)
+  const touchCapable = () => (navigator.maxTouchPoints || 0) > 0 || ('ontouchstart' in window) || mq('(pointer: coarse)') || mq('(hover: none)') || mobileUA();
   const phone = EB.phone = { on: false, move: { x: 0, y: 0 }, suggested: false, touchCapable };
 
   function updateToggles() {
     for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) { b.classList.toggle('on', phone.on); b.innerHTML = `📱 Phone Mode: <b>${phone.on ? 'ON' : 'OFF'}</b>`; } }
-    const s = $('phoneSuggest'); if (s && !phone.suggested) s.classList.add('hidden');
+    const s = $('phoneSuggest'); if (s) s.classList.toggle('hidden', !phone.suggested);
+    const f = $('fineText'); if (f) f.innerHTML = phone.on || touchCapable() ? 'Tap to play &bull; Press ? in game for help' : 'Click to play &bull; Best in Chrome &bull; Press ? in game for help';
   }
   phone.set = (on, persist) => {
     phone.on = !!on;
@@ -138,11 +144,21 @@
   phone.bindGame = bindGame;
 
   window.addEventListener('DOMContentLoaded', () => {
-    const st = localStorage.getItem(KEY);
+    const st = localStorage.getItem(KEY), touch = touchCapable();
     let on = st === '1';
-    if (st == null && touchCapable()) { on = true; phone.suggested = true; }
+    // touch device with no choice yet -> on + prompt; an old 'off' on a touch device -> prompt once more
+    if (touch && st !== '1' && (st == null || !localStorage.getItem(PROMPTED))) { on = true; phone.suggested = true; try { localStorage.setItem(PROMPTED, '1'); } catch (e) {} }
     phone.set(on, false);
-    if (phone.suggested) { const s = $('phoneSuggest'); if (s) s.classList.remove('hidden'); }
+    // the first input being a touch means a touch device, whatever the detection said
+    let firstInput = true;
+    const onFirst = (e) => {
+      if (!firstInput) return; firstInput = false;
+      window.removeEventListener('touchstart', onFirst, true); window.removeEventListener('mousedown', onFirst, true); window.removeEventListener('keydown', onFirst, true);
+      if (e.type === 'touchstart' && !phone.on && !touch && !(st === '0' && localStorage.getItem(PROMPTED))) {
+        phone.suggested = true; phone.set(true, false); try { localStorage.setItem(PROMPTED, '1'); } catch (err) {}
+      }
+    };
+    window.addEventListener('touchstart', onFirst, { capture: true, passive: true }); window.addEventListener('mousedown', onFirst, true); window.addEventListener('keydown', onFirst, true);
     for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) b.onclick = () => { phone.suggested = false; phone.set(!phone.on); }; }
     const keep = $('btnPhoneKeep'), no = $('btnPhoneNo');
     if (keep) keep.onclick = () => { phone.suggested = false; phone.set(true); };
