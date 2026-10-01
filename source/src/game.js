@@ -184,6 +184,7 @@
       this.renderQuests();
       $('loading').classList.add('hidden');
       $('hud').classList.remove('hidden');
+      if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
       ui.log(`MOTD: Greetings, ${pl.name}. New in v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
@@ -331,8 +332,8 @@
       window.addEventListener('beforeunload', () => this.save());
     }
     locked() { return document.pointerLockElement === this.renderer.domElement; }
-    requestLock() { try { const p = this.renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
-    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive || !!(EB.phone && EB.phone.on)); }
+    requestLock() { if (EB.phone && EB.phone.noLock && EB.phone.noLock()) return; try { const p = this.renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
+    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive || !!(EB.phone && (EB.phone.on || (EB.phone.noLock && EB.phone.noLock())))); }
     onKey(e, down) {
       if ($('hud').classList.contains('hidden')) return;
       if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
@@ -377,7 +378,7 @@
       this.raycaster.setFromCamera(ndc, this.camera);
       const hit = this.pickEntity(this.raycaster.ray.origin, this.raycaster.ray.direction);
       if (hit && e.button === 0) { this.setTarget(hit); return; }
-      if (e.button === 0 && !(EB.phone && EB.phone.on)) this.requestLock();
+      if (e.button === 0 && !(EB.phone && (EB.phone.on || (EB.phone.noLock && EB.phone.noLock())))) this.requestLock();
     }
     camDir() { const p = this.player; return new THREE.Vector3(Math.sin(p.yaw) * Math.cos(p.pitch), Math.sin(p.pitch), Math.cos(p.yaw) * Math.cos(p.pitch)); }
     eyePos() { return new THREE.Vector3(this.player.pos.x, this.player.pos.y + this.player.eyeH, this.player.pos.z); }
@@ -1709,7 +1710,11 @@
           break;
         }
         case 'pet': { const a = (v.split(/\s+/)[1] || '').toLowerCase().replace(/[^a-z]/g, ''); if (a === 'window' || a === '') this.toggleWin('petWin'); else this.petCommand(a === 'back' || a === 'backoff' ? 'backoff' : a); break; }
-        case 'phone': { const a = (v.split(/\s+/)[1] || '').toLowerCase(); EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}.`, 'sys'); break; }
+        case 'phone': {
+          const a = (v.split(/\s+/)[1] || '').toLowerCase();
+          if (a === 'status' || a === 'debug' || a === 'info') { const s = EB.phone.status(); this.log(`Phone Mode ${s['Phone Mode']} (${s['decided by']}); touch=${s['touch capable']} maxTouchPoints=${s.maxTouchPoints} ontouchstart=${s.ontouchstart} coarse=${s.pointerCoarse} hoverNone=${s.hoverNone} mobileUA=${s.mobileUA} iOS=${s.iOS} standalone=${s['standalone (home screen)']}`, 'sys'); break; }
+          EB.phone.source = 'command'; EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}. (/phone status shows touch detection details)`, 'sys'); break;
+        }
         case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /faction /pet attack|backoff|follow|guard|sit|window /dismiss /zone /sit /stand /music /book /lights /gfx /phone. Press ? for key bindings.', 'help'); break;
         default: this.log('That is not a valid command. Try /help.', 'sys');
       }

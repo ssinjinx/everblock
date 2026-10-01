@@ -359,3 +359,30 @@ body.phone #menuCreate button { min-height: 40px; }
 @media (orientation: portrait) {
   body.phone .panelwin { left: 6px !important; top: 50% !important; transform: translateY(-50%) !important; width: calc(100vw - 58px - env(safe-area-inset-right)) !important; max-width: none; max-height: calc(100% - 12px); }
 }
+/* v5c: safe areas (notch / Dynamic Island / home bar) when running full-screen or from the home screen */
+body.phone #playerWin { top: calc(env(safe-area-inset-top) + 4px); }
+body.phone #targetWin { top: calc(env(safe-area-inset-top) + 66px); }
+body.phone #rightCol { top: calc(env(safe-area-inset-top) + 4px); }
+body.phone #compass { top: calc(env(safe-area-inset-top) + 3px); }
+body.phone #zoneName { top: calc(env(safe-area-inset-top) + 22px); }
+body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
+@media (orientation: landscape) {
+  body.phone #phoneTop { top: calc(env(safe-area-inset-top) + 36px); }
+  body.phone .panelwin { top: calc(env(safe-area-inset-top) + 74px) !important; max-height: calc(100% - 80px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  body.phone #playerWin, body.phone #targetWin { left: calc(env(safe-area-inset-left) + 4px); }
+}
+@media (orientation: portrait) {
+  body.phone #phoneTop { top: calc(env(safe-area-inset-top) + 104px); }
+  body.phone .panelwin { max-height: calc(100% - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+}
+/* v5c: phone toggle in Help, touch status panel, iOS install hint */
+.phoneHelpRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 8px; padding: 6px 8px; background: rgba(40,60,30,0.45); border: 1px solid #6a8a4a; border-radius: 4px; }
+.phoneHelpRow .sub { font-size: 12px; color: #c0b090; }
+#phoneDbg { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 40px); transform: translateX(-50%); z-index: 200; width: min(94vw, 420px); max-height: 80vh; overflow: auto; background: rgba(10,8,16,0.96); border: 2px solid #80b060; border-radius: 6px; padding: 8px 10px; font: 12px/1.45 Verdana, sans-serif; color: #e8dcc0; }
+#phoneDbg .dbgT { font-weight: bold; color: #f3c85a; margin-bottom: 4px; display: flex; justify-content: space-between; }
+#phoneDbg .dbgT .x { cursor: pointer; padding: 0 6px; font-size: 16px; }
+#phoneDbg > div:not(.dbgT) { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+#phoneDbg b { color: #b0f080; word-break: break-all; text-align: right; }
+#installHint { position: relative; max-width: min(92vw, 420px); box-sizing: border-box; font-size: 14px; color: #e8dcc0; background: rgba(30,40,70,0.85); border: 2px solid #6a8ad0; border-radius: 6px; padding: 8px 30px 8px 12px; text-align: left; }
+#installHint .x { position: absolute; right: 6px; top: 4px; font-size: 18px; cursor: pointer; padding: 2px 6px; }
+#installHint .shareIc { display: inline-block; border: 1px solid #c0d0ff; border-radius: 3px; padding: 0 3px; font-size: 12px; }

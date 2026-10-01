@@ -8,6 +8,13 @@ A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999
 
 Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Progress saves to localStorage.
 
+## New in v5c: installable app + iPhone fix
+- **Install it like an app**: on iPhone/iPad tap **Share > Add to Home Screen** (the start screen shows this hint on iOS, and you can dismiss it). On Android/Chrome use **Install app**. It launches full screen with its own voxel "E" icon, keeps the controls clear of the notch and home bar, and **works offline**: a service worker caches the game and picks up new versions automatically when you're online.
+- **Phone Mode is now always on for touch devices**. On some iPhones, a stored "off" left by an earlier build kept Phone Mode off, so you got the desktop "Click to resume" overlay with no joystick. Old stored values are now discarded. Touch devices never show the pointer-lock overlay or grab the pointer. The touch controls start on both paths (new character and Enter World).
+- You can switch Phone Mode **in game** from the Help window (**?**) or with `/phone on|off`. `/phone status` shows on screen what touch signals the device reports.
+
+![iPhone portrait](screenshots/v5c-iphone-portrait.png)
+
 ## New in v5: the desert, factions, smarter mobs, and Phone Mode
 - **Phone Mode (touch controls)**: there is a **📱 Phone Mode** button on the start screen and the character-creation screen. It is suggested automatically on touch devices, and your choice is remembered (localStorage). You can also switch it with `/phone on|off`.
   - Layout: works in portrait and landscape on small screens, with a compact HUD, a collapsible chat log (💬), smaller full-width windows and larger touch targets. There is no pointer lock, and the browser's page scroll, pinch-zoom and double-tap zoom are blocked inside the game.
@@ -88,7 +95,7 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 | Build mode (break / place / pick block) | B (left click / right click / 1-9) |
 | Minimap / help / sound / music | N / ? or F10 / M / Shift+M |
 | Pet commands | Pet bar, P (pet window), `/pet attack\|backoff\|follow\|guard\|sit` |
-| Chat & commands | Enter or `/`: /who /loc /corpse /quests /faction /pet /dismiss /zone /save /music /lights /gfx /phone /book /help |
+| Chat & commands | Enter or `/`: /who /loc /corpse /quests /faction /pet /dismiss /zone /save /music /lights /gfx /phone [on\|off\|status] /book /help |
 
 **Phone Mode (touch)**: left joystick = move; drag on the right = look; tap = target (tap again to talk/loot); pinch = zoom; on-screen buttons for jump, attack, E, sit, consider, next target and hail; top bar for chat, bags, spellbook, map, pet, camera and help; tap hotbar slots and spell gems to use them.
 
@@ -96,6 +103,7 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 | | |
 |---|---|
 | ![Phone Mode on iPhone 13 (portrait)](screenshots/v5-phone-iphone13-combat.png) | ![Phone Mode on Pixel 5 (landscape)](screenshots/v5-phone-pixel5-combat.png) |
+| ![iPhone landscape, phone mode](screenshots/v5c-iphone-landscape.png) | ![iPhone portrait, phone mode](screenshots/v5c-iphone-portrait.png) |
 | ![iPhone start screen with a saved character](screenshots/v5b-iphone-start.png) | ![iPhone in game](screenshots/v5b-iphone-ingame.png) |
 | ![phone spellbook](screenshots/v5-phone-iphone13-spellbook.png) | ![phone merchant with sell list](screenshots/v5-phone-pixel5-merchant.png) |
 | ![Sunward Outpost](screenshots/v5-desert-outpost.png) | ![the Great Pyramid](screenshots/v5-pyramid.png) |
@@ -126,5 +134,6 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 ```
 cd source
 python3 build.py     # inlines src/*.js, src/style.css and vendor/three.min.js into ../index.html (and source/dist/everblock.html)
+sh pwa/stage.sh      # copies manifest.webmanifest, icons/ and the build-stamped sw.js next to ../index.html
 ```
-For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, or `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`); they expect Chrome at `/usr/bin/google-chrome`).
+For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`).

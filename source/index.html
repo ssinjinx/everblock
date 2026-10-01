@@ -6,6 +6,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Everblock">
+<meta name="application-name" content="Everblock">
+<meta name="theme-color" content="#1a1220">
+<script>
+// PWA: manifest + service worker only when served over http(s); the single-file build still works from file://
+if (/^https?:/.test(location.protocol)) {
+  (function () { var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l);
+    var a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.sizes = '180x180'; a.href = 'icons/apple-touch-icon.png'; document.head.appendChild(a);
+    var i = document.createElement('link'); i.rel = 'icon'; i.type = 'image/png'; i.sizes = '192x192'; i.href = 'icons/icon-192.png'; document.head.appendChild(i); })();
+  if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%235a3a1a'/%3E%3Crect y='0' width='16' height='6' fill='%234caf50'/%3E%3Crect x='3' y='8' width='4' height='4' fill='%23f3c85a'/%3E%3Crect x='9' y='9' width='3' height='3' fill='%23806040'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="src/style.css">
 </head>
@@ -27,6 +40,7 @@
         <button id="btnDelete" class="small">Delete Character</button>
       </div>
       <button id="btnNew" class="big">Create New Character</button>
+      <div id="installHint" class="hidden">📲 <b>Install Everblock:</b> tap <b>Share</b> <span class="shareIc">⎋</span> &gt; <b>Add to Home Screen</b> for full-screen play (works offline). <span class="x" title="Dismiss">✕</span></div>
       <div class="fine" id="fineText">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
     </div>
     <div id="menuCreate" class="menu hidden">
@@ -164,6 +178,7 @@
   </div>
   <div id="helpWin" class="win panelwin hidden">
     <div class="wtitle">Everblock &mdash; Help <span class="x" data-close="helpWin">✕</span></div>
+    <div class="phoneHelpRow"><button id="btnPhone3" class="phoneToggle">📱 Phone Mode: <b>OFF</b></button> <button id="btnPhoneStatus" class="small">Touch status</button> <span class="sub">Touch controls (joystick, tap to target). Also <b>/phone on|off|status</b>.</span></div>
     <div class="helpCols">
       <div>
         <h4>Movement</h4>
@@ -186,7 +201,7 @@
         <h4>Commands</h4>
         <p>/save /loc /who /played /corpse /help /time /quests /faction /pet /dismiss /zone /music /book /lights /gfx /phone</p>
         <h4>Phone Mode</h4>
-        <p>Toggle on the start screen (or <b>/phone</b>). Left thumb: joystick to move. Drag the right side to look, tap a creature to target, pinch to zoom. Buttons: jump, attack, sit, E (loot/talk), consider, bags, spellbook, map.</p>
+        <p>Toggle with the button at the top of this window, on the start screen, or with <b>/phone on|off</b> (<b>/phone status</b> shows the touch detection details). Left thumb: joystick to move. Drag the right side to look, tap a creature to target, pinch to zoom. Buttons: jump, attack, sit, E (loot/talk), consider, bags, spellbook, map.</p>
         <h4>Graphics</h4>
         <p id="gfxBtns">Model quality: <button class="small" data-gfx="high">High</button> <button class="small" data-gfx="low">Low</button><br><span style="color:#b0a080">Low = flat-shaded models, no blob shadows, fewer particles (also <b>/gfx low</b>).</span></p>
         <h4>Tips</h4>

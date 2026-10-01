@@ -6,6 +6,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Everblock">
+<meta name="application-name" content="Everblock">
+<meta name="theme-color" content="#1a1220">
+<script>
+// PWA: manifest + service worker only when served over http(s); the single-file build still works from file://
+if (/^https?:/.test(location.protocol)) {
+  (function () { var l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l);
+    var a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.sizes = '180x180'; a.href = 'icons/apple-touch-icon.png'; document.head.appendChild(a);
+    var i = document.createElement('link'); i.rel = 'icon'; i.type = 'image/png'; i.sizes = '192x192'; i.href = 'icons/icon-192.png'; document.head.appendChild(i); })();
+  if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%235a3a1a'/%3E%3Crect y='0' width='16' height='6' fill='%234caf50'/%3E%3Crect x='3' y='8' width='4' height='4' fill='%23f3c85a'/%3E%3Crect x='9' y='9' width='3' height='3' fill='%23806040'/%3E%3C/svg%3E">
 <style>
 * { box-sizing: border-box; }
@@ -369,6 +382,33 @@ body.phone #menuCreate button { min-height: 40px; }
 @media (orientation: portrait) {
   body.phone .panelwin { left: 6px !important; top: 50% !important; transform: translateY(-50%) !important; width: calc(100vw - 58px - env(safe-area-inset-right)) !important; max-width: none; max-height: calc(100% - 12px); }
 }
+/* v5c: safe areas (notch / Dynamic Island / home bar) when running full-screen or from the home screen */
+body.phone #playerWin { top: calc(env(safe-area-inset-top) + 4px); }
+body.phone #targetWin { top: calc(env(safe-area-inset-top) + 66px); }
+body.phone #rightCol { top: calc(env(safe-area-inset-top) + 4px); }
+body.phone #compass { top: calc(env(safe-area-inset-top) + 3px); }
+body.phone #zoneName { top: calc(env(safe-area-inset-top) + 22px); }
+body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
+@media (orientation: landscape) {
+  body.phone #phoneTop { top: calc(env(safe-area-inset-top) + 36px); }
+  body.phone .panelwin { top: calc(env(safe-area-inset-top) + 74px) !important; max-height: calc(100% - 80px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  body.phone #playerWin, body.phone #targetWin { left: calc(env(safe-area-inset-left) + 4px); }
+}
+@media (orientation: portrait) {
+  body.phone #phoneTop { top: calc(env(safe-area-inset-top) + 104px); }
+  body.phone .panelwin { max-height: calc(100% - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+}
+/* v5c: phone toggle in Help, touch status panel, iOS install hint */
+.phoneHelpRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 8px; padding: 6px 8px; background: rgba(40,60,30,0.45); border: 1px solid #6a8a4a; border-radius: 4px; }
+.phoneHelpRow .sub { font-size: 12px; color: #c0b090; }
+#phoneDbg { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 40px); transform: translateX(-50%); z-index: 200; width: min(94vw, 420px); max-height: 80vh; overflow: auto; background: rgba(10,8,16,0.96); border: 2px solid #80b060; border-radius: 6px; padding: 8px 10px; font: 12px/1.45 Verdana, sans-serif; color: #e8dcc0; }
+#phoneDbg .dbgT { font-weight: bold; color: #f3c85a; margin-bottom: 4px; display: flex; justify-content: space-between; }
+#phoneDbg .dbgT .x { cursor: pointer; padding: 0 6px; font-size: 16px; }
+#phoneDbg > div:not(.dbgT) { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+#phoneDbg b { color: #b0f080; word-break: break-all; text-align: right; }
+#installHint { position: relative; max-width: min(92vw, 420px); box-sizing: border-box; font-size: 14px; color: #e8dcc0; background: rgba(30,40,70,0.85); border: 2px solid #6a8ad0; border-radius: 6px; padding: 8px 30px 8px 12px; text-align: left; }
+#installHint .x { position: absolute; right: 6px; top: 4px; font-size: 18px; cursor: pointer; padding: 2px 6px; }
+#installHint .shareIc { display: inline-block; border: 1px solid #c0d0ff; border-radius: 3px; padding: 0 3px; font-size: 12px; }
 
 </style>
 </head>
@@ -390,6 +430,7 @@ body.phone #menuCreate button { min-height: 40px; }
         <button id="btnDelete" class="small">Delete Character</button>
       </div>
       <button id="btnNew" class="big">Create New Character</button>
+      <div id="installHint" class="hidden">📲 <b>Install Everblock:</b> tap <b>Share</b> <span class="shareIc">⎋</span> &gt; <b>Add to Home Screen</b> for full-screen play (works offline). <span class="x" title="Dismiss">✕</span></div>
       <div class="fine" id="fineText">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
     </div>
     <div id="menuCreate" class="menu hidden">
@@ -527,6 +568,7 @@ body.phone #menuCreate button { min-height: 40px; }
   </div>
   <div id="helpWin" class="win panelwin hidden">
     <div class="wtitle">Everblock &mdash; Help <span class="x" data-close="helpWin">✕</span></div>
+    <div class="phoneHelpRow"><button id="btnPhone3" class="phoneToggle">📱 Phone Mode: <b>OFF</b></button> <button id="btnPhoneStatus" class="small">Touch status</button> <span class="sub">Touch controls (joystick, tap to target). Also <b>/phone on|off|status</b>.</span></div>
     <div class="helpCols">
       <div>
         <h4>Movement</h4>
@@ -549,7 +591,7 @@ body.phone #menuCreate button { min-height: 40px; }
         <h4>Commands</h4>
         <p>/save /loc /who /played /corpse /help /time /quests /faction /pet /dismiss /zone /music /book /lights /gfx /phone</p>
         <h4>Phone Mode</h4>
-        <p>Toggle on the start screen (or <b>/phone</b>). Left thumb: joystick to move. Drag the right side to look, tap a creature to target, pinch to zoom. Buttons: jump, attack, sit, E (loot/talk), consider, bags, spellbook, map.</p>
+        <p>Toggle with the button at the top of this window, on the start screen, or with <b>/phone on|off</b> (<b>/phone status</b> shows the touch detection details). Left thumb: joystick to move. Drag the right side to look, tap a creature to target, pinch to zoom. Buttons: jump, attack, sit, E (loot/talk), consider, bags, spellbook, map.</p>
         <h4>Graphics</h4>
         <p id="gfxBtns">Model quality: <button class="small" data-gfx="high">High</button> <button class="small" data-gfx="low">Low</button><br><span style="color:#b0a080">Low = flat-shaded models, no blob shadows, fewer particles (also <b>/gfx low</b>).</span></p>
         <h4>Tips</h4>
@@ -5014,6 +5056,7 @@ body.phone #menuCreate button { min-height: 40px; }
       this.renderQuests();
       $('loading').classList.add('hidden');
       $('hud').classList.remove('hidden');
+      if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
       ui.log(`MOTD: Greetings, ${pl.name}. New in v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
@@ -5161,8 +5204,8 @@ body.phone #menuCreate button { min-height: 40px; }
       window.addEventListener('beforeunload', () => this.save());
     }
     locked() { return document.pointerLockElement === this.renderer.domElement; }
-    requestLock() { try { const p = this.renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
-    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive || !!(EB.phone && EB.phone.on)); }
+    requestLock() { if (EB.phone && EB.phone.noLock && EB.phone.noLock()) return; try { const p = this.renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
+    updateClickPrompt() { $('clickToPlay').classList.toggle('hidden', this.locked() || this.windows.size > 0 || !this.player.alive || !!(EB.phone && (EB.phone.on || (EB.phone.noLock && EB.phone.noLock())))); }
     onKey(e, down) {
       if ($('hud').classList.contains('hidden')) return;
       if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
@@ -5207,7 +5250,7 @@ body.phone #menuCreate button { min-height: 40px; }
       this.raycaster.setFromCamera(ndc, this.camera);
       const hit = this.pickEntity(this.raycaster.ray.origin, this.raycaster.ray.direction);
       if (hit && e.button === 0) { this.setTarget(hit); return; }
-      if (e.button === 0 && !(EB.phone && EB.phone.on)) this.requestLock();
+      if (e.button === 0 && !(EB.phone && (EB.phone.on || (EB.phone.noLock && EB.phone.noLock())))) this.requestLock();
     }
     camDir() { const p = this.player; return new THREE.Vector3(Math.sin(p.yaw) * Math.cos(p.pitch), Math.sin(p.pitch), Math.cos(p.yaw) * Math.cos(p.pitch)); }
     eyePos() { return new THREE.Vector3(this.player.pos.x, this.player.pos.y + this.player.eyeH, this.player.pos.z); }
@@ -6539,7 +6582,11 @@ body.phone #menuCreate button { min-height: 40px; }
           break;
         }
         case 'pet': { const a = (v.split(/\s+/)[1] || '').toLowerCase().replace(/[^a-z]/g, ''); if (a === 'window' || a === '') this.toggleWin('petWin'); else this.petCommand(a === 'back' || a === 'backoff' ? 'backoff' : a); break; }
-        case 'phone': { const a = (v.split(/\s+/)[1] || '').toLowerCase(); EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}.`, 'sys'); break; }
+        case 'phone': {
+          const a = (v.split(/\s+/)[1] || '').toLowerCase();
+          if (a === 'status' || a === 'debug' || a === 'info') { const s = EB.phone.status(); this.log(`Phone Mode ${s['Phone Mode']} (${s['decided by']}); touch=${s['touch capable']} maxTouchPoints=${s.maxTouchPoints} ontouchstart=${s.ontouchstart} coarse=${s.pointerCoarse} hoverNone=${s.hoverNone} mobileUA=${s.mobileUA} iOS=${s.iOS} standalone=${s['standalone (home screen)']}`, 'sys'); break; }
+          EB.phone.source = 'command'; EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}. (/phone status shows touch detection details)`, 'sys'); break;
+        }
         case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /faction /pet attack|backoff|follow|guard|sit|window /dismiss /zone /sit /stand /music /book /lights /gfx /phone. Press ? for key bindings.', 'help'); break;
         default: this.log('That is not a valid command. Try /help.', 'sys');
       }
@@ -6971,31 +7018,37 @@ body.phone #menuCreate button { min-height: 40px; }
 // action buttons) and a compact responsive layout. Toggled on the start screen; remembered in localStorage.
 (function () {
   const EB = window.EB, $ = EB.$;
-  const KEY = 'everblock_phone';
-  const PROMPTED = 'everblock_phone_prompted';
+  // v5c: new storage key - values saved by earlier builds (e.g. a stale 'off') are discarded
+  const KEY = 'everblock_phone_v2';
+  const OLD_KEYS = ['everblock_phone', 'everblock_phone_prompted'];
+  const ls = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: (k) => { try { localStorage.removeItem(k); } catch (e) {} } };
   const mq = (q) => { try { return !!(window.matchMedia && matchMedia(q).matches); } catch (e) { return false; } };
-  const mobileUA = () => { const ua = navigator.userAgent || '', pf = navigator.platform || '';
-    return /iPhone|iPad|iPod|Android|Mobile|Silk|Kindle|BlackBerry|IEMobile|Opera Mini/i.test(ua) || ((/Macintosh|MacIntel/.test(ua + pf)) && (navigator.maxTouchPoints || 0) > 1); };
-  // robust touch detection (Brave/Safari iOS, iPadOS reporting as a Mac, Android, touch laptops)
-  const touchCapable = () => (navigator.maxTouchPoints || 0) > 0 || ('ontouchstart' in window) || mq('(pointer: coarse)') || mq('(hover: none)') || mobileUA();
-  const phone = EB.phone = { on: false, move: { x: 0, y: 0 }, suggested: false, touchCapable };
+  const isIOS = () => { const ua = navigator.userAgent || '', pf = navigator.platform || ''; return /iPhone|iPad|iPod/i.test(ua) || /iPhone|iPad|iPod/.test(pf) || ((/Macintosh|MacIntel/.test(ua + pf)) && (navigator.maxTouchPoints || 0) > 1); };
+  const mobileUA = () => isIOS() || /Android|Mobile|Silk|Kindle|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+  // every signal is recorded so /phone status can show exactly what this device reported
+  const signals = () => ({ maxTouchPoints: navigator.maxTouchPoints || 0, ontouchstart: 'ontouchstart' in window, pointerCoarse: mq('(pointer: coarse)'), anyPointerCoarse: mq('(any-pointer: coarse)'), hoverNone: mq('(hover: none)'), mobileUA: mobileUA(), iOS: isIOS(), touchSeen: !!phone.touchSeen });
+  const touchCapable = () => { const s = signals(); return s.maxTouchPoints > 0 || s.ontouchstart || s.pointerCoarse || s.anyPointerCoarse || s.hoverNone || s.mobileUA || s.touchSeen; };
+  const standalone = () => navigator.standalone === true || mq('(display-mode: standalone)') || mq('(display-mode: fullscreen)');
+  const phone = EB.phone = { on: false, move: { x: 0, y: 0 }, suggested: false, touchSeen: false, touchCapable, signals, isIOS, standalone, source: 'init' };
+  // pointer lock is never used on touch-capable devices, even with Phone Mode switched off
+  phone.noLock = () => phone.on || touchCapable();
 
   function updateToggles() {
-    for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) { b.classList.toggle('on', phone.on); b.innerHTML = `📱 Phone Mode: <b>${phone.on ? 'ON' : 'OFF'}</b>`; } }
+    for (const id of ['btnPhone', 'btnPhone2', 'btnPhone3']) { const b = $(id); if (b) { b.classList.toggle('on', phone.on); b.innerHTML = `📱 Phone Mode: <b>${phone.on ? 'ON' : 'OFF'}</b>`; } }
     const s = $('phoneSuggest'); if (s) s.classList.toggle('hidden', !phone.suggested);
     const f = $('fineText'); if (f) f.innerHTML = phone.on || touchCapable() ? 'Tap to play &bull; Press ? in game for help' : 'Click to play &bull; Best in Chrome &bull; Press ? in game for help';
   }
   phone.set = (on, persist) => {
     phone.on = !!on;
     document.body.classList.toggle('phone', phone.on);
-    if (persist !== false) localStorage.setItem(KEY, phone.on ? '1' : '0');
+    if (persist !== false) ls.set(KEY, phone.on ? '1' : '0');
     phone.move.x = phone.move.y = 0;
     updateToggles();
     const g = EB.game;
     if (g && g.player && g.renderer) {
       if (phone.on) {
         if (g.locked()) document.exitPointerLock();
-        if (!localStorage.getItem('everblock_gfx')) g.applyGfx('low', true);
+        if (!ls.get('everblock_gfx')) g.applyGfx('low', true);
         g.renderer.setPixelRatio(1); g.renderer.setSize(window.innerWidth, window.innerHeight);
         phone.setChat(false);
       } else phone.setChat(true);
@@ -7013,6 +7066,8 @@ body.phone #menuCreate button { min-height: 40px; }
 
   // ---------------- in-game touch controls ----------------
   function bindGame(g) {
+    if (phone.bound) { if (phone.on) phone.set(true, false); return; }
+    phone.bound = true;
     const cv = g.renderer.domElement;
     const pts = new Map(); let pinch = null;
     const ndcPick = (x, y) => {
@@ -7112,28 +7167,50 @@ body.phone #menuCreate button { min-height: 40px; }
   }
   phone.bindGame = bindGame;
 
+  // on-screen diagnostics (/phone status or the Status button in Help)
+  phone.status = () => {
+    const sg = signals(), st = ls.get(KEY);
+    const rows = [['Phone Mode', phone.on ? 'ON' : 'OFF'], ['decided by', phone.source], ['stored (v2)', st == null ? '(none)' : st], ['touch capable', touchCapable()],
+      ...Object.entries(sg), ['standalone (home screen)', standalone()], ['controls bound', !!phone.bound], ['pointer lock', !!document.pointerLockElement], ['viewport', `${innerWidth}x${innerHeight} @${devicePixelRatio}`], ['UA', navigator.userAgent]];
+    let d = $('phoneDbg');
+    if (!d) { d = document.createElement('div'); d.id = 'phoneDbg'; document.body.appendChild(d); }
+    d.innerHTML = `<div class="dbgT">📱 Phone Mode status <span class="x">✕</span></div>` + rows.map(([k, v]) => `<div><span>${k}</span><b>${String(v).replace(/</g, '&lt;')}</b></div>`).join('');
+    d.classList.remove('hidden'); d.querySelector('.x').onclick = () => d.classList.add('hidden');
+    return Object.fromEntries(rows);
+  };
+
+  // iOS: suggest Add to Home Screen when not installed (dismissible, http(s) only)
+  function installHint() {
+    if (!/^https?:/.test(location.protocol) || !isIOS() || standalone() || ls.get('everblock_install_hint_off')) return;
+    const h = $('installHint'); if (!h) return;
+    h.classList.remove('hidden');
+    const x = h.querySelector('.x'); if (x) x.onclick = (e) => { e.stopPropagation(); h.classList.add('hidden'); ls.set('everblock_install_hint_off', '1'); };
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
-    const st = localStorage.getItem(KEY), touch = touchCapable();
-    let on = st === '1';
-    // touch device with no choice yet -> on + prompt; an old 'off' on a touch device -> prompt once more
-    if (touch && st !== '1' && (st == null || !localStorage.getItem(PROMPTED))) { on = true; phone.suggested = true; try { localStorage.setItem(PROMPTED, '1'); } catch (e) {} }
+    for (const k of OLD_KEYS) ls.del(k);
+    const st = ls.get(KEY), touch = touchCapable();
+    // touch devices default to ON (only an explicit 'off' made with this build's toggle turns it off); desktops default to OFF
+    let on = touch ? st !== '0' : st === '1';
+    phone.source = st == null ? (touch ? 'touch detected (default on)' : 'no touch (default off)') : `saved choice (${st === '1' ? 'on' : 'off'})`;
+    if (touch && st == null) phone.suggested = true;
     phone.set(on, false);
-    // the first input being a touch means a touch device, whatever the detection said
-    let firstInput = true;
-    const onFirst = (e) => {
-      if (!firstInput) return; firstInput = false;
-      window.removeEventListener('touchstart', onFirst, true); window.removeEventListener('mousedown', onFirst, true); window.removeEventListener('keydown', onFirst, true);
-      if (e.type === 'touchstart' && !phone.on && !touch && !(st === '0' && localStorage.getItem(PROMPTED))) {
-        phone.suggested = true; phone.set(true, false); try { localStorage.setItem(PROMPTED, '1'); } catch (err) {}
-      }
+    installHint();
+    // any touch at all proves a touch device (covers browsers that hide touch support): turn on unless explicitly switched off
+    const onTouch = () => {
+      if (phone.touchSeen) return; phone.touchSeen = true;
+      window.removeEventListener('touchstart', onTouch, true);
+      if (!phone.on && ls.get(KEY) !== '0') { phone.source = 'first touch'; phone.suggested = !EB.game || !EB.game.player; phone.set(true, false); }
+      else { updateToggles(); if (EB.game && EB.game.player) EB.game.updateClickPrompt(); }
     };
-    window.addEventListener('touchstart', onFirst, { capture: true, passive: true }); window.addEventListener('mousedown', onFirst, true); window.addEventListener('keydown', onFirst, true);
-    for (const id of ['btnPhone', 'btnPhone2']) { const b = $(id); if (b) b.onclick = () => { phone.suggested = false; phone.set(!phone.on); }; }
+    window.addEventListener('touchstart', onTouch, { capture: true, passive: true });
+    for (const id of ['btnPhone', 'btnPhone2', 'btnPhone3']) { const b = $(id); if (b) b.onclick = (e) => { e.stopPropagation(); phone.suggested = false; phone.source = 'toggle'; phone.set(!phone.on); }; }
+    const sb = $('btnPhoneStatus'); if (sb) sb.onclick = (e) => { e.stopPropagation(); phone.status(); };
     const keep = $('btnPhoneKeep'), no = $('btnPhoneNo');
-    if (keep) keep.onclick = () => { phone.suggested = false; phone.set(true); };
-    if (no) no.onclick = () => { phone.suggested = false; phone.set(false); };
-    // hook into the game once the player enters the world
-    const iv = setInterval(() => { const g = EB.game; if (g && g.player && g.renderer && g.pickEntity && document.getElementById('hud') && !$('hud').classList.contains('hidden')) { clearInterval(iv); bindGame(g); } }, 200);
+    if (keep) keep.onclick = () => { phone.suggested = false; phone.source = 'toggle'; phone.set(true); };
+    if (no) no.onclick = () => { phone.suggested = false; phone.source = 'toggle'; phone.set(false); };
+    // hook into the game as soon as it starts (new character and Enter World both go through game.start)
+    const iv = setInterval(() => { const g = EB.game; if (g && g.player && g.renderer && g.pickEntity) { clearInterval(iv); bindGame(g); } }, 100);
   });
 })();
 

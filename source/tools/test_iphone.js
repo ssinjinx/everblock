@@ -104,6 +104,65 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
     await ctx.close();
   }
 
+  // ---------------- the real-device failure: touch iPhone, stale stored 'off' from an earlier build, saved character, Enter World
+  {
+    const dn = 'iPhone 13 (stale off + save)', dev = { ...pw.devices['iPhone 13'], viewport: { ...pw.devices['iPhone 13'].screen } };
+    console.log(`== [${dn}] reproduce the reported case`);
+    const ctx = await browser.newContext({ ...dev, hasTouch: true });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push(`[${dn}] pageerror: ${e.message}`));
+    page.on('console', (m) => { if (m.type() === 'error' && !/WebGL|GPU|swiftshader|AudioContext/i.test(m.text())) errors.push(`[${dn}] console.error: ${m.text()}`); });
+    page.on('dialog', (d) => d.accept());
+    const ev = (fn, arg) => page.evaluate(fn, arg);
+    const inGame = () => page.waitForFunction(() => window.EB.game && EB.game.player && !document.getElementById('hud').classList.contains('hidden'), null, { timeout: 90000 });
+    await page.goto(URL); await ev(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(300);
+    if (/^https?:/.test(URL)) {
+      const ih = await ev(() => !document.getElementById('installHint').classList.contains('hidden'));
+      check(`[${dn}] iOS (not installed): "Add to Home Screen" install hint shown`, ih);
+      await page.locator('#installHint .x').tap();
+      check(`[${dn}] install hint is dismissible`, await ev(() => document.getElementById('installHint').classList.contains('hidden') && localStorage.getItem('everblock_install_hint_off') === '1'));
+    } else check(`[${dn}] install hint hidden on file:// (no PWA there)`, await ev(() => document.getElementById('installHint').classList.contains('hidden')));
+    // make a genuine saved character, then plant the stale values an older build left behind
+    await page.locator('#btnNew').tap(); await page.locator('#nameInput').fill('Stale'); await page.locator('#btnCreate').tap(); await inGame(); await page.waitForTimeout(800);
+    await ev(() => { EB.game.save(); localStorage.removeItem('everblock_phone_v2'); localStorage.setItem('everblock_phone', '0'); localStorage.setItem('everblock_phone_prompted', '1'); });
+    await page.reload(); await page.waitForTimeout(500);
+    const s0 = await ev(() => ({ on: EB.phone.on, body: document.body.className, src: EB.phone.source, old: localStorage.getItem('everblock_phone'), btn: document.getElementById('btnPhone').innerText, cont: !!document.getElementById('btnContinue').offsetParent }));
+    check(`[${dn}] stale 'off' from an older build is discarded: Phone Mode ON on the start screen`, s0.on && /phone/.test(s0.body) && s0.old === null && /ON/.test(s0.btn) && s0.cont, s0);
+    await ev(() => { window.__locks = 0; const orig = HTMLCanvasElement.prototype.requestPointerLock; HTMLCanvasElement.prototype.requestPointerLock = function () { window.__locks++; return orig && orig.call(this); }; });
+    await page.locator('#btnContinue').tap(); await inGame(); await page.waitForTimeout(1200);
+    // tap the 3D view a few times (where a desktop click would grab the pointer)
+    for (const [x, y] of [[300, 300], [200, 420]]) await page.touchscreen.tap(x, y);
+    await page.waitForTimeout(300);
+    const g = await ev(() => ({ on: EB.phone.on, bound: !!EB.phone.bound, ui: getComputedStyle(document.getElementById('phoneUI')).display, joy: !!document.getElementById('joyBase').offsetParent, btns: document.querySelectorAll('#phoneBtns .pb').length, ctp: getComputedStyle(document.getElementById('clickToPlay')).display === 'none' || document.getElementById('clickToPlay').classList.contains('hidden'), locks: window.__locks, plock: !!document.pointerLockElement }));
+    check(`[${dn}] Enter World with a saved character: joystick + action buttons, no "Click to resume", no pointer lock`, g.on && g.bound && g.ui !== 'none' && g.joy && g.btns === 7 && g.ctp && g.locks === 0 && !g.plock, g);
+    // in-game toggle in Help
+    await page.locator('#phoneTop [data-act="help"]').tap(); await page.waitForTimeout(300);
+    const hb = await ev(() => { const b = document.getElementById('btnPhone3'); const r = b.getBoundingClientRect(); return { vis: !!b.offsetParent && r.top >= 0 && r.bottom <= innerHeight, txt: b.innerText, h: Math.round(r.height) }; });
+    check(`[${dn}] Help window has a visible Phone Mode toggle`, hb.vis && /ON/.test(hb.txt), hb);
+    await page.locator('#btnPhone3').tap(); await page.waitForTimeout(200);
+    const off = await ev(() => ({ on: EB.phone.on, body: document.body.className, ls: localStorage.getItem('everblock_phone_v2'), txt: document.getElementById('btnPhone3').innerText }));
+    await ev(() => EB.game.closeAll()); await page.waitForTimeout(200);
+    const offCtp = await ev(() => getComputedStyle(document.getElementById('clickToPlay')).display === 'none' || document.getElementById('clickToPlay').classList.contains('hidden'));
+    check(`[${dn}] toggling OFF in game works and still never shows the pointer-lock overlay on a touch device`, !off.on && !/phone/.test(off.body) && off.ls === '0' && /OFF/.test(off.txt) && offCtp, { off, offCtp });
+    await ev(() => EB.game.command('/phone on')); await page.waitForTimeout(300);
+    const on2 = await ev(() => ({ on: EB.phone.on, ui: getComputedStyle(document.getElementById('phoneUI')).display, ls: localStorage.getItem('everblock_phone_v2') }));
+    check(`[${dn}] /phone on re-enables the touch controls`, on2.on && on2.ui !== 'none' && on2.ls === '1', on2);
+    await ev(() => EB.game.command('/phone status')); await page.waitForTimeout(200);
+    const dbg = await ev(() => { const d = document.getElementById('phoneDbg'); return d && !d.classList.contains('hidden') ? d.innerText : ''; });
+    check(`[${dn}] /phone status shows the detection signals on screen`, /maxTouchPoints/.test(dbg) && /ontouchstart/.test(dbg) && /pointerCoarse/.test(dbg) && /mobileUA/.test(dbg) && /standalone/.test(dbg), dbg.slice(0, 160));
+    await ev(() => document.getElementById('phoneDbg').classList.add('hidden'));
+    // screenshots of the in-game phone UI, portrait and landscape
+    await ev(() => { const g = EB.game, p = g.player, w = g.world; for (const m of g.mobs.slice()) if (Math.hypot(m.pos.x - 150, m.pos.z - 125) < 20) g.removeEntity(m); p.pos.set(128.5, w.surfaceY(128.5, 140.5), 140.5); p.yaw = 0; p.pitch = -0.12; g.camDist = 5; g.dayT = 0.35; g.spawnT = 1e9;
+      const M = new EB.ent.Mob('wolf', null, 128.5, w.surfaceY(128.5, 146.5), 146.5, [2, 2]); M.def = Object.assign({}, M.def, { aggro: 0 }); g.mobs.push(M); M.addTo(g.scene); g.setTarget(M); });
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: SHOTS + 'v5c-iphone-portrait.png' });
+    await page.setViewportSize({ width: dev.viewport.height, height: dev.viewport.width }); await page.waitForTimeout(1500);
+    const land = await ev(() => ({ on: EB.phone.on, ui: getComputedStyle(document.getElementById('phoneUI')).display, joy: !!document.getElementById('joyBase').offsetParent, w: innerWidth, h: innerHeight }));
+    check(`[${dn}] landscape: phone controls still active`, land.on && land.ui !== 'none' && land.joy && land.w > land.h, land);
+    await page.screenshot({ path: SHOTS + 'v5c-iphone-landscape.png' });
+    await ctx.close();
+  }
+
   // ---------------- detection edge cases
   console.log('== detection edge cases');
   const edge = async (opts, prep) => { const ctx = await browser.newContext(opts); const page = await ctx.newPage(); page.on('pageerror', (e) => errors.push('edge pageerror: ' + e.message)); await page.goto(URL); await page.evaluate(prep || (() => localStorage.clear())); await page.reload(); await page.waitForTimeout(400); const r = await page.evaluate(() => ({ on: EB.phone.on, sug: !document.getElementById('phoneSuggest').classList.contains('hidden'), fine: document.getElementById('fineText').innerText })); return { ctx, page, r }; };

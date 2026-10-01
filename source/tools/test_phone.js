@@ -41,9 +41,9 @@ const DEVICES = [
     check('touch detected, phone mode auto-enabled and suggested on the start screen', st0.on && st0.body && st0.sugg && /ON/.test(st0.btn) && st0.touch, st0);
     await shot(`v5-phone-${D.key}-start.png`);
     await tapSel('#btnPhone');
-    const off = await ev(() => ({ on: EB.phone.on, ls: localStorage.getItem('everblock_phone') }));
+    const off = await ev(() => ({ on: EB.phone.on, ls: localStorage.getItem('everblock_phone_v2') }));
     await tapSel('#btnPhone');
-    const on2 = await ev(() => ({ on: EB.phone.on, ls: localStorage.getItem('everblock_phone') }));
+    const on2 = await ev(() => ({ on: EB.phone.on, ls: localStorage.getItem('everblock_phone_v2') }));
     check('toggle button switches phone mode and remembers the choice in localStorage', !off.on && off.ls === '0' && on2.on && on2.ls === '1', { off, on2 });
     await page.reload(); await page.waitForTimeout(300);
     check('choice persists across reloads', await ev(() => EB.phone.on && document.body.classList.contains('phone') && document.getElementById('phoneSuggest').classList.contains('hidden')));
@@ -129,7 +129,7 @@ const DEVICES = [
     check('tapping the monster on screen targets it', await ev(() => EB.game.target === EB.game.testMob), { at: sp.map(Math.round) });
     await shot(`v5-phone-${D.key}-target.png`);
     await tapSel('#phoneBtns [data-act="consider"]');
-    check('consider button works', await ev(() => /skeleton .* -- /.test(document.getElementById('chatLog').lastChild.textContent)));
+    check('consider button works', await ev(() => [...document.getElementById('chatLog').children].slice(-4).some((l) => /skeleton .* -- /.test(l.textContent))));
     await tapSel('#phoneBtns [data-act="attack"]');
     check('attack button turns on auto attack', await ev(() => EB.game.player.autoAttack));
     // walk into melee range with the joystick

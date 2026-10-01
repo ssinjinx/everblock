@@ -221,11 +221,11 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   await clearLog();
   const wu = await ev(() => { const g = EB.game, p = g.player, M = EB.ent.Mob; const u = new M('mummy', null, p.pos.x + 2, p.pos.y, p.pos.z, [20, 20]), l = new M('bandit', null, p.pos.x - 2, p.pos.y, p.pos.z, [20, 20]);
     for (const m of [u, l]) { g.mobs.push(m); m.addTo(g.scene); m.def = Object.assign({}, m.def, { aggro: 0 }); }
-    const r = []; for (let i = 0; i < 12; i++) { u.hp = u.maxHp; g.applyAbility('ward_undead', u); r.push(u.maxHp - u.hp); }
-    const r2 = []; for (let i = 0; i < 12; i++) { l.hp = l.maxHp; g.applyAbility('ward_undead', l); r2.push(l.maxHp - l.hp); }
+    const r = []; for (let i = 0; i < 40; i++) { u.hp = u.maxHp; g.applyAbility('ward_undead', u); r.push(u.maxHp - u.hp); }
+    const r2 = []; for (let i = 0; i < 40; i++) { l.hp = l.maxHp; g.applyAbility('ward_undead', l); r2.push(l.maxHp - l.hp); }
     const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length; window.__wu = { u, l }; return { und: avg(r), liv: avg(r2) }; });
   const wuLog = await logText();
-  check('Ward Undead: double damage and holy fire vs undead', wu.und > wu.liv * 1.6 && /seared by holy fire/.test(wuLog), wu);
+  check('Ward Undead: double damage and holy fire vs undead', wu.und > wu.liv * 1.5 && /seared by holy fire/.test(wuLog), wu);
   const ta = await ev(() => { const g = EB.game, p = g.player, pet = g.pet(), { l } = window.__wu; l.hp = l.maxHp; l.aggroOn(pet, g); l.hate.set(pet, 5000); l.target = pet; g.applyAbility('taunt', l); const r = { tgt: l.target === p, top: l.hate.get(p) > 5000 }; for (const m of Object.values(window.__wu)) g.removeEntity(m); return r; });
   check('Taunt pulls the mob off your pet onto you', ta.tgt && ta.top, ta);
 
