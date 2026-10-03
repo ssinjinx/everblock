@@ -386,3 +386,28 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
 #installHint { position: relative; max-width: min(92vw, 420px); box-sizing: border-box; font-size: 14px; color: #e8dcc0; background: rgba(30,40,70,0.85); border: 2px solid #6a8ad0; border-radius: 6px; padding: 8px 30px 8px 12px; text-align: left; }
 #installHint .x { position: absolute; right: 6px; top: 4px; font-size: 18px; cursor: pointer; padding: 2px 6px; }
 #installHint .shareIc { display: inline-block; border: 1px solid #c0d0ff; border-radius: 3px; padding: 0 3px; font-size: 12px; }
+
+/* ---------- v6 online play ---------- */
+#btnOnline.online { background: linear-gradient(#2d5a7a, #1c3a52); border-color: #6fb0e0; }
+#btnOnline.glow { box-shadow: 0 0 14px rgba(111, 176, 224, 0.75); }
+#onlineHint { color: #9fd8ff; font-size: 14px; margin: 4px 0 2px; }
+.onlinePanel { max-width: 440px; margin: 0 auto; text-align: left; }
+.onlinePanel label { display: block; margin: 8px 0 3px; color: #d8c89a; font-size: 13px; }
+.onlinePanel input { width: 100%; box-sizing: border-box; }
+#olServerInfo { min-height: 16px; margin-top: 4px; color: #9fd8ff; }
+#olWho { margin-bottom: 8px; }
+#olWho .gm, .gm { color: #ffb040; font-weight: bold; }
+#olCharList { display: flex; flex-direction: column; gap: 6px; max-height: 42vh; overflow-y: auto; }
+.olChar { display: flex; align-items: center; gap: 8px; background: rgba(0, 0, 0, 0.35); border: 1px solid #5a4a30; border-radius: 6px; padding: 6px 8px; }
+.olChar .n { flex: 1; } .olChar .n span { color: #b0a080; font-size: 13px; }
+.olChar .olPlay { padding: 6px 18px; font-size: 16px; }
+#olStatus { min-height: 16px; color: #d8c89a; }
+#menuCreate.online .soloOnly { display: none; }
+#netDown { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.72); z-index: 60; display: flex; align-items: center; justify-content: center; }
+#netDown.hidden { display: none; }
+#netDown .box { background: #1a1220; border: 2px solid #8a6a3a; border-radius: 10px; padding: 22px 28px; text-align: center; max-width: 420px; }
+#netDown .t { font-size: 26px; color: #f3c85a; margin-bottom: 8px; } #netDown .why { margin-bottom: 14px; color: #e8dcc0; }
+#netToast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: rgba(26, 18, 32, 0.95); border: 1px solid #6fb0e0; border-radius: 8px; padding: 10px 14px; z-index: 40; color: #e8dcc0; text-align: center; }
+#netToast.hidden { display: none; }
+#groupWin .gpc .gname { color: #9fd8ff; } #groupWin .gl { color: #f3c85a; } #groupWin .gsep { border-top: 1px solid #5a4a30; margin: 3px 0; }
+.m.ooc { color: #60e0a0; } .m.group { color: #70c8ff; } .m.announce { color: #ffb040; font-weight: bold; }

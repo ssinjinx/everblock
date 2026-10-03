@@ -86,6 +86,8 @@
       this.camDist = 5.5; this.buildMode = false; this.buildSel = 0; this.lastZone = ''; this.hudT = 0; this.tickT = TICK; this.spawnT = 0;
       this.msgThrottle = {}; this.dayT = 0.3; this.saveT = 30; this.deathT = 0;
       this.mercs = []; this.otherCorpses = []; this.zoneEdits = {}; this.quests = {}; this.zoneMeshes = []; this.pathBudget = 6; this.showMap = true; this.questSteps = {}; this.lightT = 0;
+      this.net = EB.net && EB.net.active ? EB.net : null; // v6: online play (server-run world, see net.js)
+      if (this.net) this.net.attach(this);
     }
     initThree() {
       const r = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: true });
@@ -141,7 +143,7 @@
       }, 60);
     }
     _start(newChar) {
-      const save = newChar ? null : EB.loadSave();
+      const save = newChar ? null : this.net ? this.net.save : EB.loadSave();
       this.seed = newChar ? newChar.seed : save.seed;
       this.initThree();
       let zone = 'everblock', pl;
@@ -165,7 +167,7 @@
       }
       this.pmodel = buildModel(pl.modelOpts());
       this.scene.add(this.pmodel.group);
-      this.loadZone(zone, null);
+      this._zoneVia = 'init'; this.loadZone(zone, null);
       if (newChar || !pl.bind) { pl.bind = Object.assign({ zone: 'everblock' }, this.world.bind); }
       if (!pl.bind.zone) pl.bind.zone = 'everblock';
       if (newChar) pl.pos.set(this.world.bind.x, this.world.bind.y, this.world.bind.z);
@@ -187,10 +189,11 @@
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`MOTD: Greetings, ${pl.name}. New in v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      ui.log(`MOTD: Greetings, ${pl.name}. New in v6: multiplayer! Choose Play Online on the start screen to join an Everblock server (anyone can host one; see SERVER.md) and hunt, chat and group with other players. From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
       if (false) ui.log(`MOTD: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guildmaster Aldric says, 'Welcome, young ${RACES[pl.race].name.toLowerCase()}. Hunt the rats and snakes outside the walls to start. Return to me as you grow in power.'`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
+      if (this.net) this.net.started();
       this.last = performance.now();
       this.save();
       requestAnimationFrame((t) => this.frame(t));
@@ -213,7 +216,8 @@
       if (this.windows) this.closeAll();
       const world = (this.world = new EB.World(this.seed, this.scene, zoneId));
       world.generate();
-      if (this.zoneEdits[zoneId]) world.applyEdits(this.zoneEdits[zoneId]);
+      if (this.net) { world.applyEdits(this.net.editsFor(zoneId)); this.net.clearZone(); } // v6: the server's shared block edits
+      else if (this.zoneEdits[zoneId]) world.applyEdits(this.zoneEdits[zoneId]);
       for (const d of world.npcs) { const n = new NPC(d); n.addTo(this.scene); this.npcs.push(n); }
       for (const def of world.spawns) for (let i = 0; i < def.count; i++) this.slots.push({ def, mob: null, respawnAt: 0 });
       const keep = [];
@@ -232,6 +236,8 @@
       for (const m of this.mercs) { m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.3, pl.pos.z + 1.2); m.nav.reset(); m.casting = null; }
       this.updateSpawns(true);
       world.updateChunks(pl.pos.x, pl.pos.z, 3, 999);
+      if (this.net) this.net.zoneLoaded(zoneId, this._zoneVia || 'bind');
+      this._zoneVia = null;
     }
     changeZone(zl) {
       if (this.zoning) return;
@@ -243,7 +249,7 @@
       fade.classList.add('on');
       setTimeout(() => {
         try {
-          this.loadZone(zl.to, zl.arrive);
+          this._zoneVia = 'line'; this.loadZone(zl.to, zl.arrive);
           this.log(`You have entered ${this.world.zoneName}.`, 'ding');
           ui.center(this.world.zoneName, 'Zone', 2.5);
           this.save();
@@ -253,7 +259,7 @@
     }
     toBind() {
       const pl = this.player, b = pl.bind;
-      if (b.zone && b.zone !== this.world.zoneId) { this.loadZone(b.zone, null); this.log(`You have entered ${this.world.zoneName}.`, 'sys'); }
+      if (b.zone && b.zone !== this.world.zoneId) { this._zoneVia = 'bind'; this.loadZone(b.zone, null); this.log(`You have entered ${this.world.zoneName}.`, 'sys'); }
       pl.pos.set(b.x, b.y, b.z); pl.vel.set(0, 0, 0);
       for (const m of this.mercs) { m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.3, pl.pos.z + 1.2); m.nav.reset(); }
     }
@@ -266,6 +272,7 @@
       const data = { v: 3, seed: this.seed, zone: this.world.zoneId, char: this.player.toSave(), zoneEdits: n < 20000 ? zoneEdits : {},
         corpses: this.pcorpses.map((c) => c.toSave()).concat(this.otherCorpses), mercs: this.mercs.map((m) => m.toSave()), quests: this.quests, questSteps: this.questSteps, dayT: this.dayT };
       if (!this.player.alive) data.char.hp = 0;
+      if (this.net) { data.zoneEdits = {}; this.net.sendSave(data, manual); if (manual) ui.log('Your character has been saved to the server.', 'sys'); return; }
       try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); if (manual) ui.log('Your character has been saved.', 'sys'); }
       catch (e) { ui.log('Save failed: ' + e.message, 'death'); }
     }
@@ -275,6 +282,7 @@
 
     // ---------- spawns ----------
     updateSpawns(initial) {
+      if (this.net) return; // v6: the server spawns monsters
       for (const s of this.slots) {
         if (s.mob && s.mob.alive) continue;
         if (this.time < s.respawnAt) continue;
@@ -403,6 +411,7 @@
       for (const n of this.npcs) test(n);
       for (const c of this.pcorpses) test(c);
       for (const m of this.mercs) test(m);
+      if (this.net) for (const e of this.net.pickables()) test(e); // v6: other players
       return best;
     }
 
@@ -472,7 +481,7 @@
         this.log(`${t.name} ${st.con} -- looks like it would wipe the floor with you!`, 'sys');
         return;
       }
-      if (t.kind === 'merc') { this.log(`${t.name} regards you as an ally.`, 'sys'); return; }
+      if (t.kind === 'merc' || t.kind === 'pc') { this.log(`${t.name} regards you as an ally.`, 'sys'); return; }
       if (t.kind !== 'mob' || !t.alive) { this.log('That is a corpse.', 'sys'); return; }
       const c = t.con(this), f = this.entFaction(t);
       const attitude = f ? D.standingOf(this.standing(f)).con : t.def.aggressive ? 'glares at you threateningly' : 'regards you indifferently';
@@ -481,8 +490,9 @@
     }
     hail() {
       const t = this.target, pl = this.player;
-      if (!t) { this.log("You say, 'Hail'", 'say'); return; }
-      this.log(`You say, 'Hail, ${t.name}'`, 'say');
+      if (this.net) this.net.chat(t ? `Hail, ${t.name}` : 'Hail'); // v6: everyone nearby hears it
+      if (!t) { if (!this.net) this.log("You say, 'Hail'", 'say'); return; }
+      if (!this.net) this.log(`You say, 'Hail, ${t.name}'`, 'say');
       if (t.kind === 'merc') { setTimeout(() => this.log(`${t.name} says, '${t.isPet ? 'Yes, master?' : t.role === 'healer' ? 'I will keep you standing, ' + pl.name + '.' : 'Point me at something to hit!'}'`, 'say'), 400); return; }
       if (t.kind !== 'npc' || t.pos.distanceTo(pl.pos) > 20) return;
       if (this.questFor(t)) { setTimeout(() => this.openDialog(t), 300); return; }
@@ -515,8 +525,9 @@
       } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guildmaster - press E to train', binder: 'Soulbinder - press E to bind', guard: 'Guard', quest: 'Quest giver - press E' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
       else if (t.kind === 'pcorpse') { color = '#ffcc66'; info = 'Your corpse - press E to loot'; }
       else if (t.kind === 'merc') { color = '#70ff70'; info = `Group member - Level ${t.level} ${t.role === 'healer' ? 'Cleric' : 'Warrior'} Mercenary`; }
+      else if (t.kind === 'pc') { color = t.grouped ? '#70ff70' : '#9fd8ff'; info = `${t.grouped ? 'Group member - ' : 'Player - '}Level ${t.level} ${RACES[t.race].name} ${CLASSES[t.cls].name}`; }
       $('tName').textContent = name; $('tName').style.color = color;
-      const hp = (t.kind === 'mob' && t.alive) || t.kind === 'merc' ? t.hp / t.maxHp : t.kind === 'npc' ? 1 : 0;
+      const hp = (t.kind === 'mob' && t.alive) || t.kind === 'merc' || t.kind === 'pc' ? t.hp / t.maxHp : t.kind === 'npc' ? 1 : 0;
       ui.bar('tHp', 'tHpT', hp * 100, 100, Math.max(0, Math.ceil(hp * 100)) + '%');
       $('tInfo').textContent = info;
       this.ring.material.color.set(color);
@@ -587,6 +598,7 @@
     }
     damageMob(m, dmg, src) {
       if (!m.alive) return;
+      if (this.net && m.net) { this.net.damage(m, dmg, src); if (m === this.target) this.updateTargetWin(); return; } // v6: the server applies damage, hate and kills
       if (dmg > 0 && this.time < (m.wardUntil || 0)) dmg = Math.max(1, Math.round(dmg * (1 - (m.ward || 0))));
       m.hp -= dmg; if (dmg > 0) EB.models.flinch(m.model);
       if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} has been awakened by ${src === this.player ? 'you' : src.name}.`, 'spell'); }
@@ -617,8 +629,10 @@
       if (this.target === m) { pl.autoAttack = false; this.updateTargetWin(); }
       if (pl.casting && pl.casting.target === m) this.interruptCast('Your target has died.');
     }
+    questXP(n, id, step) { if (this.net) this.net.send({ t: 'qxp', q: id, step }); else this.gainXP(n); } // v6: the server grants quest XP once
     gainXP(n, party) {
       const pl = this.player;
+      if (this.net && !this.net.xpOK) return; // v6: experience comes from the server
       if (pl.level >= D.MAX_LEVEL) return;
       pl.xp += n;
       this.log(party ? 'You gain party experience!!' : 'You have gained experience!', 'xp');
@@ -715,6 +729,7 @@
       this.deathT = 5;
       this.updateClickPrompt();
       pl.buffs = [];
+      if (this.net) this.net.send({ t: 'died' });
       this.save();
     }
     respawn() {
@@ -767,7 +782,7 @@
         if (!melee && !this.lineOfSight(pl, t)) { this.log('You cannot see your target.', 'sys'); return; }
       }
       let ft = needsTarget ? t : null;
-      if (sp.friendly) { ft = t && t.kind === 'merc' && !t.dead && t.pos.distanceTo(pl.pos) < 32 ? t : pl; }
+      if (sp.friendly) { ft = t && (t.kind === 'merc' || t.kind === 'pc') && !t.dead && t.alive && t.pos.distanceTo(pl.pos) < 32 ? t : pl; }
       if (sp.kind === 'pet' && this.mercs.filter((m) => !m.isPet).length >= 2 && !this.mercs.some((m) => m.isPet)) { /* group of 4 max: player + 2 mercs + pet is fine */ }
       this.stand();
       if (sp.cast > 0) {
@@ -812,7 +827,7 @@
       switch (sp.kind) {
         case 'heal': {
           const amt = U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
-          const tg = t && t.kind === 'merc' ? t : pl;
+          const tg = t && (t.kind === 'merc' || t.kind === 'pc') ? t : pl;
           const before = tg.hp; tg.hp = Math.min(tg.maxHp, tg.hp + amt);
           const got = Math.round(tg.hp - before);
           if (tg !== pl) this.log(`${tg.name} feels much better. (+${got} HP)`, 'spell');
@@ -890,7 +905,7 @@
           break;
         }
         case 'buff': {
-          const tg = sp.friendly && t && t.kind === 'merc' ? t : pl;
+          const tg = sp.friendly && t && (t.kind === 'merc' || t.kind === 'pc') ? t : pl;
           tg.buffs = tg.buffs.filter((b) => b.id !== id);
           tg.buffs.push({ id, name: sp.name, left: sp.dur, buff: sp.buff });
           if (tg === pl) this.log(BUFF_MSG[id] || `You feel the effects of ${sp.name}.`, 'spell');
@@ -1018,6 +1033,7 @@
     }
     openLoot(c) {
       const pl = this.player;
+      if (this.net && c.net) { this.net.requestLoot(c); return; } // v6: the server holds the loot
       this.lootCorpse = c;
       if (c.loot.coins > 0) { pl.coins += c.loot.coins; this.log(`You receive ${U.coinStr(c.loot.coins)} from ${c.corpseName()}.`, 'loot'); c.loot.coins = 0; EB.audio.loot(); }
       if (!c.loot.items.length) { this.log(`You find nothing else on ${c.corpseName()}.`, 'sys'); this.lootCorpse = null; this.removeEntity(c); return; }
@@ -1039,6 +1055,7 @@
     takeLoot(i) {
       const c = this.lootCorpse; if (!c) return false;
       const it = c.loot.items[i];
+      if (this.net && c.net) return this.net.takeLoot(c, i);
       if (!this.addItem(it.id, it.count)) return false;
       const I = ITEMS[it.id];
       this.log(`--You have looted ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c.corpseName()}.--`, I.rare ? 'ding' : 'loot');
@@ -1049,9 +1066,10 @@
       if (this.windows.has('invWin')) this.renderInv();
       return true;
     }
-    lootAll() { const c = this.lootCorpse; if (!c) return; while (this.lootCorpse && c.loot.items.length) { if (!this.takeLoot(0)) break; } }
+    lootAll() { const c = this.lootCorpse; if (!c) return; if (this.net && c.net) { this.net.lootAllFrom(c); return; } while (this.lootCorpse && c.loot.items.length) { if (!this.takeLoot(0)) break; } }
     onLootClosed() {
       const c = this.lootCorpse; this.lootCorpse = null;
+      if (this.net && c && c.net) this.net.send({ t: 'lootdone', id: c.id });
       if (c && c.kind === 'mob' && !c.loot.items.length && !c.loot.coins) this.removeEntity(c);
     }
     lootOwnCorpse(c) {
@@ -1203,14 +1221,14 @@
     }
 
     // ---------- group / mercenaries / pets ----------
-    groupMembers() { return [this.player, ...this.mercs.filter((m) => !m.dead)].filter((g) => g.alive); }
+    groupMembers() { return [this.player, ...this.mercs.filter((m) => !m.dead), ...(this.net ? this.net.groupEnts() : [])].filter((g) => g.alive); }
     groupFoe() {
       const pl = this.player, t = this.target;
       if (t && t.kind === 'mob' && t.alive && (pl.autoAttack || t.state === 'chase' || pl.casting) && t.pos.distanceTo(pl.pos) < 40 && !this.isMezzed(t)) return t;
       let best = null, bd = 35;
       for (const m of this.mobs) {
         if (!m.alive || m.state !== 'chase' || !m.target || this.isMezzed(m)) continue;
-        if (m.target !== pl && m.target.kind !== 'merc') continue;
+        if (m.target !== pl && m.target.kind !== 'merc' && !(m.target.kind === 'pc' && m.target.grouped)) continue;
         const d = m.pos.distanceTo(pl.pos);
         if (d < bd) { bd = d; best = m; }
       }
@@ -1324,9 +1342,10 @@
     renderGroup() {
       this.renderPetBar();
       const gw = $('groupWin');
-      if (!this.mercs.length) { gw.classList.add('hidden'); return; }
+      if (!this.mercs.length && !(this.net && this.net.hasGroup())) { gw.classList.add('hidden'); return; }
       gw.classList.remove('hidden');
       gw.innerHTML = '<div class="wtitle" style="margin-bottom:2px">Group</div>';
+      if (this.net) this.net.renderGroupRows(gw); // v6: other players in your group
       this.mercs.forEach((m, i) => {
         const row = document.createElement('div'); row.className = 'gmem' + (m.dead ? ' dead' : '');
         const head = `<div class="gname"><span class="fk">F${i + 2}</span> ${m.name}${m.isPet ? ' <span class="gpet">pet</span>' : ''} <span class="gcfg" title="Settings / give gear">⚙</span><span class="gx" title="Dismiss">✕</span></div>`;
@@ -1344,6 +1363,7 @@
       });
     }
     updateGroupBars() {
+      if (this.net) this.net.updateGroupBars();
       for (const m of this.mercs) {
         if (!m.gRow || m.dead) continue;
         const bars = m.gRow.querySelectorAll('.bar'); if (!bars.length) continue;
@@ -1470,7 +1490,7 @@
         if (si < q.steps.length - 1) {
           if (step.give) { this.addItem(step.give, 1, true); this.log(`You receive ${ITEMS[step.give].name}.`, 'loot'); }
           this.questSteps[id] = si + 1;
-          this.gainXP(Math.floor(400 * (si + 1) * (1 + pl.level / 10)));
+          this.questXP(Math.floor(400 * (si + 1) * (1 + pl.level / 10)), id, si);
           this.log(`Quest updated: ${q.name}. Next: ${q.steps[si + 1].hint}.`, 'ding');
           EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
           return;
@@ -1482,7 +1502,7 @@
       if (q.title) { pl.title = q.title; this.log(`You have earned the title: ${q.title}!`, 'ding'); ui.center(q.title, `${pl.name}, ${q.title}`, 4); }
       for (const [f, d] of q.faction || []) this.adjustFaction(f, d);
       this.log(`You have completed the quest: ${q.name}!`, 'ding');
-      this.gainXP(Math.floor(q.xp * (1 + pl.level / 10)));
+      this.questXP(Math.floor(q.xp * (1 + pl.level / 10)), id, null);
       EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
     }
     renderQuests() {
@@ -1643,7 +1663,7 @@
     // ---------- separation (mobs / mercs / player don't overlap) ----------
     separate() {
       const pl = this.player, w = this.world;
-      const list = this.mobs.filter((m) => m.alive && m.state !== 'idle' || (m.alive && m.pos.distanceTo(pl.pos) < 30));
+      const list = this.net ? [] : this.mobs.filter((m) => m.alive && m.state !== 'idle' || (m.alive && m.pos.distanceTo(pl.pos) < 30)); // v6: server-run monsters keep their server positions
       for (const m of this.mercs) if (!m.dead) list.push(m);
       if (pl.alive) list.push(pl);
       const shift = (e, sx, sz) => { if (!collides(w, e.pos.x + sx, e.pos.y, e.pos.z + sz, e.hw, e.h) || collides(w, e.pos.x, e.pos.y, e.pos.z, e.hw, e.h)) { e.pos.x += sx; e.pos.z += sz; } };
@@ -1668,6 +1688,7 @@
       const h = this.world.raycast(e.x, e.y, e.z, d.x, d.y, d.z, 6);
       if (!h) return;
       if (h.b === B.BEDROCK) { this.log('That is far too sturdy to break.', 'sys'); return; }
+      if (this.net && !this.net.block(h.x, h.y, h.z, B.AIR)) return;
       this.world.setBlock(h.x, h.y, h.z, B.AIR); EB.audio.block();
     }
     placeBlock() {
@@ -1680,12 +1701,14 @@
       const pl = this.player;
       const overlaps = (ent) => x + 1 > ent.pos.x - ent.hw && x < ent.pos.x + ent.hw && z + 1 > ent.pos.z - ent.hw && z < ent.pos.z + ent.hw && y + 1 > ent.pos.y && y < ent.pos.y + ent.h;
       if (overlaps(pl) || this.mobs.some((m) => m.alive && overlaps(m))) return;
+      if (this.net && !this.net.block(x, y, z, D.BUILDABLE[this.buildSel])) return;
       this.world.setBlock(x, y, z, D.BUILDABLE[this.buildSel]); EB.audio.block();
     }
 
     // ---------- commands ----------
     command(v) {
       const pl = this.player;
+      if (this.net && this.net.command(v)) return; // v6: chat, /who, groups and admin commands go to the server
       if (v[0] !== '/') { this.log(`You say, '${v}'`, 'say'); return; }
       const cmd = v.slice(1).toLowerCase().split(/\s+/)[0];
       switch (cmd) {
@@ -2003,10 +2026,13 @@
       // spawns & entities
       this.spawnT -= dt;
       if (this.spawnT <= 0) { this.spawnT = 1; this.updateSpawns(false); }
-      for (const m of this.mobs.slice()) {
-        if (!m.alive || m.state !== 'idle' || m.pos.distanceTo(pl.pos) < 140) m.update(dt, this);
+      if (this.net) { this.net.update(dt); for (const m of this.mobs.slice()) this.net.updateMob(m, dt); for (const n of this.npcs) this.net.updateNpc(n, dt); }
+      else {
+        for (const m of this.mobs.slice()) {
+          if (!m.alive || m.state !== 'idle' || m.pos.distanceTo(pl.pos) < 140) m.update(dt, this);
+        }
+        for (const n of this.npcs) n.update(dt, this);
       }
-      for (const n of this.npcs) n.update(dt, this);
       for (const m of this.mercs.slice()) m.update(dt, this);
       this.tickDots(dt);
       this.separate();

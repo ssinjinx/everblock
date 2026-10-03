@@ -1,0 +1,37 @@
+# Everblock multiplayer server + Caddy (HTTPS).   cp .env.example .env && docker compose up -d
+# Game data (accounts, characters, world edits) lives in the "everblock-data" volume - see SERVER.md for backups.
+services:
+  everblock:
+    build: .
+    image: everblock-server:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      PORT: "8080"
+      TRUST_PROXY: "1"
+    volumes:
+      - everblock-data:/data
+    # Only reachable through Caddy by default. Set BIND_ADDR=0.0.0.0 in .env to expose it directly.
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${PORT:-8080}:8080"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - everblock
+    environment:
+      SITE_ADDRESS: ${DOMAIN:-:80}   # your domain from .env, or plain http on :80 when DOMAIN is empty
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  everblock-data:
+  caddy-data:
+  caddy-config:

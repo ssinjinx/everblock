@@ -144,7 +144,7 @@
     topHate(game) {
       let best = null, bv = -1;
       for (const [e, v] of this.hate) {
-        const valid = e === game.player ? game.player.alive : e.kind === 'merc' ? !e.dead && game.mercs.includes(e) : e.kind === 'npc';
+        const valid = game.validHate ? game.validHate(e) : e === game.player ? game.player.alive : e.kind === 'merc' ? !e.dead && game.mercs.includes(e) : e.kind === 'npc'; // v6: the server validates players/mercs of many owners
         if (!valid) { this.hate.delete(e); continue; }
         if (v > bv) { bv = v; best = e; }
       }
@@ -240,11 +240,11 @@
       if (this.aggroCheck <= 0) {
         this.aggroCheck = 0.5;
         if (this.state === 'idle' && this.def.aggressive && pl.alive && !pl.godMode) {
-          const cands = [pl, ...game.mercs.filter((m) => !m.dead)];
+          const cands = game.aggroCands ? game.aggroCands(this) : [pl, ...game.mercs.filter((m) => !m.dead)]; // v6: every player (and their mercs) nearby on the server
           for (const t of cands) {
             const d = this.pos.distanceTo(t.pos);
-            const c = this.con(game);
-            const ignores = ((c === 'grey' || c === 'green') && this.def.faction !== 'undead') || !game.factionKOS(this);
+            const c = game.conFor ? game.conFor(this, t) : this.con(game);
+            const ignores = ((c === 'grey' || c === 'green') && this.def.faction !== 'undead') || !(game.factionKOSFor ? game.factionKOSFor(this, t) : game.factionKOS(this));
             if (d < this.def.aggro && !ignores && game.lineOfSight(this, t)) {
               this.aggroOn(t, game);
               if (this.def.named) game.log(`${U.cap(this.name)} says, 'You dare trespass here? Die!'`, 'say');
@@ -257,7 +257,7 @@
         this.hateT -= dt;
         if (this.hateT <= 0 || !this.target) { this.hateT = 0.5; this.target = this.topHate(game); }
         const t = this.target;
-        if (!t || (t === pl && !pl.alive) || this.pos.distanceTo(this.home) > 120) this.goHome();
+        if (!t || (t === pl && !pl.alive) || (game.validHate && t.alive === false) || this.pos.distanceTo(this.home) > 120) this.goHome();
         else {
           if (this.canFlee(game) && this.hp < this.maxHp * 0.18 && t.kind !== 'npc' && !this.fledOnce) { this.state = 'flee'; this.fledOnce = true; this.casting = null; this.fleeT = 0; this.helper = this.findHelper(game); game.log(`${U.cap(this.name)} turns to flee!`, 'other'); }
           // v5 support AI: casters heal wounded allies (or themselves) and buff allies in the fight

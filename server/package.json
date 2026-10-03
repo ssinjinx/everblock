@@ -1,0 +1,21 @@
+{
+  "name": "everblock-server",
+  "version": "6.0.0",
+  "description": "Everblock multiplayer server: shared persistent world, accounts, grouping and chat for the Everblock browser game",
+  "main": "index.js",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node index.js",
+    "admin": "node admin.js",
+    "test": "node test/bots.js"
+  },
+  "dependencies": {
+    "three": "0.149.0",
+    "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.7.0"
+  }
+}

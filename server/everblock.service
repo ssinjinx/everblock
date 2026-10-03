@@ -1,0 +1,29 @@
+# Example systemd unit for running Everblock without Docker (Node 18+ installed system-wide).
+#   sudo useradd -r -m -d /opt/everblock everblock
+#   sudo -u everblock git clone https://github.com/ssinjinx/everblock.git /opt/everblock/app
+#   cd /opt/everblock/app/server && sudo -u everblock npm ci --omit=dev
+#   sudo cp everblock.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now everblock
+# Settings: /opt/everblock/app/.env (see .env.example). Put Caddy or nginx in front for HTTPS.
+[Unit]
+Description=Everblock multiplayer server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=everblock
+WorkingDirectory=/opt/everblock/app/server
+Environment=NODE_ENV=production
+Environment=DATA_DIR=/opt/everblock/data
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=3
+# hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/everblock/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

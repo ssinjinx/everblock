@@ -476,6 +476,14 @@
     fence: ['superior_potion', 'waterskin', 'sand_scimitar', 'venom_stinger', 'bandit_leathers', 'dune_robe'],
   };
 
+  // ---------- formulas (shared by the browser game and the multiplayer server) ----------
+  EB.calc = {
+    maxHp(cls, L, STA) { return 20 + L * CLASSES[cls].hpPer + Math.floor(STA * L / 12); },
+    maxMana(cls, L, stats) { const C = CLASSES[cls], ms = C.manaStat; if (ms == null) return 0; return Math.floor((15 + L * 5 + Math.floor(stats[ms] * L / 6)) * (C.manaMult || 1)); },
+    xpForKill(mobL) { return mobL * mobL * 9 + mobL * 6 + 5; },
+    fizzle(L, stat) { return EB.util.clamp(20 - L * 1.5 - (stat - 75) / 8, 2, 25); },
+  };
+
   EB.data = { PETS, MERCS, mercCost, QUESTS, B, BLOCKS, BUILDABLE, RACES, STAT_NAMES, CLASSES, ITEMS, EQUIP_SLOTS, SPELLS, MOBS, conColor, CON_HEX, CON_XP, CON_MSG, xpToNext, MAX_LEVEL,
     FACTIONS, KILL_FACTION, STANDINGS, standingOf, factionPriceMult, STOCKS };
 })();

@@ -1,12 +1,26 @@
 # Everblock
 
-![Everblock v5: the monsters of the Sunscorched Expanse and the Tomb of Ankhet-Ra](screenshots/v5-hero.png)
+![Everblock v6: two players grouped up at the Everblock Keep fountain](screenshots/v6-two-players.png)
 
 **[▶ Play in your browser](https://ssinjinx.github.io/everblock/)**
 
 A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999)**. You roll a character (race, class, stat points), bind at Everblock Keep, hunt rats and gnolls outside the walls, then work your way through the Sunken Crypt, the Frostfang Highlands and the Sunscorched Expanse, all the way down to the Pharaoh's tomb. It also plays on phones, with touch controls. There are con colors, auto attack, spell gems and a spellbook, med/sit regen, corpse runs, named mobs and camps. You can also break and place blocks anywhere.
 
-Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Progress saves to localStorage.
+Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Solo progress saves to localStorage. Multiplayer needs an Everblock server ([SERVER.md](SERVER.md)).
+
+## New in v6: multiplayer
+- **Play Online**: the start screen has a **🌐 Play Online** button next to **Play Solo**. Type a server address (it defaults to the page's own address when the page came from a server, and it's remembered), register or log in, then create and pick characters on the server. Solo play is unchanged and still works offline, from `file://` and as the installed app.
+- **A shared, persistent world**: the server owns the world seed, monsters and their AI, kills, loot, respawns, corpses and block edits, and it saves your character. Players see each other with their real v4 models, gear, nameplates and animations, and their mercenaries and pets too.
+- **Chat**: `/say` (or just type), `/shout` (zone), `/ooc` (everyone), `/tell <name>` and `/r`, `/who`.
+- **Groups**: target a player and type `/invite` (or `/invite <name>`). They get a Join/Decline prompt. Group members share kill XP EQ-style, show up in the group window, can be healed and buffed, and fight the same monsters. Use `/g` for group chat and `/disband` to leave.
+- **Phone Mode works online** with the same touch controls.
+- **Host your own server** on any small Linux VPS with Docker: `cp .env.example .env && docker compose up -d`. Caddy provides automatic HTTPS. See **[SERVER.md](SERVER.md)** for the full guide (domains, sslip.io, firewall, backups, updates, admin commands).
+- Cheat resistance: the server validates every intent (movement speed, damage caps and range, loot rights, rate limits). Passwords are hashed with scrypt.
+
+| | |
+|---|---|
+| ![two players together](screenshots/v6-two-players.png) | ![a group fighting a rat together](screenshots/v6-group-fight.png) |
+| ![Play Online login panel](screenshots/v6-online-login.png) | ![Phone Mode online](screenshots/v6-phone-online.png) |
 
 ## New in v5c: installable app + iPhone fix
 - **Install it like an app**: on iPhone/iPad tap **Share > Add to Home Screen** (the start screen shows this hint on iOS, and you can dismiss it). On Android/Chrome use **Install app**. It launches full screen with its own voxel "E" icon, keeps the controls clear of the notch and home bar, and **works offline**: a service worker caches the game and picks up new versions automatically when you're online.
@@ -136,4 +150,4 @@ cd source
 python3 build.py     # inlines src/*.js, src/style.css and vendor/three.min.js into ../index.html (and source/dist/everblock.html)
 sh pwa/stage.sh      # copies manifest.webmanifest, icons/ and the build-stamped sw.js next to ../index.html
 ```
-For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`).
+For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`). Multiplayer: `node test_v6.js` (starts a throwaway server and plays it with two desktop browsers and one phone), plus `cd server && npm install && npm test` (protocol test with bot clients) and `node test/load.js` (load test).

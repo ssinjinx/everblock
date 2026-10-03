@@ -1,0 +1,6 @@
+# Caddy in front of Everblock: automatic HTTPS (Let's Encrypt) when DOMAIN is set in .env,
+# plain http on port 80 when it is empty. WebSockets (/ws) are proxied automatically.
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+	reverse_proxy everblock:8080
+}

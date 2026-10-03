@@ -40,8 +40,32 @@ if (/^https?:/.test(location.protocol)) {
         <button id="btnDelete" class="small">Delete Character</button>
       </div>
       <button id="btnNew" class="big">Create New Character</button>
+      <button id="btnOnline" class="big online">🌐 Play Online</button>
+      <div id="onlineHint" class="hidden"></div>
       <div id="installHint" class="hidden">📲 <b>Install Everblock:</b> tap <b>Share</b> <span class="shareIc">⎋</span> &gt; <b>Add to Home Screen</b> for full-screen play (works offline). <span class="x" title="Dismiss">✕</span></div>
       <div class="fine" id="fineText">Click to play &bull; Best in Chrome &bull; Press ? in game for help</div>
+    </div>
+    <div id="menuOnline" class="menu hidden">
+      <div class="panel onlinePanel">
+        <h3>🌐 Play Online</h3>
+        <label for="olServer">Server</label>
+        <input id="olServer" maxlength="200" placeholder="https://play.example.com" autocomplete="url" spellcheck="false" autocapitalize="off">
+        <div id="olServerInfo" class="sub"></div>
+        <div id="olLogin">
+          <label for="olUser">Username</label><input id="olUser" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false">
+          <label for="olPass">Password</label><input id="olPass" type="password" maxlength="128" autocomplete="current-password">
+          <div class="btnRow"><button id="olBtnLogin" class="big">Log In</button><button id="olBtnRegister">Create Account</button></div>
+        </div>
+        <div id="olChars" class="hidden">
+          <div id="olWho"></div>
+          <div id="olCharList"></div>
+          <div class="btnRow"><button id="olBtnNew" class="big">Create New Character</button></div>
+          <div class="btnRow"><button id="olBtnLogout" class="small">Log Out</button></div>
+        </div>
+        <div id="olStatus" class="sub"></div>
+        <div id="olErr" class="err"></div>
+        <div class="btnRow"><button id="olBtnBack">Back</button></div>
+      </div>
     </div>
     <div id="menuCreate" class="menu hidden">
       <div class="createGrid">
@@ -62,8 +86,8 @@ if (/^https?:/.test(location.protocol)) {
           <h3>Name</h3>
           <input id="nameInput" maxlength="15" placeholder="Enter a name" autocomplete="off">
           <div id="nameErr" class="err"></div>
-          <h3>World Seed</h3>
-          <input id="seedInput" maxlength="12" value="1999">
+          <h3 class="soloOnly">World Seed</h3>
+          <input id="seedInput" class="soloOnly" maxlength="12" value="1999">
           <div class="btnRow"><button id="btnPhone2" class="phoneToggle small">📱 Phone Mode: <b>OFF</b></button></div>
           <div class="btnRow"><button id="btnBack">Back</button><button id="btnCreate" class="big">Enter Everblock</button></div>
         </div>
@@ -71,6 +95,7 @@ if (/^https?:/.test(location.protocol)) {
     </div>
   </div>
 </div>
+<div id="netDown" class="hidden"><div class="box"><div class="t">Disconnected</div><div class="why"></div><button class="big">Reconnect</button></div></div>
 <div id="loading" class="hidden"><div>Loading, please wait...</div><div id="loadingSub"></div></div>
 
 <!-- HUD -->
@@ -230,6 +255,7 @@ if (/^https?:/.test(location.protocol)) {
 <script src="src/audio.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/game.js"></script>
+<script src="src/net.js"></script>
 <script src="src/phone.js"></script>
 </body>
 </html>

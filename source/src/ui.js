@@ -6,13 +6,7 @@
   const $ = (id) => document.getElementById(id);
 
   // ---------- formulas ----------
-  const calc = {
-    maxHp(cls, L, STA) { return 20 + L * CLASSES[cls].hpPer + Math.floor(STA * L / 12); },
-    maxMana(cls, L, stats) { const C = CLASSES[cls], ms = C.manaStat; if (ms == null) return 0; return Math.floor((15 + L * 5 + Math.floor(stats[ms] * L / 6)) * (C.manaMult || 1)); },
-    xpForKill(mobL) { return mobL * mobL * 9 + mobL * 6 + 5; },
-    fizzle(L, stat) { return U.clamp(20 - L * 1.5 - (stat - 75) / 8, 2, 25); },
-  };
-  EB.calc = calc;
+  const calc = EB.calc; // v6: formulas moved to data.js so the server shares them
 
   // ---------- Character creation ----------
   const create = { race: 'human', cls: 'warrior', alloc: [0, 0, 0, 0, 0, 0, 0], pool: 20 };
@@ -73,13 +67,14 @@
     }
     $('btnContinue').onclick = () => { EB.audio.unlock(); if (EB.models) EB.models.stopPreview(); onPlay(null); };
     $('btnDelete').onclick = () => { if (confirm('Delete this character forever?')) { localStorage.removeItem(EB.SAVE_KEY); location.reload(); } };
-    $('btnNew').onclick = () => { $('menuMain').classList.add('hidden'); $('menuCreate').classList.remove('hidden'); renderCreate(); $('nameInput').focus(); };
-    $('btnBack').onclick = () => { if (EB.models) EB.models.stopPreview(); $('menuCreate').classList.add('hidden'); $('menuMain').classList.remove('hidden'); };
+    $('btnNew').onclick = () => { $('menuMain').classList.add('hidden'); $('menuOnline').classList.add('hidden'); $('menuCreate').classList.remove('hidden'); $('menuCreate').classList.toggle('online', !!(EB.net && EB.net.creating)); renderCreate(); $('nameInput').focus(); };
+    $('btnBack').onclick = () => { if (EB.models) EB.models.stopPreview(); $('menuCreate').classList.add('hidden'); if (EB.net && EB.net.creating) { EB.net.creating = false; EB.net.ui.show('menuOnline'); return; } $('menuMain').classList.remove('hidden'); };
     $('btnCreate').onclick = () => {
       let n = $('nameInput').value.trim();
       const err = validName(n);
       if (err) { $('nameErr').textContent = err; return; }
       n = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
+      if (EB.net && EB.net.creating) { $('nameErr').textContent = ''; EB.net.send({ t: 'create', char: { name: n, race: create.race, cls: create.cls, stats: baseStats() } }); return; } // v6: online characters live on the server
       if (save && save.char && !confirm(`This will replace your existing character ${save.char.name}. Continue?`)) return;
       EB.audio.unlock();
       const seedStr = $('seedInput').value.trim() || '1999';
@@ -88,6 +83,7 @@
       onPlay({ name: n, race: create.race, cls: create.cls, stats: baseStats(), seed });
     };
     $('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnCreate').click(); e.stopPropagation(); });
+    if (EB.net) EB.net.bindTitle(onPlay); // v6: Play Online
   }
 
   // ---------- HUD ----------

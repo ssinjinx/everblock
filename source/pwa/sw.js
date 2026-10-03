@@ -12,6 +12,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request; if (req.method !== 'GET') return;
   const url = new URL(req.url); if (url.origin !== location.origin) return;
+  if (url.pathname.indexOf('/api/') >= 0 || url.pathname.endsWith('/ws')) return; // v6: multiplayer server API is always live
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
   if (isPage) {
     e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put('./index.html', copy)); } return res; })

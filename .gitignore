@@ -1,2 +1,4 @@
 node_modules/
 source/dist/
+server/data/
+.env
