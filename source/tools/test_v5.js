@@ -107,14 +107,14 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
     const r = { open: g.windows.has('merchantWin'), m0: g.fMult(), p0: g.buyPrice('superior_potion'), rows: document.querySelectorAll('#merchList .row:not(.sellRow)').length, fline: !!document.querySelector('#merchList .fstand') };
     g.player.faction.sunward = 800; g.renderMerchant(); r.m1 = g.fMult(); r.p1 = g.buyPrice('superior_potion'); r.sellHdr = !!document.querySelector('#merchList .sellHdr'); return r; });
   check('Trader Hamid trades with his own desert stock and shows your standing', ham.open && ham.rows === 8 && ham.fline && ham.m0 === 1, ham);
-  check('better faction = cheaper prices (Warmly: 8% off)', ham.m1 === 0.92 && ham.p1 < ham.p0 && ham.sellHdr, ham);
+  check('better faction = cheaper prices (Hugger: 8% off)', ham.m1 === 0.92 && ham.p1 < ham.p0 && ham.sellHdr, ham);
   await ev(() => { const g = EB.game; g.closeAll(); g.player.faction.sunward = 0; });
 
   step('kill faction hits');
   await clearLog();
   const kill = await ev(() => { const g = EB.game, p = g.player, M = EB.ent.Mob; const m = new M('bandit', null, p.pos.x + 3, p.pos.y, p.pos.z, [17, 17]); g.mobs.push(m); m.addTo(g.scene); m.grpDamage = m.maxHp; m.hp = 0; g.killMob(m, p); return { bandit: g.standing('bandit'), sunward: g.standing('sunward') }; });
   const killLog = await logText();
-  check('killing a bandit: Sandreavers worse, Sunward Caravan better', kill.bandit === -814 && kill.sunward === 10 && /Sandreaver Bandits got worse/.test(killLog) && /Sunward Caravan got better/.test(killLog), kill);
+  check('killing a bandit: Sandreavers worse, Sunward Caravan better', kill.bandit === -814 && kill.sunward === 10 && /reputation with Sandreaver Bandits worsened/.test(killLog) && /reputation with Sunward Caravan improved/.test(killLog), kill);
   const kos = await ev(() => { const g = EB.game, p = g.player, M = EB.ent.Mob; const m = new M('bandit', null, p.pos.x + 3, p.pos.y, p.pos.z, [17, 17]); g.mobs.push(m); m.addTo(g.scene); const a = g.factionKOS(m); p.faction.bandit = 0; const b = g.factionKOS(m); p.faction.bandit = -814; g.removeEntity(m); return [a, b]; });
   check('bandits only attack on sight while you are KOS to them', kos[0] === true && kos[1] === false, kos);
   const clamp = await ev(() => { const g = EB.game; g.adjustFaction('sunward', 99999, true); const a = g.standing('sunward'); g.player.faction.sunward = 10; return a; });
@@ -125,7 +125,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   await ev(() => { const g = EB.game, p = g.player, M = EB.ent.Mob, w = g.world; p.pos.set(128.5, w.surfaceY(128.5, 182.5), 182.5); w.updateChunks(128.5, 182.5, 3, 999); for (const m of g.mobs.slice()) if (Math.hypot(m.pos.x - 128, m.pos.z - 182) < 30) g.removeEntity(m);
     const m = new M('bandit', null, p.pos.x, w.surfaceY(p.pos.x, p.pos.z - 4.5), p.pos.z - 4.5, [18, 18]); m.def = Object.assign({}, m.def, { aggro: 0 }); g.mobs.push(m); m.addTo(g.scene); window.__b = m; g.setTarget(m); g.consider(); const n = g.npcs.find((x) => x.name === 'Captain Asha'); g.setTarget(n); g.consider(); g.setTarget(m); });
   const con = await logText();
-  check('consider shows EQ faction attitude (KOS bandit glares threateningly, Sunward indifferent)', /glares at you threateningly/.test(con) && /Captain Asha regards you indifferently/.test(con), con.slice(-300));
+  check('consider shows faction attitude (KOS bandit cracks its knuckles, Sunward meh)', /cracks its knuckles at you/.test(con) && /Captain Asha could not care less about you/.test(con), con.slice(-300));
   await ev(() => { const g = EB.game, p = g.player, b = window.__b; p.yaw = Math.atan2(b.pos.x - p.pos.x, b.pos.z - p.pos.z); b.yaw = p.yaw + Math.PI; g.camOverride = { pos: new THREE.Vector3(p.pos.x + 1.6, p.pos.y + 2.6, p.pos.z + 3.2), look: new THREE.Vector3(b.pos.x, b.pos.y + 1.1, b.pos.z) }; });
   await waitGame(0.6);
   await shot('v5-faction-con.png');
@@ -225,9 +225,9 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
     const r2 = []; for (let i = 0; i < 40; i++) { l.hp = l.maxHp; g.applyAbility('ward_undead', l); r2.push(l.maxHp - l.hp); }
     const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length; window.__wu = { u, l }; return { und: avg(r), liv: avg(r2) }; });
   const wuLog = await logText();
-  check('Ward Undead: double damage and holy fire vs undead', wu.und > wu.liv * 1.5 && /seared by holy fire/.test(wuLog), wu);
+  check('Undead Repellent: double damage and holy fire vs undead', wu.und > wu.liv * 1.5 && /seared by holy fire/.test(wuLog), wu);
   const ta = await ev(() => { const g = EB.game, p = g.player, pet = g.pet(), { l } = window.__wu; l.hp = l.maxHp; l.aggroOn(pet, g); l.hate.set(pet, 5000); l.target = pet; g.applyAbility('taunt', l); const r = { tgt: l.target === p, top: l.hate.get(p) > 5000 }; for (const m of Object.values(window.__wu)) g.removeEntity(m); return r; });
-  check('Taunt pulls the mob off your pet onto you', ta.tgt && ta.top, ta);
+  check('Yo Mama Taunt pulls the mob off your pet onto you', ta.tgt && ta.top, ta);
 
   // ---------------------------------------------------------------- models + showcase
   step('monster models + showcase');

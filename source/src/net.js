@@ -142,7 +142,7 @@
     started() {
       const g = this.game; this.ready = true;
       if (this.dayT != null) g.dayT = this.dayT;
-      g.log(`You are playing online on ${this.serverName}. /say talks to people nearby, /shout to the zone, /ooc to everyone, /tell <name> to one player. Target a player and type /invite to group. /who lists who is online.`, 'help');
+      g.log(`You are playing online on ${this.serverName}. /say talks to people nearby, /shout hollers to the zone, /ooc chats with everyone, /tell <name> to one player. Target a player and type /invite to group. /who lists who is online.`, 'help');
       const q = this.queue; this.queue = [];
       for (const m of q) this.handle(m);
       this.sendLook(true); this.sendMove(true);
@@ -252,15 +252,15 @@
     h_die(m, g) {
       const mob = this.mobById(m.id); if (!mob) return;
       const mine = m.byKey === 'p' + this.pid;
-      if (mine) g.log(`You have slain ${mob.name}!`, 'melee');
-      else if (g.player.pos.distanceTo(mob.pos) < 40) g.log(`${U.cap(mob.name)} has been slain by ${m.by || 'something'}!`, 'other');
+      if (mine) g.log(`You have defeated ${mob.name}! It had it coming.`, 'melee');
+      else if (g.player.pos.distanceTo(mob.pos) < 40) g.log(`${U.cap(mob.name)} has been taken out by ${m.by || 'something'}!`, 'other');
       mob.hp = 0; this.markDead(mob);
     },
     h_xp(m, g) {
       const pl = g.player, mob = m.id ? this.mobById(m.id) : null;
       if (m.kill && mob) { g.questKillHook && g.questKillHook(mob); for (const [f, d] of g.factionHitsFor(mob)) g.adjustFaction(f, d); }
       if (m.n > 0) { this.xpOK = true; try { g.gainXP(m.n, m.party); } finally { this.xpOK = false; } }
-      else if (m.kill) g.log('You gain no experience from that kill.', 'other');
+      else if (m.kill) g.log('That kill taught you absolutely nothing.', 'other');
       if (pl.level !== m.lvl || Math.abs(pl.xp - m.xp) > 1) { pl.level = m.lvl; pl.xp = m.xp; }
     },
     h_ma(m, g) {
@@ -277,12 +277,12 @@
     h_log(m, g) { g.log(m.m, m.c || 'other'); },
     h_chat(m, g) {
       const f = m.from, t = m.m;
-      const line = f == null && m.c !== 'announce' ? t : { say: m.self ? `You say, '${t}'` : `${f} says, '${t}'`, shout: m.self ? `You shout, '${t}'` : `${f} shouts, '${t}'`, ooc: `${m.self ? 'You say' : f + ' says'} out of character, '${t}'`,
-        auction: `${m.self ? 'You auction' : f + ' auctions'}, '${t}'`, group: m.self ? `You tell your party, '${t}'` : `${f} tells the group, '${t}'`, tell: `${f} tells you, '${t}'`, told: `You told ${f}, '${t}'`, announce: `[Server] ${t}` }[m.c];
+      const line = f == null && m.c !== 'announce' ? t : { say: m.self ? `You say: "${t}"` : `${f} says: "${t}"`, shout: m.self ? `You holler: "${t}"` : `${f} hollers: "${t}"`, ooc: `[OOC] ${m.self ? 'You' : f}: ${t}`,
+        auction: `[Market] ${m.self ? 'You hawk' : f + ' hawks'}: "${t}"`, group: `[Party] ${m.self ? 'You' : f}: ${t}`, tell: `${f} whispers to you: "${t}"`, told: `You whisper to ${f}: "${t}"`, announce: `[Server] ${t}` }[m.c];
       g.log(line || t, { say: 'say', shout: 'shout', ooc: 'ooc', auction: 'ooc', group: 'group', tell: 'tell', told: 'tell', announce: 'announce', who: 'sys', help: 'help' }[m.c] || 'sys');
       if (m.c === 'announce') EB.ui.center('Server', t, 5);
     },
-    h_invite(m) { this.toast(`${esc(m.from)} invites you to join a group.`, [['Join', () => this.chat('/join')], ['Decline', () => this.chat('/decline')]]); },
+    h_invite(m) { this.toast(`${esc(m.from)} wants you in their party.`, [['Join', () => this.chat('/join')], ['Decline', () => this.chat('/decline')]]); },
     h_group(m, g) {
       this.group = m.id ? m : null;
       for (const r of this.remotes.values()) this.refreshRemotePlate(r);
@@ -350,7 +350,7 @@
       if (!c || m.gone) { g.log('That corpse has already been looted.', 'sys'); return; }
       const pl = g.player;
       g.lootCorpse = c; c.loot = { coins: 0, items: m.items.slice() };
-      if (m.coins > 0) { pl.coins += m.coins; g.log(`You receive ${U.coinStr(m.coins)} from ${c.corpseName()}.`, 'loot'); EB.audio.loot(); }
+      if (m.coins > 0) { pl.coins += m.coins; g.log(`You pocket ${U.coinStr(m.coins)} from ${c.corpseName()}.`, 'loot'); EB.audio.loot(); }
       if (!c.loot.items.length) { g.log(`You find nothing else on ${c.corpseName()}.`, 'sys'); g.lootCorpse = null; this.send({ t: 'lootdone', id: c.id }); return; }
       $('lootTitle').firstChild.textContent = `Loot: ${c.corpseName()} `;
       g.openWin('lootWin');
@@ -361,7 +361,7 @@
       if (m.item) {
         g.addItem(m.item.id, m.item.count);
         const I = ITEMS[m.item.id];
-        g.log(`--You have looted ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c ? c.corpseName() : 'a corpse'}.--`, I.rare ? 'ding' : 'loot');
+        g.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c ? c.corpseName() : 'a corpse'}!`, I.rare ? 'ding' : 'loot');
         EB.audio.loot();
       }
       if (!c || g.lootCorpse !== c) return;

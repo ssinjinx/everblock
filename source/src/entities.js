@@ -196,7 +196,7 @@
         }
         if (tg) {
           this.casting = { support: heals, type: 'heal', target: tg, t: heals.cast }; this.nextHeal = now + heals.cd;
-          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} begins to cast a spell. <${heals.name}>`, 'spell');
+          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} starts chanting: <${heals.name}>`, 'spell');
           return true;
         }
       }
@@ -209,7 +209,7 @@
         }
         if (tg) {
           this.casting = { support: buffs, type: 'buff', target: tg, t: buffs.cast }; this.nextBuff = now + buffs.cd;
-          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} begins to cast a spell. <${buffs.name}>`, 'spell');
+          if (game.player.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} starts chanting: <${buffs.name}>`, 'spell');
           return true;
         }
       }
@@ -247,7 +247,7 @@
             const ignores = ((c === 'grey' || c === 'green') && this.def.faction !== 'undead') || !(game.factionKOSFor ? game.factionKOSFor(this, t) : game.factionKOS(this));
             if (d < this.def.aggro && !ignores && game.lineOfSight(this, t)) {
               this.aggroOn(t, game);
-              if (this.def.named) game.log(`${U.cap(this.name)} says, 'You dare trespass here? Die!'`, 'say');
+              if (this.def.named) game.log(`${U.cap(this.name)} says: "Wipe your feet! This is MY lair!"`, 'say');
               break;
             }
           }
@@ -274,7 +274,7 @@
             if (this.casting.t <= 0) { const sp = this.casting.sp; this.casting = null; if (d < sp.range + 6) game.mobSpell(this, t, sp); }
           } else if (cs && this.nextCast <= game.time && d < cs.range && d > 2 && game.lineOfSight(this, t)) {
             this.casting = { sp: cs, t: cs.cast }; this.nextCast = game.time + cs.cd * (0.8 + Math.random() * 0.4);
-            if (pl.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} begins to cast a spell. <${cs.name}>`, 'spell');
+            if (pl.pos.distanceTo(this.pos) < 45) game.log(`${U.cap(this.name)} starts chanting: <${cs.name}>`, 'spell');
           }
           if (!this.casting) {
             if (d > reach * 0.85) dir = this.nav.steer(this, t.pos.x, t.pos.y, t.pos.z, game, reach * 0.8, dt);
@@ -352,7 +352,7 @@
       this.model = buildModel(EB.models.npcOpts(d));
       this.hw = 0.3; this.h = this.model.height;
       this.maxHp = 3000; this.hp = 3000;
-      const sub = d.sub || { merchant: '<Merchant>', trainer: '<Guildmaster>', binder: '<Soulbinder>', guard: '<Everblock Guard>', liaison: '<Mercenary Liaison>' }[d.kind];
+      const sub = d.sub || { merchant: '<Merchant>', trainer: '<Guild Coach>', binder: '<Soul Notary>', guard: '<Everblock Guard>', liaison: '<Sellsword Recruiter>' }[d.kind];
       this.plate = makeNameplate(d.name, '#7fb0ff', sub);
       this.target = null; this.swing = 0; this.yaw = Math.PI; this.nav = new Nav();
     }
@@ -368,7 +368,7 @@
             const d = m.pos.distanceTo(this.pos);
             if (d < 15 && (m.state === 'chase' || m.state === 'flee') && m.pos.distanceTo(this.home) < 30) {
               this.target = m;
-              if (game.player.pos.distanceTo(this.pos) < 40) game.log(`${this.name} shouts, 'Time to die ${m.name}!'`, 'shout');
+              if (game.player.pos.distanceTo(this.pos) < 40) game.log(`${this.name} shouts: "Your respawn timer starts now, ${m.name}!"`, 'shout');
               break;
             }
           }
@@ -382,7 +382,7 @@
             this.swing = 2.0; this.attackT = 0.01;
             const dmg = U.randInt(12, 30);
             if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(this, game, true);
-            if (pl.pos.distanceTo(this.pos) < 30) game.log(`${this.name} slashes ${t.name} for ${dmg} points of damage.`, 'other');
+            if (pl.pos.distanceTo(this.pos) < 30) game.log(`${this.name} slashes ${t.name} for ${dmg} damage.`, 'other');
             game.damageMob(t, dmg, this);
           }
         } else {

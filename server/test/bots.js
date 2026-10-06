@@ -95,7 +95,7 @@ const statsFor = (race, cls) => EB.data.RACES[race].stats.map((v, i) => v + EB.d
     b.send({ t: 'chat', v: '/tell alicia psst' });
     check('/tell is private', (await a.wait((m) => m.t === 'chat' && m.c === 'tell')).m === 'psst');
     a.send({ t: 'chat', v: '/who' });
-    await a.wait((m) => m.t === 'chat' && /There are 2 players/.test(m.m));
+    await a.wait((m) => m.t === 'chat' && /2 adventurers are/.test(m.m));
     check('/who lists both players', true);
 
     a.send({ t: 'chat', v: '/invite Bobby' });

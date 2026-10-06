@@ -15,7 +15,7 @@
   const DAY_LEN = 720; // seconds per full day
   const FISTS = { name: 'Fists', dmg: 2, delay: 2.2, verb: 'punch' };
   const VERB3 = { slash: 'slashes', pierce: 'pierces', crush: 'crushes', punch: 'punches', hit: 'hits', bite: 'bites', claw: 'claws', kick: 'kicks', backstab: 'backstabs' };
-  const BUFF_MSG = { courage: 'You feel brave.', minor_shielding: 'You feel armored.', holy_armor: 'A holy aura surrounds you.', battle_fury: 'You are filled with a battle fury!', evade: 'You prepare to evade attacks.' };
+  const BUFF_MSG = { courage: 'You feel pepped up!', minor_shielding: 'A travel-size shield pops up around you.', holy_armor: 'You are wrapped in holy bubble wrap.', battle_fury: 'You are filled with a battle fury!', evade: 'You prepare to nope out of the next few attacks.' };
   const MERCHANT_STOCK = ['healing_potion', 'greater_potion', 'bread', 'cloth_cap', 'cloth_pants', 'rawhide_gloves', 'leather_boots', 'leather_tunic', 'wooden_shield', 'bronze_long_sword', 'fine_steel_dagger', 'oak_staff'];
 
   // ---------------- Player ----------------
@@ -189,9 +189,9 @@
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`MOTD: Greetings, ${pl.name}. New in v6: multiplayer! Choose Play Online on the start screen to join an Everblock server (anyone can host one; see SERVER.md) and hunt, chat and group with other players. From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
-      if (false) ui.log(`MOTD: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soulbinder Kerra). Press ? for help.`, 'help');
-      if (newChar) ui.log(`Guildmaster Aldric says, 'Welcome, young ${RACES[pl.race].name.toLowerCase()}. Hunt the rats and snakes outside the walls to start. Return to me as you grow in power.'`, 'say');
+      ui.log(`Town Crier: Greetings, ${pl.name}. New in v6: multiplayer! Choose Play Online on the start screen to join an Everblock server (anyone can host one; see SERVER.md) and hunt, chat and group with other players. From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soul-Notary Kerra). Press ? for help.`, 'help');
+      if (newChar) ui.log(`Guild Coach Aldric says: "Welcome, young ${RACES[pl.race].name.toLowerCase()}. Go bully the rats and snakes outside the walls. Come back when you have grown, and stretch first."`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
       if (this.net) this.net.started();
       this.last = performance.now();
@@ -245,12 +245,12 @@
       const pl = this.player;
       pl.autoAttack = false; pl.casting = null; $('castBar').classList.add('hidden');
       const fade = $('zoneFade');
-      fade.querySelector('div').textContent = 'LOADING, PLEASE WAIT...';
+      fade.querySelector('div').textContent = 'LOADING, PLEASE GO MAKE A SANDWICH...';
       fade.classList.add('on');
       setTimeout(() => {
         try {
           this._zoneVia = 'line'; this.loadZone(zl.to, zl.arrive);
-          this.log(`You have entered ${this.world.zoneName}.`, 'ding');
+          this.log(`You wander into ${this.world.zoneName}.`, 'ding');
           ui.center(this.world.zoneName, 'Zone', 2.5);
           this.save();
         } catch (e) { console.error(e); }
@@ -259,7 +259,7 @@
     }
     toBind() {
       const pl = this.player, b = pl.bind;
-      if (b.zone && b.zone !== this.world.zoneId) { this._zoneVia = 'bind'; this.loadZone(b.zone, null); this.log(`You have entered ${this.world.zoneName}.`, 'sys'); }
+      if (b.zone && b.zone !== this.world.zoneId) { this._zoneVia = 'bind'; this.loadZone(b.zone, null); this.log(`You wander into ${this.world.zoneName}.`, 'sys'); }
       pl.pos.set(b.x, b.y, b.z); pl.vel.set(0, 0, 0);
       for (const m of this.mercs) { m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.3, pl.pos.z + 1.2); m.nav.reset(); }
     }
@@ -299,7 +299,7 @@
         m.addTo(this.scene); m.syncModel();
         this.mobs.push(m);
         s.mob = m;
-        if (m.def.named && !initial && this.player.pos.distanceTo(m.pos) < 90) this.log(`${m.name} shouts, 'You will all fall before me!'`, 'shout');
+        if (m.def.named && !initial && this.player.pos.distanceTo(m.pos) < 90) this.log(`${m.name} shouts: "You will all fall before me!"`, 'shout');
       }
     }
     removeEntity(e) {
@@ -459,50 +459,50 @@
     npcFaction(n) { return n.faction || { everblock: 'guards', frostfang: 'hollis', desert: 'sunward' }[this.world.zoneId] || 'guards'; }
     entFaction(e) { if (!e) return null; if (e.kind === 'npc') return this.npcFaction(e); if (e.kind === 'mob' && D.FACTIONS[e.def.faction]) return e.def.faction; return null; }
     standing(f) { const v = this.player.faction[f]; return v == null ? 0 : v; }
-    // tracked-faction mobs only attack on sight when you are threatening (KOS) or worse
+    // tracked-faction mobs only attack on sight when you are Hostile (KOS) or worse
     factionKOS(m) { const f = m.def.faction; if (!D.FACTIONS[f]) return true; return this.standing(f) < -750; }
     adjustFaction(f, delta, silent) {
       const pl = this.player; if (!D.FACTIONS[f] || !delta) return;
       const old = this.standing(f), nv = U.clamp(old + delta, -2000, 2000), name = D.FACTIONS[f].name;
       pl.faction[f] = nv;
       if (silent) return;
-      if (nv === old) this.log(`Your faction standing with ${name} could not possibly get any ${delta > 0 ? 'better' : 'worse'}.`, 'faction');
-      else this.log(`Your faction standing with ${name} got ${delta > 0 ? 'better' : 'worse'}.`, 'faction');
+      if (nv === old) this.log(`Your reputation with ${name} is maxed out. They are as ${delta > 0 ? 'impressed' : 'unimpressed'} as they will ever be.`, 'faction');
+      else this.log(delta > 0 ? `Your reputation with ${name} improved. They might even learn your name.` : `Your reputation with ${name} worsened. Someone is writing your name in a little book.`, 'faction');
       const a = D.standingOf(old).label, b = D.standingOf(nv).label;
-      if (a !== b) this.log(`${name} now ${D.standingOf(nv).con.replace(/ you.*$/, '')} you. (${b})`, 'faction');
+      if (a !== b) this.log(`${name} now ${D.standingOf(nv).con}. (${b})`, 'faction');
     }
     factionHitsFor(m) { return (D.KILL_FACTION[m.def.faction] || []).concat(m.def.factionHits || []); }
     priceMult(npc) { return D.factionPriceMult(this.standing(this.npcFaction(npc))); }
     consider() {
       const t = this.target;
-      if (!t) { this.log('You must first select a target to consider.', 'sys'); return; }
+      if (!t) { this.log('Consider what, exactly? Pick a target first.', 'sys'); return; }
       if (t.kind === 'npc') {
         const st = D.standingOf(this.standing(this.npcFaction(t)));
-        this.log(`${t.name} ${st.con} -- looks like it would wipe the floor with you!`, 'sys');
+        this.log(`${t.name} ${st.con} -- looks like it would use you as a mop!`, 'sys');
         return;
       }
-      if (t.kind === 'merc' || t.kind === 'pc') { this.log(`${t.name} regards you as an ally.`, 'sys'); return; }
+      if (t.kind === 'merc' || t.kind === 'pc') { this.log(`${t.name} considers you a buddy.`, 'sys'); return; }
       if (t.kind !== 'mob' || !t.alive) { this.log('That is a corpse.', 'sys'); return; }
       const c = t.con(this), f = this.entFaction(t);
-      const attitude = f ? D.standingOf(this.standing(f)).con : t.def.aggressive ? 'glares at you threateningly' : 'regards you indifferently';
+      const attitude = f ? D.standingOf(this.standing(f)).con : t.def.aggressive ? 'cracks its knuckles at you' : 'could not care less about you';
       this.log(`${U.cap(t.name)} ${attitude} -- ${CON_MSG[c]}`, 'sys');
       const last = $('chatLog').lastChild; if (last) last.style.color = CON_HEX[c];
     }
     hail() {
       const t = this.target, pl = this.player;
       if (this.net) this.net.chat(t ? `Hail, ${t.name}` : 'Hail'); // v6: everyone nearby hears it
-      if (!t) { if (!this.net) this.log("You say, 'Hail'", 'say'); return; }
-      if (!this.net) this.log(`You say, 'Hail, ${t.name}'`, 'say');
-      if (t.kind === 'merc') { setTimeout(() => this.log(`${t.name} says, '${t.isPet ? 'Yes, master?' : t.role === 'healer' ? 'I will keep you standing, ' + pl.name + '.' : 'Point me at something to hit!'}'`, 'say'), 400); return; }
+      if (!t) { if (!this.net) this.log('You say: "Hail!"', 'say'); return; }
+      if (!this.net) this.log(`You say: "Hail, ${t.name}!"`, 'say');
+      if (t.kind === 'merc') { setTimeout(() => this.log(`${t.name} says: "${t.isPet ? 'Yes, boss?' : t.role === 'healer' ? 'I will keep you standing, ' + pl.name + '.' : 'Point me at something to hit!'}"`, 'say'), 400); return; }
       if (t.kind !== 'npc' || t.pos.distanceTo(pl.pos) > 20) return;
       if (this.questFor(t)) { setTimeout(() => this.openDialog(t), 300); return; }
       const lines = {
         quest: `Well met, ${pl.name}.`,
         liaison: `Looking for a sword arm or a healer, ${pl.name}? My mercenaries will follow you anywhere, for a price. (Press E to hire)`,
         merchant: `Welcome, ${pl.name}! Browse my wares? I buy anything you dig out of those critters, too. (Press E to trade)`,
-        trainer: pl.level < 5 ? `Ah, ${pl.name}. Rats, snakes and fire beetles roam outside our walls. Hunt them, and return to me when you have grown. (Press E to train)` : `You have grown strong, ${pl.name}. The Darkpaw gnolls to the west and the Forsaken Graveyard to the south will test you. The Sunken Crypt to the northeast... only the bravest return. (Press E to train)`,
+        trainer: pl.level < 5 ? `Ah, ${pl.name}. Rats, snakes and spicy beetles roam outside our walls. Go get some reps in, and return to me when you have grown. (Press E to train)` : `You have grown strong, ${pl.name}. The Darkpaws gnolls to the west and the Forsaken Graveyard to the south will test you. The Sunken Crypt to the northeast... only the bravest return. (Press E to train)`,
         binder: t.name === 'Scout Hollis' ? `Careful out here, ${pl.name}. The orcs of the Frostfang Warcamp to the northwest raid us nightly, and the giants of Vorgath's keep to the north are worse. Press E and I'll bind your soul to this camp.` : `Greetings, ${pl.name}. Should you fall, your spirit will return to where it is bound. Press E and I shall bind your soul here.`,
-        guard: ['Move along, citizen.', `Hail, ${pl.name}. Keep your eyes open, the Darkpaw gnolls have been seen near the west gate. Some say Fippy Darkpaw himself leads them.`, "I don't have time to chat. Gnolls, you know.", 'The undead of the Sunken Crypt grow restless at night.'][Math.floor(Math.random() * 4)],
+        guard: ['Move along, citizen.', `Hail, ${pl.name}. Keep your eyes open, the Darkpaws gnolls have been seen near the west gate. Some say Flippy Darkpaws himself leads them.`, "I don't have time to chat. Gnolls, you know.", 'The undead of the Sunken Crypt grow restless at night.'][Math.floor(Math.random() * 4)],
       };
       const special = {
         'Sunpriestess Nefa': `The sun watches over all who walk the Expanse, ${pl.name}. Press E and I shall bind your soul to this outpost.`,
@@ -512,7 +512,7 @@
         'Sunward Guard Omari': `The Great Pyramid lies to the north. The dead there do not rest, and Pharaoh Ankhet-Ra still sits upon his throne.`,
       };
       if (this.world.zoneId === 'desert' && t.npcKind === 'guard' && !special[t.name]) special[t.name] = 'Keep your waterskin full and your blade sharp.';
-      setTimeout(() => this.log(`${t.name} says, '${special[t.name] || lines[t.npcKind]}'`, 'say'), 400);
+      setTimeout(() => this.log(`${t.name} says: "${special[t.name] || lines[t.npcKind]}"`, 'say'), 400);
     }
     updateTargetWin() {
       const t = this.target;
@@ -520,9 +520,9 @@
       $('targetWin').classList.remove('hidden');
       let color = '#ffffff', name = t.name, info = '';
       if (t.kind === 'mob') {
-        if (t.alive) { const f = this.entFaction(t); color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : f ? D.standingOf(this.standing(f)).label : t.def.aggressive ? 'Threatening' : 'Indifferent'}`; }
+        if (t.alive) { const f = this.entFaction(t); color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : f ? D.standingOf(this.standing(f)).label : t.def.aggressive ? 'Hostile' : 'Meh'}`; }
         else { name = t.corpseName(); color = '#b0a080'; info = 'Press E to loot'; }
-      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guildmaster - press E to train', binder: 'Soulbinder - press E to bind', guard: 'Guard', quest: 'Quest giver - press E' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
+      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guild Coach - press E to train', binder: 'Soul Notary - press E to bind', guard: 'Guard', quest: 'Quest giver - press E' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
       else if (t.kind === 'pcorpse') { color = '#ffcc66'; info = 'Your corpse - press E to loot'; }
       else if (t.kind === 'merc') { color = '#70ff70'; info = `Group member - Level ${t.level} ${t.role === 'healer' ? 'Cleric' : 'Warrior'} Mercenary`; }
       else if (t.kind === 'pc') { color = t.grouped ? '#70ff70' : '#9fd8ff'; info = `${t.grouped ? 'Group member - ' : 'Player - '}Level ${t.level} ${RACES[t.race].name} ${CLASSES[t.cls].name}`; }
@@ -537,10 +537,10 @@
     toggleAuto(force) {
       const pl = this.player;
       const on = force != null ? force : !pl.autoAttack;
-      if (on && (!this.target || this.target.kind !== 'mob' || !this.target.alive)) { this.log('You must first select a target for this command!', 'sys'); pl.autoAttack = false; return; }
+      if (on && (!this.target || this.target.kind !== 'mob' || !this.target.alive)) { this.log('You need a target for that. Swinging at the air is not a strategy.', 'sys'); pl.autoAttack = false; return; }
       pl.autoAttack = on;
       if (on) { this.stand(); pl.swing = Math.max(pl.swing, 0.3); }
-      this.log(on ? 'Auto attack is on.' : 'Auto attack is off.', 'sys');
+      this.log(on ? 'Auto-swing engaged. Flail away!' : 'Auto-swing off. Catch your breath.', 'sys');
     }
     facing(t) {
       const pl = this.player, f = pl.forward();
@@ -555,21 +555,21 @@
       if (!t || t.kind !== 'mob' || !t.alive) { pl.autoAttack = false; return; }
       if (pl.swing > 0) return;
       const d = pl.pos.distanceTo(t.pos);
-      if (d > this.meleeReach(t)) { this.throttled('far', 3, 'Your target is too far away, get closer!', 'sys'); return; }
-      if (!this.facing(t)) { this.throttled('face', 3, 'You cannot see your target.', 'sys'); return; }
+      if (d > this.meleeReach(t)) { this.throttled('far', 3, 'Your target is too far away. Your arms are not that long!', 'sys'); return; }
+      if (!this.facing(t)) { this.throttled('face', 3, 'You need to face your target. It is rude to swing behind your back.', 'sys'); return; }
       const w = pl.weapon(), st = pl.stats();
       pl.swing = w.delay * (1 - Math.min(0.25, (st.DEX - 60) / 800 + pl.level / 200));
       this.pAttackAnim = 0.01; this.pAttackKind = null;
       EB.audio.swing();
       const hitChance = U.clamp(0.72 + (pl.level - t.level) * 0.05 + (st.DEX - 75) / 400, 0.3, 0.95);
-      if (Math.random() > hitChance) { this.log(`You try to ${w.verb} ${t.name}, but miss!`, 'miss'); if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this); return; }
+      if (Math.random() > hitChance) { this.log(`You try to ${w.verb} ${t.name}, but whiff!`, 'miss'); if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this); return; }
       const dmg = this.meleeDamage(w, st);
-      this.log(`You ${w.verb} ${t.name} for ${dmg} point${dmg === 1 ? '' : 's'} of damage.`, 'melee');
+      this.log(`You ${w.verb} ${t.name} for ${dmg} damage.`, 'melee');
       EB.audio.hit();
       this.damageMob(t, dmg, pl);
       if (t.alive && (pl.cls === 'warrior' || pl.cls === 'rogue') && pl.level >= 5 && Math.random() < 0.15 + pl.level * 0.01) {
         const d2 = this.meleeDamage(w, st);
-        this.log(`You ${w.verb} ${t.name} for ${d2} points of damage.`, 'melee');
+        this.log(`You ${w.verb} ${t.name} for ${d2} damage.`, 'melee');
         this.damageMob(t, d2, pl);
       }
     }
@@ -601,7 +601,7 @@
       if (this.net && m.net) { this.net.damage(m, dmg, src); if (m === this.target) this.updateTargetWin(); return; } // v6: the server applies damage, hate and kills
       if (dmg > 0 && this.time < (m.wardUntil || 0)) dmg = Math.max(1, Math.round(dmg * (1 - (m.ward || 0))));
       m.hp -= dmg; if (dmg > 0) EB.models.flinch(m.model);
-      if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} has been awakened by ${src === this.player ? 'you' : src.name}.`, 'spell'); }
+      if (dmg > 0 && this.time < (m.mezUntil || 0)) { m.mezUntil = 0; this.log(`${U.cap(m.name)} snaps out of it, thanks to ${src === this.player ? 'you' : src.name}.`, 'spell'); }
       if (src === this.player || (src && src.kind === 'merc')) m.grpDamage += dmg;
       if (m.state !== 'chase' && m.state !== 'flee') m.aggroOn(src, this);
       m.addHate(src, dmg + 1);
@@ -611,8 +611,8 @@
     killMob(m, src) {
       const pl = this.player;
       const byPlayer = m.grpDamage >= m.maxHp * 0.5;
-      if (src === pl) this.log(`You have slain ${m.name}!`, 'melee');
-      else if (pl.pos.distanceTo(m.pos) < 40) this.log(`${U.cap(m.name)} has been slain by ${src.name}!`, 'other');
+      if (src === pl) this.log(`You have defeated ${m.name}! It had it coming.`, 'melee');
+      else if (pl.pos.distanceTo(m.pos) < 40) this.log(`${U.cap(m.name)} has been taken out by ${src.name}!`, 'other');
       m.die(this, src);
       if (byPlayer && pl.alive) {
         const c = conColor(pl.level, m.level);
@@ -622,7 +622,7 @@
           const total = xp * (1 + 0.15 * (grp.length - 1)), sumL = grp.reduce((a, g) => a + g.level, 0);
           xp = Math.floor(total * pl.level / sumL);
           this.gainXP(xp, true);
-        } else if (xp > 0) this.gainXP(xp); else this.log('You gain no experience from that kill.', 'other');
+        } else if (xp > 0) this.gainXP(xp); else this.log('That kill taught you absolutely nothing.', 'other');
         this.questKillHook && this.questKillHook(m);
         for (const [f, d] of this.factionHitsFor(m)) this.adjustFaction(f, d);
       }
@@ -635,22 +635,22 @@
       if (this.net && !this.net.xpOK) return; // v6: experience comes from the server
       if (pl.level >= D.MAX_LEVEL) return;
       pl.xp += n;
-      this.log(party ? 'You gain party experience!!' : 'You have gained experience!', 'xp');
+      this.log(party ? 'You and your party feel smarter. (shared XP)' : 'You feel a little smarter. (XP)', 'xp');
       let dinged = false;
       while (pl.level < D.MAX_LEVEL && pl.xp >= D.xpToNext(pl.level)) {
         pl.xp -= D.xpToNext(pl.level);
         const hpPct = pl.hp / pl.maxHp;
         pl.level++;
         pl.hp = Math.max(pl.hp, Math.ceil(pl.maxHp * hpPct));
-        this.log(`You have gained a level! Welcome to level ${pl.level}!`, 'ding');
+        this.log(`DING! You are now level ${pl.level}. Your mom would be proud.`, 'ding');
         dinged = true;
       }
       if (dinged) {
-        ui.center('DING!', `Welcome to level ${pl.level}!`, 3);
+        ui.center('DING!', `You are now level ${pl.level}. Your mom would be proud.`, 3);
         EB.fx.column(pl, 0xffe070);
         EB.audio.ding();
         const avail = Object.keys(SPELLS).filter((s) => { const L = SPELLS[s].classes[pl.cls]; return L && L <= pl.level && !pl.spells.includes(s); });
-        if (avail.length) this.log(`You feel you could learn something new at your guild. (${avail.map((s) => SPELLS[s].name).join(', ')})`, 'help');
+        if (avail.length) this.log(`Your Guild Coach has new tricks to teach you. (${avail.map((s) => SPELLS[s].name).join(', ')})`, 'help');
         for (const m of this.mobs) m.refreshPlate(this);
         this.updateTargetWin();
         this.save();
@@ -668,22 +668,22 @@
         const hitChance = U.clamp(0.62 + (m.level - t.level) * 0.05 - t.ac / 500, 0.2, 0.95);
         if (Math.random() > hitChance) { this.log(`${U.cap(m.name)} tries to ${m.def.verb} ${t.name}, but misses!`, 'other'); return; }
         dmg = Math.max(1, Math.round(U.randInt(1, m.maxHit) * (1 - Math.min(0.5, t.ac / (t.ac + 150)))));
-        this.log(`${U.cap(m.name)} ${VERB3[m.def.verb] || m.def.verb + 's'} ${t.name} for ${dmg} points of damage.`, 'other');
+        this.log(`${U.cap(m.name)} ${VERB3[m.def.verb] || m.def.verb + 's'} ${t.name} for ${dmg} damage.`, 'other');
       }
       t.hp -= dmg; EB.models.flinch(t.model);
       if (t.hp <= 0) this.mercDie(t, m);
     }
     mobSpell(m, t, sp) {
-      if (Math.random() < 0.1) { if (t === this.player) this.log(`You resist the ${sp.name} spell!`, 'spell'); return; }
+      if (Math.random() < 0.1) { if (t === this.player) this.log(`You shrug off ${sp.name}!`, 'spell'); return; }
       const dmg = U.randInt(sp.dmg[0], sp.dmg[1]);
       EB.fx.bolt(this.castHand(m), t, /frost|glacial/i.test(sp.name) ? 0x9ee8ff : 0xff8040, { size: 0.6, speed: 24 });
       if (t === this.player) {
         if (!this.player.alive) return;
-        this.log(`You are struck by ${sp.name}! You have taken ${dmg} points of non-melee damage.`, 'hitme');
+        this.log(`${sp.name} smacks you for ${dmg} spell damage!`, 'hitme');
         EB.audio.hurt();
         this.damagePlayer(dmg, m);
-        if (this.player.casting && !this.player.casting.skill && Math.random() < 0.35) this.interruptCast('Your spell is interrupted.');
-      } else if (t.kind === 'merc') { this.log(`${t.name} is struck by ${sp.name} for ${dmg} points of damage.`, 'other'); this.mercTakeHit(m, t, dmg); }
+        if (this.player.casting && !this.player.casting.skill && Math.random() < 0.35) this.interruptCast('Ouch! Your spell is interrupted.');
+      } else if (t.kind === 'merc') { this.log(`${t.name} is struck by ${sp.name} for ${dmg} damage.`, 'other'); this.mercTakeHit(m, t, dmg); }
     }
     mobAttackPlayer(m) {
       const pl = this.player;
@@ -692,15 +692,15 @@
       const hitChance = U.clamp(0.62 + (m.level - pl.level) * 0.05 - pl.ac / 500, 0.2, 0.95);
       const dodge = U.clamp((st.AGI - 60) / 600 + pl.buffSum('dodge') / 100 + (pl.cls === 'rogue' ? 0.05 : 0), 0, 0.6);
       const verb = m.def.verb;
-      if (Math.random() > hitChance) { this.log(`${U.cap(m.name)} tries to ${verb} YOU, but misses!`, 'miss'); return; }
-      if (Math.random() < dodge) { this.log(`${U.cap(m.name)} tries to ${verb} YOU, but YOU dodge!`, 'miss'); return; }
+      if (Math.random() > hitChance) { this.log(`${U.cap(m.name)} tries to ${verb} you, but swings at air!`, 'miss'); return; }
+      if (Math.random() < dodge) { this.log(`${U.cap(m.name)} tries to ${verb} you, but you dodge like a pro!`, 'miss'); return; }
       let dmg = U.randInt(1, m.maxHit);
       dmg = Math.max(1, Math.round(dmg * (1 - Math.min(0.5, pl.ac / (pl.ac + 150)))));
       if (pl.sitting) { dmg = Math.ceil(dmg * 1.5); this.stand(); }
-      this.log(`${U.cap(m.name)} ${VERB3[verb] || verb + 's'} YOU for ${dmg} point${dmg === 1 ? '' : 's'} of damage.`, 'hitme');
+      this.log(`${U.cap(m.name)} ${VERB3[verb] || verb + 's'} you for ${dmg} damage.`, 'hitme');
       EB.audio.hurt();
       this.damagePlayer(dmg, m);
-      if (pl.casting && !pl.casting.skill && Math.random() < 0.2) this.interruptCast('Your spell is interrupted.');
+      if (pl.casting && !pl.casting.skill && Math.random() < 0.2) this.interruptCast('Ouch! Your spell is interrupted.');
     }
     damagePlayer(dmg, src) {
       const pl = this.player;
@@ -711,10 +711,10 @@
       const pl = this.player;
       pl.hp = 0; pl.alive = false; pl.autoAttack = false; pl.casting = null; pl.sitting = false; pl.memorizing = null;
       $('castBar').classList.add('hidden');
-      this.log(`You have been slain by ${src ? src.name : 'something'}!`, 'death');
+      this.log(`You have been flattened by ${src ? src.name : 'something'}! Walk it off.`, 'death');
       EB.audio.death();
       const loss = Math.floor(D.xpToNext(pl.level) * 0.08);
-      if (pl.xp > 0 && loss > 0) { pl.xp = Math.max(0, pl.xp - loss); this.log('You have lost experience.', 'death'); }
+      if (pl.xp > 0 && loss > 0) { pl.xp = Math.max(0, pl.xp - loss); this.log('You feel a little less experienced, like waking up from a nap that went too long.', 'death'); }
       const items = pl.inv.filter(Boolean);
       if (items.length || Object.keys(pl.equip).length || pl.coins) {
         const pc = new PlayerCorpse(pl, { zone: this.world.zoneId, x: pl.pos.x, y: pl.pos.y, z: pl.pos.z, coins: pl.coins, items, equip: Object.assign({}, pl.equip) });
@@ -749,7 +749,7 @@
     toggleSit() { if (this.player.sitting) this.stand(); else this.sit(); }
     sit() {
       const pl = this.player;
-      if (pl.casting) this.interruptCast('Your spell is interrupted.');
+      if (pl.casting) this.interruptCast('Ouch! Your spell is interrupted.');
       pl.sitting = true; pl.autoAttack = false;
       this.log('You sit down.', 'sys');
     }
@@ -766,20 +766,20 @@
     useAbility(id) {
       const pl = this.player, sp = SPELLS[id];
       if (!pl.alive) return;
-      if (pl.casting) { this.log('You are already casting a spell!', 'sys'); return; }
+      if (pl.casting) { this.log('One spell at a time, show-off!', 'sys'); return; }
       if (pl.memorizing) { this.log('You are busy memorizing a spell.', 'sys'); return; }
       if (isSpell(id) && !pl.gems.includes(id)) { this.log(`You do not have ${sp.name} memorized. Open your spellbook (K) and memorize it into a spell gem.`, 'sys'); return; }
       const cd = (pl.cooldowns[id] || 0) - this.time;
       if (cd > 0) { this.log(`You can use ${sp.name} again in ${Math.ceil(cd)} seconds.`, 'sys'); return; }
-      if (sp.mana > pl.mana) { this.log('Insufficient Mana to cast this spell!', 'sys'); return; }
+      if (sp.mana > pl.mana) { this.log('Not enough mana. Try sitting down and thinking about your choices.', 'sys'); return; }
       const t = this.target;
       const needsTarget = ['nuke', 'root', 'skill', 'dot', 'snare', 'slow', 'mez', 'stun'].includes(sp.kind);
       if (needsTarget) {
-        if (!t || t.kind !== 'mob' || !t.alive) { this.log('You must first select a target for this spell!', 'sys'); return; }
+        if (!t || t.kind !== 'mob' || !t.alive) { this.log('That spell needs a target. Pointing at the sky does not count.', 'sys'); return; }
         const melee = sp.kind === 'skill' && !sp.range;
         const range = melee ? this.meleeReach(t) : sp.range || 32;
-        if (pl.pos.distanceTo(t.pos) > range) { this.log(melee ? 'Your target is too far away, get closer!' : 'Your target is out of range, get closer!', 'sys'); return; }
-        if (!melee && !this.lineOfSight(pl, t)) { this.log('You cannot see your target.', 'sys'); return; }
+        if (pl.pos.distanceTo(t.pos) > range) { this.log(melee ? 'Your target is too far away. Your arms are not that long!' : 'Your target is out of range. Scoot closer!', 'sys'); return; }
+        if (!melee && !this.lineOfSight(pl, t)) { this.log('Your target is out of sight. Walls are rude like that.', 'sys'); return; }
       }
       let ft = needsTarget ? t : null;
       if (sp.friendly) { ft = t && (t.kind === 'merc' || t.kind === 'pc') && !t.dead && t.alive && t.pos.distanceTo(pl.pos) < 32 ? t : pl; }
@@ -787,7 +787,7 @@
       this.stand();
       if (sp.cast > 0) {
         pl.casting = { id, t: 0, total: sp.cast, target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
-        if (!sp.skill) { this.log(`You begin casting ${sp.name}.`, 'spell'); EB.audio.cast(); }
+        if (!sp.skill) { this.log(`You start waving your hands around: ${sp.name}.`, 'spell'); EB.audio.cast(); }
         else this.log(`You begin to ${sp.name.toLowerCase()}.`, 'sys');
         $('castBar').classList.remove('hidden'); $('castName').textContent = sp.name; $('castFill').style.width = '0%';
       } else this.applyAbility(id, ft);
@@ -801,7 +801,7 @@
     updateCasting(dt, moving) {
       const pl = this.player, c = pl.casting;
       if (!c) return;
-      if (moving || Math.hypot(pl.pos.x - c.startPos.x, pl.pos.z - c.startPos.z) > 0.25) { this.interruptCast(c.skill ? 'You stop what you are doing.' : 'Your spell is interrupted.'); return; }
+      if (moving || Math.hypot(pl.pos.x - c.startPos.x, pl.pos.z - c.startPos.z) > 0.25) { this.interruptCast(c.skill ? 'You stop what you are doing.' : 'Ouch! Your spell is interrupted.'); return; }
       c.t += dt;
       $('castFill').style.width = Math.min(100, (c.t / c.total) * 100) + '%';
       if (c.t >= c.total) {
@@ -810,7 +810,7 @@
         if (!sp.skill) {
           const fz = calc.fizzle(pl.level, pl.castStat());
           if (Math.random() * 100 < fz) {
-            this.log('Your spell fizzles!', 'spell'); EB.audio.fizzle();
+            this.log('Your spell fizzles like a wet firecracker!', 'spell'); EB.audio.fizzle();
             pl.mana -= Math.ceil(sp.mana / 2); pl.cooldowns[c.id] = this.time + 1;
             return;
           }
@@ -850,12 +850,12 @@
           break;
         }
         case 'nuke': {
-          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           let dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
           if (sp.undead && t.def.faction === 'undead') { dmg = Math.floor(dmg * sp.undead); this.log(`${U.cap(t.name)} is seared by holy fire!`, 'spell'); }
           const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
-          this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
+          this.log(`Your spell hits ${t.name} for ${dmg} damage.`, 'nonmelee');
           EB.audio.spell();
           this.spellFx(t, sp.school);
           this.damageMob(t, dmg, pl);
@@ -863,7 +863,7 @@
           break;
         }
         case 'dot': {
-          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           const per = U.randInt(sp.tick[0], sp.tick[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
           t.dots = (t.dots || []).filter((d) => d.id !== id);
           t.dots.push({ id, name: sp.name, src: pl, dmg: per, left: sp.dur, next: 3, school: sp.school });
@@ -873,7 +873,7 @@
           break;
         }
         case 'snare': case 'slow': {
-          if (Math.random() < 0.08 + Math.max(0, t.level - L) * 0.05) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (Math.random() < 0.08 + Math.max(0, t.level - L) * 0.05) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           if (sp.kind === 'snare') { t.snaredUntil = this.time + sp.dur; this.log(`${U.cap(t.name)} is ensnared.`, 'spell'); }
           else { t.slowedUntil = this.time + sp.dur; this.log(`${U.cap(t.name)} yawns. (slowed)`, 'spell'); }
           this.spellFx(t, 'magic'); EB.audio.spell();
@@ -881,19 +881,19 @@
           break;
         }
         case 'mez': {
-          if (t.def.named || t.level > sp.maxLvl) { this.log(`Your target is immune to changes in its attack speed... er, too powerful to be mesmerized.`, 'spell'); pl.cooldowns[id] = this.time + 1; break; }
-          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} resisted your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
+          if (t.def.named || t.level > sp.maxLvl) { this.log(`Your target is too powerful to be mesmer-eyed. It just stares back. Awkward.`, 'spell'); pl.cooldowns[id] = this.time + 1; break; }
+          if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this, true);
           t.addHate(pl, 20); t.casting = null;
           t.mezUntil = this.time + sp.dur;
-          this.log(`${U.cap(t.name)} has been mesmerized.`, 'spell');
+          this.log(`${U.cap(t.name)} is mesmer-eyed and staring into space.`, 'spell');
           this.spellFx(t, 'mind', 'mez'); EB.audio.spell();
-          if (this.target === t && pl.autoAttack) { pl.autoAttack = false; this.log('Auto attack is off (your target is mesmerized).', 'sys'); }
+          if (this.target === t && pl.autoAttack) { pl.autoAttack = false; this.log('Auto-swing off (your target is busy staring into space).', 'sys'); }
           break;
         }
         case 'stun': {
           const dmg = U.randInt(sp.dmg[0], sp.dmg[1]);
-          this.log(`You hit ${t.name} for ${dmg} points of non-melee damage.`, 'nonmelee');
+          this.log(`Your spell hits ${t.name} for ${dmg} damage.`, 'nonmelee');
           this.damageMob(t, dmg, pl);
           if (t.alive && !t.def.named) { t.stunUntil = this.time + sp.dur; t.casting = null; this.log(`${U.cap(t.name)} is stunned.`, 'spell'); }
           else if (t.alive) this.log(`${U.cap(t.name)} is unaffected by the stun.`, 'spell');
@@ -915,7 +915,7 @@
           break;
         }
         case 'gate': {
-          this.log('You feel a pull to your bind point.', 'spell');
+          this.log('You mash the Panic Button. Whoosh, back to your bind point!', 'spell');
           for (const m of this.mobs) if (m.alive && m.hate.has(pl)) m.goHome();
           this.toBind();
           pl.autoAttack = false; EB.audio.spell();
@@ -923,7 +923,7 @@
         }
         case 'root': {
           t.rootedUntil = this.time + sp.dur;
-          this.log(`${U.cap(t.name)}'s feet adhere to the ground.`, 'spell');
+          this.log(`${U.cap(t.name)} is stuck in place like gum on a boot.`, 'spell');
           this.damageMob(t, 0, pl); EB.audio.spell();
           break;
         }
@@ -932,25 +932,25 @@
             if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this);
             let top = 0; for (const [, v] of t.hate) top = Math.max(top, v);
             t.hate.set(pl, top + 50 + L * 5); t.target = pl; t.hateT = 1.5;
-            this.log(`You taunt ${t.name} to attack you!`, 'melee'); this.pAttackAnim = 0.01; this.pAttackKind = 'bash';
+            this.log(`You say something unforgivable about ${t.name}'s mother. It is now very focused on you! (taunt)`, 'melee'); this.pAttackAnim = 0.01; this.pAttackKind = 'bash';
             if (t.def.named && Math.random() < 0.25) this.log(`${U.cap(t.name)} is not impressed by your taunt.`, 'sys');
             break;
           }
           if (sp.backstab) {
             const w = pl.weapon();
-            if (w.verb !== 'pierce') { this.log('You need a piercing weapon to backstab!', 'sys'); pl.cooldowns[id] = this.time + 1; return; }
+            if (w.verb !== 'pierce') { this.log('You need something pointy to backpoke with!', 'sys'); pl.cooldowns[id] = this.time + 1; return; }
             const mf = new THREE.Vector3(Math.sin(t.yaw), 0, Math.cos(t.yaw));
             const toP = new THREE.Vector3(pl.pos.x - t.pos.x, 0, pl.pos.z - t.pos.z).normalize();
-            if (mf.dot(toP) > -0.25) { this.log('You must be behind your target to backstab!', 'sys'); pl.cooldowns[id] = this.time + 1; return; }
+            if (mf.dot(toP) > -0.25) { this.log('Get behind your target first. Backpokes only work from the back.', 'sys'); pl.cooldowns[id] = this.time + 1; return; }
             const dmg = Math.floor((w.dmg * (2 + L / 3)) + U.randInt(1, 6 + L * 2));
-            this.log(`You backstab ${t.name} for ${dmg} points of damage.`, 'melee');
+            this.log(`You rudely backpoke ${t.name} for ${dmg} damage.`, 'melee');
             EB.audio.hit(); this.pAttackAnim = 0.01; this.pAttackKind = 'pierce';
             this.damageMob(t, dmg, pl);
           } else {
-            if (Math.random() < (sp.archery ? 0.2 : 0.15)) { this.log(`You try to ${sp.verb} ${t.name}, but miss!`, 'miss'); this.damageMob(t, 0, pl); break; }
+            if (Math.random() < (sp.archery ? 0.2 : 0.15)) { this.log(`You try to ${sp.verb} ${t.name}, but whiff!`, 'miss'); this.damageMob(t, 0, pl); break; }
             if (sp.archery) this.arrowFx(t);
             const dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
-            this.log(`You ${sp.verb} ${t.name} for ${dmg} points of damage.`, 'melee');
+            this.log(`You ${sp.verb} ${t.name} for ${dmg} damage.`, 'melee');
             EB.audio.hit(); this.pAttackAnim = 0.01; this.pAttackKind = sp.archery ? 'bow' : sp.verb === 'kick' ? 'kick' : sp.verb === 'bash' ? (this.pmodel.parts.shield ? 'bash' : 'crush') : null;
             this.damageMob(t, dmg, pl);
           }
@@ -1016,26 +1016,26 @@
       if (t.kind === 'mob') return this.openLoot(t);
       if (t.npcKind === 'merchant' && this.priceMult(t) == null) {
         const st = D.standingOf(this.standing(this.npcFaction(t)));
-        this.log(`${t.name} ${st.con}. ${t.name} says, 'I will not trade with the likes of you, ${pl.name}! Begone!'`, 'say');
+        this.log(`${t.name} ${st.con}. ${t.name} says: "I will not trade with the likes of you, ${pl.name}! Begone!"`, 'say');
         this.log(`(Your standing with ${D.FACTIONS[this.npcFaction(t)].name} is too low: ${st.label}.)`, 'faction');
         return;
       }
-      if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says, 'Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}'`, 'say'); this.openWin('merchantWin'); }
+      if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says: "Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}"`, 'say'); this.openWin('merchantWin'); }
       else if (t.npcKind === 'trainer') this.openWin('trainerWin');
       else if (t.npcKind === 'liaison') this.openWin('mercWin');
       else if ((t.npcKind === 'guard' || t.npcKind === 'quest') && this.questFor(t)) this.openDialog(t);
       else if (t.npcKind === 'quest') this.hail();
       else if (t.npcKind === 'binder') {
         pl.bind = { zone: this.world.zoneId, x: pl.pos.x, y: pl.pos.y, z: pl.pos.z };
-        this.log(`${t.name} says, 'Binding your soul. You will return here when you die.'`, 'say');
-        this.log('You feel yourself bind to the area.', 'spell'); EB.audio.heal(); this.save();
+        this.log(`${t.name} says: "Soul notarized! When you die, you will pop back up right here. Sign here, and here."`, 'say');
+        this.log('Your soul is now officially registered at this address.', 'spell'); EB.audio.heal(); this.save();
       } else if (t.npcKind === 'guard') this.hail();
     }
     openLoot(c) {
       const pl = this.player;
       if (this.net && c.net) { this.net.requestLoot(c); return; } // v6: the server holds the loot
       this.lootCorpse = c;
-      if (c.loot.coins > 0) { pl.coins += c.loot.coins; this.log(`You receive ${U.coinStr(c.loot.coins)} from ${c.corpseName()}.`, 'loot'); c.loot.coins = 0; EB.audio.loot(); }
+      if (c.loot.coins > 0) { pl.coins += c.loot.coins; this.log(`You pocket ${U.coinStr(c.loot.coins)} from ${c.corpseName()}.`, 'loot'); c.loot.coins = 0; EB.audio.loot(); }
       if (!c.loot.items.length) { this.log(`You find nothing else on ${c.corpseName()}.`, 'sys'); this.lootCorpse = null; this.removeEntity(c); return; }
       $('lootTitle').firstChild.textContent = `Loot: ${c.corpseName()} `;
       this.openWin('lootWin');
@@ -1058,7 +1058,7 @@
       if (this.net && c.net) return this.net.takeLoot(c, i);
       if (!this.addItem(it.id, it.count)) return false;
       const I = ITEMS[it.id];
-      this.log(`--You have looted ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c.corpseName()}.--`, I.rare ? 'ding' : 'loot');
+      this.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c.corpseName()}!`, I.rare ? 'ding' : 'loot');
       EB.audio.loot();
       c.loot.items.splice(i, 1);
       ui.hideTip();
@@ -1197,7 +1197,7 @@
     trainCost(L) { return L <= 1 ? 0 : L * L * 12; }
     renderTrainer() {
       const pl = this.player, list = $('trainList');
-      list.innerHTML = `<div class="sub">Guildmaster Aldric teaches ${CLASSES[pl.cls].name}s. Your coin: ${U.coinStr(pl.coins)}</div>`;
+      list.innerHTML = `<div class="sub">Guild Coach Aldric teaches ${CLASSES[pl.cls].name}s. Your coin: ${U.coinStr(pl.coins)}</div>`;
       const ids = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[pl.cls]).sort((a, b) => SPELLS[a].classes[pl.cls] - SPELLS[b].classes[pl.cls]);
       for (const id of ids) {
         const sp = SPELLS[id], L = sp.classes[pl.cls];
@@ -1213,7 +1213,7 @@
       const pl = this.player, sp = SPELLS[id], c = this.trainCost(sp.classes[pl.cls]);
       if (pl.coins < c) return;
       pl.coins -= c; pl.spells.push(id);
-      this.log(isSpell(id) ? `You have finished scribing ${sp.name} into your spellbook.` : `You have learned ${sp.name}!`, 'spell');
+      this.log(isSpell(id) ? `You copy ${sp.name} into your spellbook in your neatest handwriting.` : `You have learned ${sp.name}!`, 'spell');
       if (isSpell(id)) { const g = pl.gems.indexOf(null); if (g >= 0) { pl.gems[g] = id; this.log(`${sp.name} has been memorized into spell gem ${g + 1}.`, 'spell'); } else this.log('Your spell gems are full. Open your spellbook (K) to memorize it.', 'help'); }
       const hs = pl.hotbar.indexOf(null);
       if (hs >= 0) pl.hotbar[hs] = id; else this.log('Your hotbar is full. Use the spellbook (K) to rearrange it.', 'sys');
@@ -1266,7 +1266,7 @@
       this.mercs.push(m);
       if (!silent) {
         this.log(`${m.name} has joined your group.`, 'loot');
-        if (!m.isPet) setTimeout(() => this.log(`${m.name} says, '${role === 'healer' ? `Lead on, ${pl.name}. I'll keep you breathing.` : `Aye, ${pl.name}! Show me who needs a beating.`}'`, 'say'), 500);
+        if (!m.isPet) setTimeout(() => this.log(`${m.name} says: "${role === 'healer' ? `Lead on, ${pl.name}. I'll keep you breathing.` : `Aye, ${pl.name}! Show me who needs a beating.`}"`, 'say'), 500);
       }
       this.renderGroup();
       return m;
@@ -1276,7 +1276,7 @@
       if (old) { this.log(`${old.name} crumbles to dust.`, 'spell'); this.removeMercModel(old); }
       const pet = this.addMerc('pet', { petLvl }, true);
       this.log(`You summon ${pet.name}, a level ${petLvl} servant, from the grave.`, 'spell');
-      this.log(`${pet.name} says, 'Master, I await your command.'`, 'say');
+      this.log(`${pet.name} says: "Reporting for duty, boss. Bones and all."`, 'say');
       return pet;
     }
     hireMerc(role) {
@@ -1284,7 +1284,7 @@
       if (ex) { this.log(ex.dead ? `${ex.name} is dead. Revive them instead.` : 'That mercenary is already in your group.', 'sys'); return; }
       if (pl.coins < c) { this.log("You can't afford that mercenary.", 'sys'); return; }
       pl.coins -= c;
-      this.log(`You pay ${U.coinStr(c)} to Liaison Brenna.`, 'loot');
+      this.log(`You pay ${U.coinStr(c)} to Recruiter Brenna.`, 'loot');
       this.addMerc(role);
       this.renderMercWin(); this.save();
     }
@@ -1299,7 +1299,7 @@
       m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.2, pl.pos.z + 1.2);
       this.scene.add(m.model.group); this.scene.add(m.plate); m.syncModel();
       this.log(`You pay ${U.coinStr(c)}. ${m.name} has been revived!`, 'loot');
-      this.log(`${m.name} says, 'Thank you, ${pl.name}. I won't fall so easily again.'`, 'say');
+      this.log(`${m.name} says: "Thank you, ${pl.name}. I won't fall so easily again."`, 'say');
       EB.audio.heal(); this.renderGroup(); if (this.windows.has('mercWin')) this.renderMercWin(); this.save();
     }
     removeMercModel(m) {
@@ -1317,7 +1317,7 @@
     }
     mercDie(m, killer) {
       m.hp = 0; m.casting = null;
-      this.log(`${m.name} has been slain by ${killer ? killer.name : 'something'}!`, 'death');
+      this.log(`${m.name} has been taken out by ${killer ? killer.name : 'something'}!`, 'death');
       for (const mob of this.mobs) mob.hate.delete(m);
       if (m.isPet) { m.dead = true; this.removeMercModel(m); this.save(); return; }
       m.dead = true;
@@ -1422,7 +1422,7 @@
       if (old) this.addItem(old.id, 1, true);
       m.hp = Math.ceil(m.maxHp * hpPct); m.mana = Math.min(m.mana, m.maxMana);
       this.log(`You give ${I.name} to ${m.name}.${old ? ` ${m.name} hands back the ${ITEMS[old.id].name}.` : ''}`, 'loot');
-      this.log(`${m.name} says, 'My thanks, ${pl.name}. This will serve me well.'`, 'say');
+      this.log(`${m.name} says: "My thanks, ${pl.name}. This will serve me well."`, 'say');
       EB.audio.loot(); ui.hideTip(); this.renderMercCfg(); if (this.windows.has('invWin')) this.renderInv(); this.save();
     }
     takeFromMerc(m, sl) {
@@ -1471,7 +1471,7 @@
       }
       btn('Close', () => this.closeWin('dialogWin'));
       $('dlgText').innerHTML = html;
-      this.log(`${npc.name} says, '${said}'`, 'say');
+      this.log(`${npc.name} says: "${said}"`, 'say');
       this.openWin('dialogWin');
     }
     acceptQuest(id) {
@@ -1486,7 +1486,7 @@
       for (const [it, n] of this.questNeeds(id)) this.removeItems(it, n);
       if (q.chain) {
         const si = this.questStep(id), step = q.steps[si];
-        this.log(`${npc.name} says, '${step.done}'`, 'say');
+        this.log(`${npc.name} says: "${step.done}"`, 'say');
         if (si < q.steps.length - 1) {
           if (step.give) { this.addItem(step.give, 1, true); this.log(`You receive ${ITEMS[step.give].name}.`, 'loot'); }
           this.questSteps[id] = si + 1;
@@ -1495,7 +1495,7 @@
           EB.audio.ding(); this.closeWin('dialogWin'); this.renderQuests(); this.save();
           return;
         }
-      } else this.log(`${npc.name} says, '${q.done}'`, 'say');
+      } else this.log(`${npc.name} says: "${q.done}"`, 'say');
       this.quests[id] = 'done';
       pl.coins += q.coins; this.log(`You receive ${U.coinStr(q.coins)}.`, 'loot');
       if (q.reward) { this.addItem(q.reward, q.rewardCount || 1, true); this.log(`You receive ${q.rewardCount > 1 ? q.rewardCount + 'x ' : 'a '}${ITEMS[q.reward].name}.`, ITEMS[q.reward].rare ? 'ding' : 'loot'); }
@@ -1558,7 +1558,7 @@
     memorize(id, gem, instant) {
       const pl = this.player;
       if (!isSpell(id)) { this.log('Only spells can be memorized. Place abilities on your hotbar instead.', 'sys'); return; }
-      if (!pl.spells.includes(id)) { this.log('You have not scribed that spell.', 'sys'); return; }
+      if (!pl.spells.includes(id)) { this.log('You have not learned that spell yet.', 'sys'); return; }
       if (pl.casting) { this.log('You cannot memorize while casting.', 'sys'); return; }
       if (!pl.alive) return;
       for (let i = 0; i < 8; i++) if (pl.gems[i] === id) pl.gems[i] = null;
@@ -1566,7 +1566,7 @@
       pl.gems[gem] = null;
       this.sit();
       pl.memorizing = { id, gem, t: 0, total: this.memTime(id) };
-      this.log(`Beginning to memorize ${SPELLS[id].name}...`, 'spell');
+      this.log(`Cramming ${SPELLS[id].name} into your brain...`, 'spell');
       $('castBar').classList.remove('hidden'); $('castName').textContent = `Memorizing ${SPELLS[id].name}`; $('castFill').style.width = '0%';
       this.renderGems(); this.rebuildHotbar();
       if (this.windows.has('bookWin')) this.renderBook();
@@ -1578,14 +1578,14 @@
       $('castFill').style.width = Math.min(100, (m.t / m.total) * 100) + '%';
       if (m.t >= m.total) {
         pl.memorizing = null; pl.gems[m.gem] = m.id; $('castBar').classList.add('hidden');
-        this.log(`You have finished memorizing ${SPELLS[m.id].name}.`, 'spell'); EB.audio.click();
+        this.log(`You have finished memorizing ${SPELLS[m.id].name}. Pop quiz passed!`, 'spell'); EB.audio.click();
         this.renderGems(); this.rebuildHotbar(); if (this.windows.has('bookWin')) this.renderBook(); this.save();
       }
     }
     interruptMemorize() {
       const pl = this.player; if (!pl.memorizing) return;
       pl.memorizing = null; $('castBar').classList.add('hidden');
-      this.log('Your memorization was interrupted.', 'spell'); this.renderGems();
+      this.log('Your study session was interrupted. Now where were you?', 'spell'); this.renderGems();
     }
     assignHotbar(slot, id) {
       const pl = this.player;
@@ -1709,12 +1709,12 @@
     command(v) {
       const pl = this.player;
       if (this.net && this.net.command(v)) return; // v6: chat, /who, groups and admin commands go to the server
-      if (v[0] !== '/') { this.log(`You say, '${v}'`, 'say'); return; }
+      if (v[0] !== '/') { this.log(`You say: "${v}"`, 'say'); return; }
       const cmd = v.slice(1).toLowerCase().split(/\s+/)[0];
       switch (cmd) {
         case 'save': this.save(true); break;
-        case 'loc': this.log(`Your Location is ${pl.pos.x.toFixed(1)}, ${pl.pos.y.toFixed(1)}, ${pl.pos.z.toFixed(1)}`, 'sys'); break;
-        case 'who': this.log('Players on Everblock:', 'sys'); this.mercs.forEach((m) => this.log(`[${m.level} ${m.isPet ? 'Pet' : m.role === 'healer' ? 'Cleric' : 'Warrior'}] ${m.name} (${m.isPet ? 'Pet' : 'Mercenary'})${m.dead ? ' - DEAD' : ''} - in your group`, 'sys')); this.log(`[${pl.level} ${CLASSES[pl.cls].name}] ${pl.name}${pl.title ? `, ${pl.title}` : ''} (${RACES[pl.race].name}) ZONE: ${this.lastZone}`, 'sys'); this.log('There is 1 player in Everblock.', 'sys'); break;
+        case 'loc': this.log(`You are standing at ${pl.pos.x.toFixed(1)}, ${pl.pos.y.toFixed(1)}, ${pl.pos.z.toFixed(1)} (give or take a block)`, 'sys'); break;
+        case 'who': this.log('Adventurers loitering in Everblock:', 'sys'); this.mercs.forEach((m) => this.log(`Lv${m.level} ${m.isPet ? 'Pet' : m.role === 'healer' ? 'Cleric' : 'Warrior'} ${m.name} (${m.isPet ? 'Pet' : 'Mercenary'})${m.dead ? ' - DEAD' : ''} - in your group`, 'sys')); this.log(`Lv${pl.level} ${CLASSES[pl.cls].name} ${pl.name}${pl.title ? `, ${pl.title}` : ''} (${RACES[pl.race].name}) - hanging around ${this.lastZone}`, 'sys'); this.log('1 adventurer is loitering in Everblock.', 'sys'); break;
         case 'played': this.log(`You have played ${Math.floor(pl.played / 3600)}h ${Math.floor(pl.played / 60) % 60}m.`, 'sys'); break;
         case 'time': { const h = Math.floor(this.dayT * 24); this.log(`It is ${((h + 11) % 12) + 1}:00 ${h < 12 ? 'AM' : 'PM'} in Everblock.`, 'sys'); break; }
         case 'corpse': this.otherCorpses.forEach((c) => this.log(`You have a corpse in ${EB.WORLD.ZONES[c.zone || 'everblock'].name}.`, 'sys')); if (!this.pcorpses.length && !this.otherCorpses.length) this.log('You have no corpses.', 'sys'); else this.pcorpses.forEach((c) => this.log(`Your corpse lies at ${c.pos.x.toFixed(0)}, ${c.pos.y.toFixed(0)}, ${c.pos.z.toFixed(0)} (${c.pos.distanceTo(pl.pos).toFixed(0)} away).`, 'sys')); break;
@@ -1739,7 +1739,7 @@
           EB.phone.source = 'command'; EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}. (/phone status shows touch detection details)`, 'sys'); break;
         }
         case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /faction /pet attack|backoff|follow|guard|sit|window /dismiss /zone /sit /stand /music /book /lights /gfx /phone. Press ? for key bindings.', 'help'); break;
-        default: this.log('That is not a valid command. Try /help.', 'sys');
+        default: this.log('Huh? That is not a command. Try /help.', 'sys');
       }
     }
 
@@ -1748,20 +1748,20 @@
     petCommand(cmd) {
       const pet = this.pet(), t = this.target;
       if (!pet) { this.log('You do not have a pet.', 'sys'); return; }
-      const say = (s) => this.log(`${pet.name} says, '${s}'`, 'say');
+      const say = (s) => this.log(`${pet.name} says: "${s}"`, 'say');
       switch (cmd) {
         case 'attack':
           if (!t || t.kind !== 'mob' || !t.alive) { this.log('You must first target something for your pet to attack.', 'sys'); return; }
           if (t.pos.distanceTo(pet.pos) > 60) { this.log(`${t.name} is too far away for your pet.`, 'sys'); return; }
           pet.petTarget = t; pet.backoffUntil = 0; if (pet.petMode === 'sit') pet.petMode = 'follow';
-          say(`Attacking ${t.name}, Master.`); break;
+          say(`On it, boss! Going after ${t.name}.`); break;
         case 'backoff':
           pet.petTarget = null; pet.backoffUntil = this.time + 6;
           for (const m of this.mobs) if (m.target === pet && m.hate.has(this.player)) m.target = this.player;
-          say('Backing off, Master.'); break;
-        case 'follow': pet.petMode = 'follow'; pet.guardPos = null; say('Following you, Master.'); break;
-        case 'guard': pet.petMode = 'guard'; pet.guardPos = pet.pos.clone(); pet.petTarget = null; say('Guarding with my life... oh splendid one.'); break;
-        case 'sit': pet.petMode = pet.petMode === 'sit' ? 'follow' : 'sit'; pet.petTarget = null; say(pet.petMode === 'sit' ? 'Changing position, Master. (sitting)' : 'Changing position, Master. (standing)'); break;
+          say('Fine, fine. Backing off.'); break;
+        case 'follow': pet.petMode = 'follow'; pet.guardPos = null; say('Right behind you, boss. Like, RIGHT behind you.'); break;
+        case 'guard': pet.petMode = 'guard'; pet.guardPos = pet.pos.clone(); pet.petTarget = null; say('Guarding this exact spot. Nobody touches it.'); break;
+        case 'sit': pet.petMode = pet.petMode === 'sit' ? 'follow' : 'sit'; pet.petTarget = null; say(pet.petMode === 'sit' ? 'Taking a load off, boss. (sitting)' : 'Back on my feet, boss. (standing)'); break;
         default: this.log('Pet commands: /pet attack, backoff, follow, guard, sit, window.', 'sys'); return;
       }
       this.player.petMode = pet.petMode;
@@ -1890,7 +1890,7 @@
           d.next -= dt;
           if (d.next > 0) continue;
           d.next += 3; d.left -= 3;
-          if (d.src === this.player && this.player.pos.distanceTo(m.pos) < 60) this.log(`${U.cap(m.name)} has taken ${d.dmg} damage from your ${d.name}.`, 'nonmelee');
+          if (d.src === this.player && this.player.pos.distanceTo(m.pos) < 60) this.log(`${U.cap(m.name)} is still suffering from your ${d.name} (${d.dmg} damage).`, 'nonmelee');
           this.damageMob(m, d.dmg, d.src);
           if (!m.alive) break;
           if (d.left <= 0) m.dots.splice(m.dots.indexOf(d), 1);
@@ -2022,7 +2022,7 @@
       for (const b of pl.buffs) b.left -= dt;
       for (const m of this.mercs) { for (const b of m.buffs) b.left -= dt; if (m.buffs.some((b) => b.left <= 0)) { m.buffs = m.buffs.filter((b) => b.left > 0); m.hp = Math.min(m.hp, m.maxHp); } }
       const expired = pl.buffs.filter((b) => b.left <= 0);
-      if (expired.length) { for (const b of expired) this.log(`Your ${b.name} spell has worn off.`, 'spell'); pl.buffs = pl.buffs.filter((b) => b.left > 0); pl.hp = Math.min(pl.hp, pl.maxHp); }
+      if (expired.length) { for (const b of expired) this.log(`Your ${b.name} wore off. Sad trombone.`, 'spell'); pl.buffs = pl.buffs.filter((b) => b.left > 0); pl.hp = Math.min(pl.hp, pl.maxHp); }
       // spawns & entities
       this.spawnT -= dt;
       if (this.spawnT <= 0) { this.spawnT = 1; this.updateSpawns(false); }
@@ -2060,7 +2060,7 @@
         this.updateLights();
         EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.world.zoneId === 'desert' ? (this.lastZone === 'Tomb of Ankhet-Ra' ? 'tomb' : 'desert') : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
         const z = this.world.zoneAt(pl.pos.x, pl.pos.y, pl.pos.z);
-        if (z !== this.lastZone) { if (this.lastZone) { this.log(`You have entered ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
+        if (z !== this.lastZone) { if (this.lastZone) { this.log(`You wander into ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
       }
       this.saveT -= dt;
       if (this.saveT <= 0) { this.saveT = 30; this.save(); }

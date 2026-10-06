@@ -609,7 +609,7 @@
       this.fill(O.x + 9, g + 4, O.z + 2, O.x + 14, g + 4, O.z + 6, B.WOOL);
       for (const [x, z] of [[O.x - 7, O.z + 2], [O.x + 7, O.z + 2], [O.x - 7, O.z - 1], [O.x + 7, O.z - 1]]) this.sandPost(x, g + 1, z);
       const y = g + 1, T = { color: 0xd8c8a0 };
-      this.npcs.push({ kind: 'binder', name: 'Sunpriestess Nefa', x: temple.x, y, z: temple.z, color: 0xe8d8a0, sub: '<Soulbinder>', turban: 0xe8e0c8 });
+      this.npcs.push({ kind: 'binder', name: 'Sunpriestess Nefa', x: temple.x, y, z: temple.z, color: 0xe8d8a0, sub: '<Soul Notary>', turban: 0xe8e0c8 });
       this.npcs.push({ kind: 'merchant', name: 'Trader Hamid', x: shop.x, y, z: shop.z, color: 0x2a6a8a, stock: 'desert', faction: 'sunward', turban: 0xe0e0e0 });
       this.npcs.push({ kind: 'merchant', name: 'Fence Jabari', x: O.x + 11.5, y, z: O.z + 4.5, color: 0x4a3a5a, stock: 'fence', faction: 'bandit', sub: '<Sandreaver Fence>', turban: 0x2a2a3a, veil: 0x2a2a3a });
       this.npcs.push({ kind: 'quest', name: 'Caravan Master Idris', x: O.x - 4.5, y, z: O.z + 4.5, color: 0x9a5a2a, sub: '<Caravan Master>', turban: 0xc04030 });
@@ -855,9 +855,9 @@
       for (const [x, z] of [[cx - 5, cz - 5], [cx + 5, cz - 5], [cx - 5, cz + 5], [cx + 5, cz + 5], [cx - 12, cz - 3], [cx + 12, cz + 3], [cx + 3, cz - 14], [cx - 3, cz + 14]]) this.lanternPost(x, g + 1, z);
       const y = g + 1;
       this.npcs.push({ kind: 'merchant', name: 'Merchant Tiloria', x: shop.x, y, z: shop.z, color: 0x7a4a9a });
-      this.npcs.push({ kind: 'trainer', name: 'Guildmaster Aldric', x: guild.x, y, z: guild.z, color: 0x9a2a2a });
-      this.npcs.push({ kind: 'liaison', name: 'Mercenary Liaison Brenna', x: cx - 8.5, y, z: cz + 3.5, color: 0x2a7a4a });
-      this.npcs.push({ kind: 'binder', name: 'Soulbinder Kerra', x: temple.x, y, z: temple.z, color: 0xdadaf0 });
+      this.npcs.push({ kind: 'trainer', name: 'Guild Coach Aldric', x: guild.x, y, z: guild.z, color: 0x9a2a2a });
+      this.npcs.push({ kind: 'liaison', name: 'Sellsword Recruiter Brenna', x: cx - 8.5, y, z: cz + 3.5, color: 0x2a7a4a });
+      this.npcs.push({ kind: 'binder', name: 'Soul-Notary Kerra', x: temple.x, y, z: temple.z, color: 0xdadaf0 });
       const gd = [[cx - 2.5, cz - hf + 2.5], [cx + 3.5, cz - hf + 2.5], [cx - 2.5, cz + hf - 1.5], [cx + 3.5, cz + hf - 1.5],
         [cx - hf + 2.5, cz - 2.5], [cx - hf + 2.5, cz + 3.5], [cx + hf - 1.5, cz - 2.5], [cx + hf - 1.5, cz + 3.5]];
       const gnames = ['Guard Brightblade', 'Guard Halric', 'Guard Mossen', 'Guard Tannis', 'Guard Rolf', 'Guard Pellar', 'Guard Ostin', 'Guard Veyla'];
@@ -902,7 +902,7 @@
         const y = this.topY(x, z) + 1;
         this.rawSet(x, y, z, B.LOG); this.rawSet(x, y + 1, z, B.LOG);
       }
-      this.zones.push({ name: 'Darkpaw Gnoll Camp', x0: C.x - 12, x1: C.x + 12, z0: C.z - 12, z1: C.z + 12 });
+      this.zones.push({ name: 'Darkpaws Gnoll Camp', x0: C.x - 12, x1: C.x + 12, z0: C.z - 12, z1: C.z + 12 });
     }
     buildDungeon() {
       const Dg = LAYOUT.dungeon, g = Dg.g;

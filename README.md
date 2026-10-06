@@ -8,11 +8,19 @@ A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999
 
 Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Solo progress saves to localStorage. Multiplayer needs an Everblock server ([SERVER.md](SERVER.md)).
 
+## New in v6b: the Great Renaming
+Everblock is a love letter to 1999-era MMOs, but it should have its own names. Every spell, item, mob, NPC title, faction tier and chat message that was copied word for word from EverQuest now has an affectionate parody. *Lay on Hands* is now **Aggressive High-Five**, *Gate* is **Panic Button**, *Spirit of Wolf* is **Zoomies of the Wolf**, and *Fippy Darkpaw* is **Flippy Darkpaws, Gate Enthusiast**. Consider tells you a mob "looks like a bad decision", and leveling up says **DING! You are now level X. Your mom would be proud.** Tooltips still explain exactly what each spell does. Internal ids did not change, so every solo and server save loads as before. The full old → new list is in **[RENAMES.md](RENAMES.md)**.
+
+| | |
+|---|---|
+| ![renamed spells in the spellbook](screenshots/v6b-spellbook.png) | ![considering Flippy Darkpaws, Gate Enthusiast](screenshots/v6b-consider.png) |
+| ![defeating Flippy and yoinking his Spiked Fashion Collar](screenshots/v6b-loot.png) | |
+
 ## New in v6: multiplayer
 - **Play Online**: the start screen has a **🌐 Play Online** button next to **Play Solo**. Type a server address (it defaults to the page's own address when the page came from a server, and it's remembered), register or log in, then create and pick characters on the server. Solo play is unchanged and still works offline, from `file://` and as the installed app.
 - **A shared, persistent world**: the server owns the world seed, monsters and their AI, kills, loot, respawns, corpses and block edits, and it saves your character. Players see each other with their real v4 models, gear, nameplates and animations, and their mercenaries and pets too.
 - **Chat**: `/say` (or just type), `/shout` (zone), `/ooc` (everyone), `/tell <name>` and `/r`, `/who`.
-- **Groups**: target a player and type `/invite` (or `/invite <name>`). They get a Join/Decline prompt. Group members share kill XP EQ-style, show up in the group window, can be healed and buffed, and fight the same monsters. Use `/g` for group chat and `/disband` to leave.
+- **Groups**: target a player and type `/invite` (or `/invite <name>`). They get a Join/Decline prompt. Group members share kill XP old-school style, show up in the group window, can be healed and buffed, and fight the same monsters. Use `/g` for group chat and `/disband` to leave.
 - **Phone Mode works online** with the same touch controls.
 - **Host your own server** on any small Linux VPS with Docker: `cp .env.example .env && docker compose up -d`. Caddy provides automatic HTTPS. See **[SERVER.md](SERVER.md)** for the full guide (domains, sslip.io, firewall, backups, updates, admin commands).
 - Cheat resistance: the server validates every intent (movement speed, damage caps and range, loot rights, rate limits). Passwords are hashed with scrypt.
@@ -43,10 +51,10 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
   - New blocks: sandstone, carved hieroglyph stone, gold, cactus, palm, dune sand and braziers (lit at night and in the dungeon). The zone has its own music: a hijaz-scale desert theme and a darker tomb drone.
 - **12 new detailed monsters**: sand scorpions and **Szyrix the Venomqueen**, Sandreaver bandits and mystics plus **Rahzik the Sand Viper**, wrapped mummies, tomb priests, **Grand Vizier Sethek**, sand giants and **Gorukh the Dune Titan**, dust djinn, and the boss **Pharaoh Ankhet-Ra the Eternal**.
 - **Level cap 25**: every class gets new spells and abilities up to level 25, for example Taunt and Ward Undead (double damage against undead), with new tiers of heals, nukes, DoTs, buffs, mez and slows. Necromancers get level 18 and 23 pets. There is desert loot (scimitars, khopeshes, sunforged and pharaoh gear) and level 15-25 merchant stock.
-- **EQ faction standing**: Guards of Everblock, Hollis Rangers, Sunward Caravan, Darkpaw Gnolls, Frostfang Orcs and Sandreaver Bandits.
-  - Kills and quests move your standing, and you get EQ messages ("Your faction standing with ... got worse.").
-  - Consider shows the attitude (*glares at you threateningly*, *regards you indifferently*, ...). Faction mobs only attack on sight while you're KOS.
-  - Merchants charge more or less depending on your standing and refuse to trade when you're Dubious or worse. `/faction` lists your standings.
+- **Faction standing**: Guards of Everblock, Hollis Rangers, Sunward Caravan, Darkpaws Gnoll Homeowners Assn., Frostfang Orcs and Sandreaver Bandits.
+  - Kills and quests move your standing, and the chat log tells you about it ("Your reputation with ... worsened. Someone is writing your name in a little book.").
+  - Consider shows the attitude, from *considers you its BFF* down to *is sharpening something with your name on it*. Faction mobs only attack on sight once you're Hostile or worse.
+  - Merchants charge more or less depending on your standing and refuse to trade when you're Hostile or worse. `/faction` lists your standings.
 - **Pet commands**: a pet bar and `/pet attack|backoff|follow|guard|sit|window` (window also opens with **P**). Guard holds a spot, sit stays put, back off drops the fight. The pet's mode is saved.
 - **Smarter mobs**:
   - Casters heal hurt allies (or themselves) and buff them with wards and haste.
@@ -56,7 +64,7 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 
 ## New in v4: character & monster graphics
 - **Detailed voxel models, rigged**: the player, mercenaries, NPCs and all 18 monster types are rebuilt from 50-90 small shaded boxes each (previously about 12) on hierarchical rigs: hips, torso, head, upper and lower arms, hands, thighs, shins, plus tails, jaws and snouts. Each race has its own proportions and features. Dwarves are short and stocky with big heads, long beards and big noses. Ogres are huge and hunched, with tusks, a heavy brow and a topknot. Elves are slim with pointy ears and long hair (Dark Elves have red eyes). Gnomes have oversized heads and tufts of hair. Barbarians are broad, with braids, a beard and warpaint. Faces have eyes with pupils and catch-lights, brows, a nose and a mouth.
-- **Monsters look like themselves**: rats with whiskers and pink tails, slithering striped snakes, six-legged fire beetles with glowing glands, bushy-tailed wolves (frost wolves have glowing eyes), skeletons with ribs and vertebrae, hyena-headed gnolls, hunched ghouls with claws and exposed ribs, tusked orcs with warpaint and spiked pauldrons, feathered orc shamans with totems, yetis, bearded frost giants, and the bosses (Grimbone's crown and soulblade, Grimtusk's horned helm and greatsword, Vorgath's ice greatsword). Necro pets progress from a plain skeleton to a sword-and-board skeleton to a horned shadow knight.
+- **Monsters look like themselves**: rats with whiskers and pink tails, slithering striped snakes, six-legged spicy beetles with glowing glands, bushy-tailed wolves (frost wolves have glowing eyes), skeletons with ribs and vertebrae, hyena-headed gnolls, hunched ghouls with claws and exposed ribs, tusked orcs with warpaint and spiked pauldrons, feathered orc shamans with totems, yetis, bearded frost giants, and the bosses (Grimbone's crown and soulblade, Grimtusk's horned helm and greatsword, Vorgath's ice greatsword). Necro pets progress from a plain skeleton to a sword-and-board skeleton to a horned shadow knight.
 - **Visible gear**: separate weapon models for sword, longsword, greatsword, dagger, mace, club, axe, staff, totem, bow and spear, with rusty, bronze, steel, bone, ice and glowing metals. Shields (wood, bone, crest) and helms (cap, bone, giant, horned, crested) are modeled too. Cloaks sway as you run. Chest armor shows its tier: cloth, leather, chain with pauldrons, plate with knee pads, or a robe. Gloves, boots, bracers, necklaces and collars are also visible. The model rebuilds as soon as you or your mercs change gear. Rangers carry a bow on their back and draw it for Archery.
 - **Animations**:
   - Everyone: idle breathing and looking around, a walk/run cycle with knees and elbows, a sit pose, a cast pose with glowing hand particles, hit flinches, and a death collapse.
@@ -65,28 +73,28 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 - **Materials & effects**:
   - Models get baked face shading and height-based ambient occlusion, a subtle pixel-grain texture and a rim light that strengthens at night. Characters have soft blob shadows.
   - Targets get a pulsing dashed selection ring tinted by con color.
-  - A pooled particle system (a single draw call) adds nuke bolts that fly from the caster's hand, impact bursts, heal sparkles, buff swirls, DoT clouds, mez/stun stars, a level-up column, pet summon bursts, and mob spells like Frost Shock.
+  - A pooled particle system (a single draw call) adds nuke bolts that fly from the caster's hand, impact bursts, heal sparkles, buff swirls, DoT clouds, mez/stun stars, a level-up column, pet summon bursts, and mob spells like Brain Freeze.
 - **3D character preview** on the creation screen. It rotates, you can drag it, and it shows the chosen race and class in starting gear.
 - **Performance & quality toggle**: all boxes on a bone merge into one mesh, and geometry and materials are cached and shared by every instance of a look. Distant models skip posing, and models past the fog aren't drawn. Use `/gfx low|high` or the buttons in the help window (**?**): Low gives flat models with no blob shadows or rim light, fewer particles and a 1x pixel ratio. The frame rate matches v3.
 - **Saves**: all v1/v2/v3 saves load unchanged. Models are built from race, class and equipped items; nothing new is stored except the graphics preference.
 
 ## New in v3
-- **Five new classes**: **Ranger** (archery at range, Flame Lick DoT, Snare, Salve, Spirit of Wolf), **Paladin** (Lay on Hands, Bash, Stun, Yaulp, heals), **Shaman** (Sicken DoT, Drowsy slow, Inner Fire, Spirit of Wolf), **Necromancer** (Lifetap, Disease Cloud, Snare, and a **skeletal pet** that grows from Cavorting Bones to Bone Walk to Convoke Shadow), and **Enchanter** (Mesmerize, which breaks on damage, Stun, Chaos Flux, Breeze/Clarity mana regen). EQ-style race restrictions apply: Ogres can't be Rangers, Wood Elves can't be Paladins, and so on.
+- **Five new classes**: **Ranger** (Pew Pew archery at range, Toasty Tickle DoT, Molasses Feet snare, Forest Ointment, Zoomies of the Wolf), **Paladin** (Aggressive High-Five, Shield Bonk, Seeing Stars, Battle Yodel, heals), **Shaman** (Mild Case of the Ick DoT, Nap Time slow, Inner Heartburn, Zoomies of the Wolf), **Necromancer** (Life Siphon Straw, Questionable Fog, Molasses Feet, and a **skeletal pet** that grows from Skeleton Disco to Skeleton Crew to Summon Edgelord), and **Enchanter** (Mesmer-eyes, which breaks on damage, Seeing Stars, Chaos Fluff, Mana Spritz/Big Brain Juice mana regen). Classic race restrictions apply: Ogres can't be Rangers, Wood Elves can't be Paladins, and so on.
 - **Spellbook & spell gems**: press **K** to open the spellbook. Memorize spells into **8 spell gems** (left edge of the screen). You sit while you memorize and it takes a few seconds; moving or getting hit interrupts it. You can only cast spells you have memorized.
 - **Spell icons & a configurable hotbar**: every spell and ability gets a procedurally drawn icon. Drag spells from the book onto the hotbar or gems, or click a spell and then click a slot. Right-click a slot to clear it or a gem to forget the spell.
 - **Mercenary upgrades**: click **⚙** in the group window to set a **stance** (passive / balanced / aggressive) and the healer's **heal threshold**, and to **give them gear** (armor and weapons raise their HP, AC and damage, and you can take it back). Fallen mercs stay in the group and can be **revived for a fee** instead of re-hired. Gear, stance and death state are saved.
-- **The Warden's Legacy**: a four-part quest chain across both zones (Soulbinder Kerra → Scout Hollis in Frostfang → Warlord Grimtusk's shard → Guildmaster Aldric). The reward is the **Signet of the Everblock Warden** and the title *Warden of Everblock*.
+- **The Warden's Legacy**: a four-part quest chain across both zones (Soul-Notary Kerra → Scout Hollis in Frostfang → Warlord Grimtusk's shard → Guild Coach Aldric). The reward is the **Signet of the Everblock Warden** and the title *Warden of Everblock*.
 - **New quests**: *Bones of the Restless* (Guard Mossen) and *Yeti Hunt* (Trapper Gunnar at the Frostfang outpost).
 - **Synthesized music** that changes mood for town, the wilds, Frostfang and the crypt (**Shift+M**), plus **warm point lights** from nearby lanterns and a player torch at night or underground. These switch on automatically when the frame rate allows; use `/lights` to force them on or off.
 - v1/v2 saves load unchanged: old characters get their spells auto-memorized into gems.
 
 ## Features
-- **Races & classes**: Human, Barbarian, Wood Elf, Dark Elf, Dwarf, Gnome, Ogre / Warrior, Cleric, Wizard, Rogue, Ranger, Paladin, Shaman, Necromancer, Enchanter. Each has EQ-style stats, skills, and spell lines trained at the guildmaster.
-- **EQ combat**: con colors, auto attack, casting and fizzles, DoTs, snares, slows, mez and stuns, hate lists and social aggro, fleeing mobs, experience loss and corpse runs
+- **Races & classes**: Human, Barbarian, Wood Elf, Dark Elf, Dwarf, Gnome, Ogre / Warrior, Cleric, Wizard, Rogue, Ranger, Paladin, Shaman, Necromancer, Enchanter. Each has classic stats, skills, and spell lines trained at the Guild Coach.
+- **Old-school combat**: con colors, auto attack, casting and fizzles, DoTs, snares, slows, mez and stuns, hate lists and social aggro, fleeing mobs, experience loss and corpse runs
 - **Mob pathfinding**: A* on the voxel grid with step-up and drop handling, so mobs chase you around walls and through dungeon doorways
-- **Group**: Cleric and Warrior mercenaries from the Mercenary Liaison and a necromancer pet, with EQ-style group XP split (pets don't take a share)
+- **Group**: Cleric and Warrior mercenaries from Sellsword Recruiter Brenna and a necromancer pet, with an old-school group XP split (pets don't take a share)
 - **Three zones**: the Everblock Wilds (levels 1-10: town, gnoll camp, graveyard, Sunken Crypt), the Frostfang Highlands (levels 8-15: orc warcamp, yetis, frost giants, Vorgath's Frozen Keep) and the Sunscorched Expanse (levels 15-25: Sunward Outpost, bandit hideout, the Great Pyramid and the Tomb of Ankhet-Ra), connected by zone lines
-- **Named mobs & loot**: Fippy Darkpaw, Grimbone, Warlord Grimtusk, Vorgath the Frostbound, and more
+- **Named mobs & loot**: Flippy Darkpaws (Gate Enthusiast), Lord Grimbone, Warlord Grimtusk, Vorgath the Frostbound, and more
 - **Quests**, a **minimap**, a day/night cycle, and **building** (break and place blocks)
 
 ## Controls
@@ -102,7 +110,7 @@ Everything is generated in code: terrain, textures, models, spell icons, sound a
 | Spellbook (memorize into gems) | K (click or drag a spell to a gem; double-click to memorize) |
 | Cast from a spell gem / forget it | Left click / right click on the gem |
 | Consider / sit (regen) | C / X |
-| Loot, talk to merchant, trainer, binder, merc liaison | E |
+| Loot, talk to merchant, Guild Coach, Soul Notary, Sellsword Recruiter | E |
 | Hail (quest givers open a dialog) | H |
 | Merc stance, heal threshold, gear | ⚙ in the group window |
 | Inventory | I |

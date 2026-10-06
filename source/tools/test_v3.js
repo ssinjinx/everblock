@@ -120,7 +120,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   check('unmemorized hotbar spell has unmem style', hb8b);
   await page.keyboard.press('Digit8');
   const unm = (await logTail(1))[0];
-  check('casting an unmemorized spell is refused', /do not have Disease Cloud memorized/.test(unm), unm);
+  check('casting an unmemorized spell is refused', /do not have Questionable Fog memorized/.test(unm), unm);
   // right-click clears hotbar slot
   await page.click('#hotbar .slot >> nth=7', { button: 'right' });
   check('right-click clears hotbar slot', await ev(() => EB.game.player.hotbar[7] === null));
@@ -138,12 +138,12 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
     await cast('cavorting_bones');
   }
   const pet = await ev(() => { const g = EB.game, m = g.mercs.find((m) => m.isPet); return m ? { name: m.name, lvl: m.level, hp: m.hp, plate: !!m.plate, rows: document.querySelectorAll('#groupWin .gmem').length, pet: !!document.querySelector('#groupWin .gpet') } : null; });
-  check('Cavorting Bones summons a level 3 pet in the group window', pet && pet.lvl === 3 && pet.name === 'Gabober' && pet.pet, pet);
+  check('Skeleton Disco summons a level 3 pet in the group window', pet && pet.lvl === 3 && pet.name === 'Rattles McGee' && pet.pet, pet);
   await cast('lifetap');
   let petHit = false, petShot = false;
   for (let i = 0; i < 60; i++) {
     await waitGame(0.5);
-    const s = await ev(() => { const g = EB.game, m = window.__m, p = g.player; if (p.hp < p.maxHp * 0.4) p.hp = p.maxHp; const log = document.getElementById('chatLog').innerText; const pt = g.mercs.find((x) => x.isPet); return { alive: m.alive, hit: /Gabober (hits|tries to hit)/.test(log), pd: pt ? pt.pos.distanceTo(m.pos) : 99 }; });
+    const s = await ev(() => { const g = EB.game, m = window.__m, p = g.player; if (p.hp < p.maxHp * 0.4) p.hp = p.maxHp; const log = document.getElementById('chatLog').innerText; const pt = g.mercs.find((x) => x.isPet); return { alive: m.alive, hit: /Rattles McGee (hits|tries to hit)/.test(log), pd: pt ? pt.pos.distanceTo(m.pos) : 99 }; });
     if (s.hit) petHit = true;
     if (!petShot && s.hit && s.pd < 3) { await ev(() => { const g = EB.game, p = g.player, m = window.__m; p.yaw = Math.atan2(m.pos.x - p.pos.x, m.pos.z - p.pos.z) + 0.35; g.camDist = 7; }); await waitGame(0.1); await hidePrompt(page); await page.screenshot({ path: SHOTS + 'v3-necro-pet.png' }); petShot = true; }
     if (!s.alive) break;
@@ -170,7 +170,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   check('mesmerize holds the mob still', mz0.mez && mz1.mez && moved < 0.3, { mz0, moved });
   await ev(() => EB.game.damageMob(window.__m, 2, EB.game.player));
   const mz2 = await ev(() => ({ mez: (window.__m.mezUntil || 0) > EB.game.time, log: document.getElementById('chatLog').innerText.split('\n').slice(-2) }));
-  check('damage breaks mesmerize', !mz2.mez && mz2.log.some((l) => /awakened/.test(l)), mz2);
+  check('damage breaks mesmerize', !mz2.mez && mz2.log.some((l) => /snaps out of it/.test(l)), mz2);
   await cast('stun');
   const st = await ev(() => ({ stun: (window.__m.stunUntil || 0) > EB.game.time, log: document.getElementById('chatLog').innerText.split('\n').slice(-3) }));
   check('stun lands on the target', st.stun || st.log.some((l) => /resist/.test(l)), st);
@@ -188,11 +188,11 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   for (let k = 0; k < 4 && !dotted; k++) { await cast('sicken'); dotted = await ev(() => (window.__m.dots || []).length > 0); }
   const h0 = await ev(() => window.__m.hp);
   await waitGame(6.5);
-  const d1 = await ev(() => ({ hp: window.__m.hp, log: document.getElementById('chatLog').innerText.split('\n').filter((l) => /from your Sicken/.test(l)).length }));
-  check('Sicken damage-over-time ticks', dotted && d1.hp < h0 && d1.log >= 1, { h0, d1 });
+  const d1 = await ev(() => ({ hp: window.__m.hp, log: document.getElementById('chatLog').innerText.split('\n').filter((l) => /from your Mild Case of the Ick/.test(l)).length }));
+  check('Mild Case of the Ick damage-over-time ticks', dotted && d1.hp < h0 && d1.log >= 1, { h0, d1 });
   let slowed = false;
   for (let k = 0; k < 4 && !slowed; k++) { await cast('drowsy'); slowed = await ev(() => (window.__m.slowedUntil || 0) > EB.game.time); }
-  check('Drowsy slows the target', slowed);
+  check('Nap Time slows the target', slowed);
   // walk speed test before/after spirit of wolf (flat road in town)
   const walk = async () => {
     await ev(() => { const g = EB.game, p = g.player, w = g.world, m = window.__m; if (m) { g.removeEntity ? 0 : 0; m.pos.set(m.pos.x + 60, m.pos.y, m.pos.z); m.state = 'idle'; m.hate.clear(); } const x = 128.5, z = 150.5; p.pos.set(x, w.surfaceY(x, z), z); p.yaw = Math.PI; g.setTarget(null); });
@@ -207,7 +207,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   await cast('spirit_of_wolf');
   const sow = await ev(() => EB.game.player.buffSum('speed'));
   const v1 = await walk();
-  check('Spirit of Wolf increases run speed', sow > 0.3 && v1 > v0 * 1.15, { sow, v0: +v0.toFixed(2), v1: +v1.toFixed(2) });
+  check('Zoomies of the Wolf increases run speed', sow > 0.3 && v1 > v0 * 1.15, { sow, v0: +v0.toFixed(2), v1: +v1.toFixed(2) });
 
   // ---------------------------------------------------------------- ranger: archery at range
   step('ranger: archery');
@@ -226,12 +226,12 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   await newChar('Dwarf', 'Paladin', 'Thorgrim');
   await levelTo(8);
   const lh = await ev(() => { const g = EB.game, p = g.player; p.hp = Math.floor(p.maxHp * 0.3); const b = p.hp; g.setTarget(null); g.useAbility('lay_hands'); return { before: b, after: p.hp, max: p.maxHp }; });
-  check('Lay on Hands heals instantly', lh.after > lh.before + 40, lh);
+  check('Aggressive High-Five heals instantly', lh.after > lh.before + 40, lh);
   await learn(['stun'], true);
   await placeMob('gnoll', 2.2, 6);
   let pst = false;
   for (let k = 0; k < 4 && !pst; k++) { await cast('stun'); pst = await ev(() => (window.__m.stunUntil || 0) > EB.game.time - 1); }
-  check('paladin Stun', pst);
+  check('paladin Seeing Stars', pst);
   await ev(() => { const m = window.__m; m.pos.set(m.pos.x + 80, m.pos.y, m.pos.z); m.state = 'idle'; m.hate.clear(); m.target = null; EB.game.player.autoAttack = false; EB.game.setTarget(null); });
 
   step('mercenaries: stance, heal threshold, gear, revive');
@@ -274,7 +274,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   const ha = await ev(() => EB.game.mercs.find((m) => m.role === 'healer').healAt);
   await ev(() => { const g = EB.game, p = g.player; const h = g.mercs.find((m) => m.role === 'healer'); h.mana = h.maxMana; h.healT = 0; h.casting = null; p.hp = Math.floor(p.maxHp * 0.85); });
   await waitGame(1);
-  const healed = await ev(() => { const h = EB.game.mercs.find((m) => m.role === 'healer'); return !!(h.casting && EB.data.SPELLS[h.casting.id].kind === 'heal') || /Sister Maelin begins to cast a spell. <(Minor|Light)/.test(document.getElementById('chatLog').innerText.split('\n').slice(-6).join('\n')); });
+  const healed = await ev(() => { const h = EB.game.mercs.find((m) => m.role === 'healer'); return !!(h.casting && EB.data.SPELLS[h.casting.id].kind === 'heal') || /Sister Maelin starts chanting: <(Mild|Lightly)/.test(document.getElementById('chatLog').innerText.split('\n').slice(-6).join('\n')); });
   check('heal threshold slider (90%) makes the healer heal at 85% HP', ha === 0.9 && healed, { ha, healed });
   await ev(() => EB.game.closeWin('mercCfgWin'));
   // death -> revive
@@ -305,13 +305,13 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
     await page.waitForFunction((z) => EB.game.world.zoneId === z && !EB.game.zoning, z, { timeout: 60000 });
     await page.waitForTimeout(800);
   };
-  let d = await hailNpc('Soulbinder Kerra');
+  let d = await hailNpc('Soul-Notary Kerra');
   check('Kerra offers The Warden\'s Legacy', d.open && d.btns.some((b) => /Accept: The Warden/.test(b)), d);
   await clickBtn('Accept: The Warden');
   const qw = await ev(() => document.getElementById('questWin').innerText);
   check('chain shows in quest tracker with step hint', /Warden's Legacy \(1\/4\)/.test(qw) && /Ghoul Ichor/.test(qw), qw.replace(/\n/g, ' | '));
   await ev(() => EB.game.addItem('ghoul_ichor', 2, true));
-  d = await hailNpc('Soulbinder Kerra');
+  d = await hailNpc('Soul-Notary Kerra');
   await clickBtn('Hand in: 2 Vial of Ghoul Ichor');
   const s1 = await ev(() => ({ step: EB.game.questSteps.warden_legacy, letter: EB.game.countItem('kerra_letter') }));
   check('step 1 done: Kerra gives her sealed letter', s1.step === 1 && s1.letter === 1, s1);
@@ -337,14 +337,14 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   check('Warlord Grimtusk always drops the Warden shard', shard);
   await ev(() => EB.game.addItem('warden_shard', 1, true));
   await zoneTo('everblock');
-  d = await hailNpc('Guildmaster Aldric');
+  d = await hailNpc('Guild Coach Aldric');
   const aldric = d.btns.some((b) => /Hand in: 1 Shard.*\+ 1 Hollis/.test(b));
   await clickBtn('Hand in: 1 Shard');
   await page.waitForTimeout(400);
   const fin = await ev(() => { const g = EB.game, p = g.player; return { st: g.quests.warden_legacy, signet: g.countItem('warden_signet'), title: p.title, pName: document.getElementById('pName').textContent, mood: EB.audio.mood }; });
   check('final step at Aldric grants the Signet and the title', aldric && fin.st === 'done' && fin.signet === 1 && fin.title === 'Warden of Everblock' && /Warden/.test(fin.pName), fin);
   check('music mood is town in Everblock Keep', fin.mood === 'town', fin.mood);
-  await ev(() => { const g = EB.game, p = g.player, a = g.npcs.find((n) => n.name === 'Guildmaster Aldric'); p.pos.set(a.pos.x + 3.2, a.pos.y, a.pos.z + 1.2); p.yaw = Math.atan2(a.pos.x - p.pos.x, a.pos.z - p.pos.z) + 0.25; p.pitch = -0.1; g.camDist = 4.5; g.dayT = 0.35; });
+  await ev(() => { const g = EB.game, p = g.player, a = g.npcs.find((n) => n.name === 'Guild Coach Aldric'); p.pos.set(a.pos.x + 3.2, a.pos.y, a.pos.z + 1.2); p.yaw = Math.atan2(a.pos.x - p.pos.x, a.pos.z - p.pos.z) + 0.25; p.pitch = -0.1; g.camDist = 4.5; g.dayT = 0.35; });
   await waitGame(0.5); await hidePrompt(page); await page.screenshot({ path: SHOTS + 'v3-quest-reward.png' });
   // new quest: Guard Mossen
   d = await hailNpc('Guard Mossen');

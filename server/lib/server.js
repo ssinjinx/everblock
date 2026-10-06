@@ -203,8 +203,8 @@ class EverblockServer {
     console.log(`[play] ${s.account.username} entered as ${rec.name} (${z.name})`);
     const n = this.online().length;
     s.sys(`Welcome to ${this.name}! There ${n === 1 ? 'is 1 player' : `are ${n} players`} online. Type /who to see them, /ooc to chat with everyone and /invite to group.`, 'sys');
-    if (this.motd) s.send({ t: 'chat', c: 'announce', m: 'MOTD: ' + this.motd });
-    for (const o of this.online()) if (o !== s) o.send({ t: 'chat', c: 'sys', m: `${rec.name} has entered Everblock.` });
+    if (this.motd) s.send({ t: 'chat', c: 'announce', m: 'Town Crier: ' + this.motd });
+    for (const o of this.online()) if (o !== s) o.send({ t: 'chat', c: 'sys', m: `${rec.name} has wandered into Everblock.` });
   }
   addToZone(s, z) {
     s.zone = z; s.proxy.zone = z; z.sessions.add(s);
@@ -361,10 +361,10 @@ class EverblockServer {
   on_loot(s, m) {
     const z = s.zone, mob = z.mobById(m.id | 0);
     if (!mob || mob.alive || !mob.loot) return s.send({ t: 'lootwin', id: m.id | 0, gone: true });
-    if (mob.pos.distanceTo(s.proxy.pos) > 9) return s.send({ t: 'lootwin', id: mob.id, err: 'You are too far away to loot that corpse.' });
+    if (mob.pos.distanceTo(s.proxy.pos) > 9) return s.send({ t: 'lootwin', id: mob.id, err: 'Too far away. Your arms are not that long.' });
     const ck = z.creditKey(s.proxy);
-    if (mob.lootRights && mob.lootRights !== ck && z.time < mob.lootOpenAt) return s.send({ t: 'lootwin', id: mob.id, err: 'You may not loot this corpse at this time.' });
-    if (mob.looter && mob.looter !== s && mob.looter.zone === z && z.time < (mob.lootLock || 0)) return s.send({ t: 'lootwin', id: mob.id, err: 'Someone is already looting that corpse.' });
+    if (mob.lootRights && mob.lootRights !== ck && z.time < mob.lootOpenAt) return s.send({ t: 'lootwin', id: mob.id, err: 'Hands off! That corpse belongs to someone else for now.' });
+    if (mob.looter && mob.looter !== s && mob.looter.zone === z && z.time < (mob.lootLock || 0)) return s.send({ t: 'lootwin', id: mob.id, err: 'Someone else is already rummaging through that corpse.' });
     mob.looter = s; mob.lootLock = z.time + 30;
     const coins = mob.loot.coins; mob.loot.coins = 0;
     s.send({ t: 'lootwin', id: mob.id, coins, items: mob.loot.items });
@@ -460,7 +460,7 @@ class EverblockServer {
     g.members = g.members.filter((o) => o !== s); s.group = null;
     s.send({ t: 'group', id: 0, members: [] });
     for (const o of g.members) o.sys(`${s.rec ? s.rec.name : 'Someone'} has left the group.`);
-    if (g.members.length <= 1) { for (const o of g.members) { o.group = null; o.send({ t: 'group', id: 0, members: [] }); o.sys('Your group has been disbanded.'); if (o.zone) o.zone.broadcast(this.pinfo(o)); } this.groups.delete(g.id); }
+    if (g.members.length <= 1) { for (const o of g.members) { o.group = null; o.send({ t: 'group', id: 0, members: [] }); o.sys('Your party has disbanded. Everyone go home.'); if (o.zone) o.zone.broadcast(this.pinfo(o)); } this.groups.delete(g.id); }
     else { if (g.leader === s) { g.leader = g.members[0]; g.leader.sys('You are now the leader of your group.'); } this.sendGroup(g); }
     if (s.zone && s.proxy) s.zone.broadcast(this.pinfo(s));
   }
@@ -486,7 +486,7 @@ class EverblockServer {
         let to, text;
         if (cmd === 'r' || cmd === 'reply') { to = s.lastTell; text = rest; } else { const i = rest.indexOf(' '); to = i < 0 ? rest : rest.slice(0, i); text = i < 0 ? '' : rest.slice(i + 1).trim(); }
         const o = this.findOnline(to);
-        if (!o) return s.sys(to ? `${to} is not online at this time.` : 'Tell whom?');
+        if (!o) return s.sys(to ? `${to} is not online right now. Probably eating dinner.` : 'Tell whom?');
         if (!text) return s.sys('Usage: /tell <name> <message>');
         o.lastTell = me; o.send({ t: 'chat', c: 'tell', from: me, m: text });
         s.send({ t: 'chat', c: 'told', from: o.rec.name, m: text });
@@ -494,9 +494,9 @@ class EverblockServer {
       }
       case 'who': {
         const all = rest.toLowerCase() === 'all' || !rest ? this.online() : this.online().filter((o) => o.rec.name.toLowerCase().includes(rest.toLowerCase()));
-        s.sys('Players on Everblock:', 'who');
-        for (const o of all) s.sys(`${o.zone === s.zone ? '' : ''}[${o.rec.level} ${CLASSES[o.rec.cls].name}] ${o.rec.name}${o.proxy.title ? ', ' + o.proxy.title : ''} (${RACES[o.rec.race].name}) ZONE: ${o.zone ? o.zone.name : '?'}${o.group && o.group === s.group ? ' <group>' : ''}${this.isAdmin(o) ? ' *GM*' : ''}`, 'who');
-        s.sys(`There ${all.length === 1 ? 'is 1 player' : `are ${all.length} players`} in Everblock.`, 'who');
+        s.sys('Adventurers loitering in Everblock:', 'who');
+        for (const o of all) s.sys(`Lv${o.rec.level} ${CLASSES[o.rec.cls].name} ${o.rec.name}${o.proxy.title ? ', ' + o.proxy.title : ''} (${RACES[o.rec.race].name}) - hanging around ${o.zone ? o.zone.name : '?'}${o.group && o.group === s.group ? ' <group>' : ''}${this.isAdmin(o) ? ' *GM*' : ''}`, 'who');
+        s.sys(`${all.length === 1 ? '1 adventurer is' : `${all.length} adventurers are`} loitering in Everblock.`, 'who');
         break;
       }
       case 'invite': case 'inv': {
@@ -508,8 +508,8 @@ class EverblockServer {
         if (s.group && s.group.members.length >= 6) return s.sys('Your group is full.');
         o.invite = { from: s, t: Date.now() };
         o.send({ t: 'invite', from: me });
-        o.sys(`${me} invites you to join a group. Type /join to accept or /decline.`, 'group');
-        s.sys(`You invite ${o.rec.name} to join your group.`, 'group');
+        o.sys(`${me} wants you in their party. Type /join to accept or /decline.`, 'group');
+        s.sys(`You invite ${o.rec.name} to your party.`, 'group');
         break;
       }
       case 'join': case 'accept': case 'follow': {
@@ -521,7 +521,7 @@ class EverblockServer {
         if (!g) { g = { id: this.nextGid++, leader: L, members: [L] }; this.groups.set(g.id, g); L.group = g; }
         if (g.members.length >= 6) return s.sys('That group is full.');
         g.members.push(s); s.group = g;
-        for (const o of g.members) o.sys(o === s ? `You have joined ${L.rec.name}'s group.` : `${me} has joined the group.`, 'group');
+        for (const o of g.members) o.sys(o === s ? `You have joined ${L.rec.name}'s group.` : `${me} has joined the party.`, 'group');
         this.sendGroup(g);
         for (const o of g.members) if (o.zone) o.zone.broadcast(this.pinfo(o));
         break;
@@ -533,7 +533,7 @@ class EverblockServer {
         const o = this.findOnline(rest || m.tgt); if (!o || o.group !== s.group || o === s) return s.sys('That player is not in your group.');
         this.leaveGroup(o); o.sys('You have been removed from the group.', 'group'); break;
       }
-      case 'motd': s.sys(this.motd ? 'MOTD: ' + this.motd : 'There is no message of the day.'); break;
+      case 'motd': s.sys(this.motd ? 'Town Crier: ' + this.motd : 'The Town Crier has nothing to say today.'); break;
       case 'announce': case 'broadcast':
         if (!this.isAdmin(s)) return s.sys('You do not have permission to do that.');
         for (const o of this.online()) o.send({ t: 'chat', c: 'announce', m: rest }); console.log(`[admin] ${me} announced: ${rest}`); break;
@@ -560,14 +560,14 @@ class EverblockServer {
           const from = cmd === 'goto' ? o : s; who = cmd === 'goto' ? s : o; x = from.proxy.pos.x + 1; z = from.proxy.pos.z + 1; y = from.proxy.pos.y + 0.5;
         }
         who.proxy.pos.set(x, y, z); who.proxy.lastMv = Date.now(); who.proxy.ready = false;
-        who.send({ t: 'pos', x, y, z }); if (who !== s) who.sys(`You have been summoned by ${me}.`);
+        who.send({ t: 'pos', x, y, z }); if (who !== s) who.sys(`${me} yanks you across the zone. Hello!`);
         console.log(`[admin] ${me} ${cmd} ${who.rec.name} -> ${x.toFixed(1)}, ${z.toFixed(1)}`); break;
       }
       case 'setmotd': if (!this.isAdmin(s)) return s.sys('You do not have permission to do that.'); this.motd = rest; s.sys('MOTD updated (until restart; set MOTD in .env to keep it).'); break;
       case 'gm': case 'admin':
         if (!this.isAdmin(s)) return s.sys('You do not have permission to do that.');
         s.sys('Admin commands: /announce <text>, /kick <name>, /ban <name>, /unban <name>, /setmotd <text>, /tp <x> <z>, /goto <name>, /summon <name>, /who all', 'help'); break;
-      default: s.sys('That is not a valid command. Try /help.');
+      default: s.sys('Huh? That is not a command. Try /help.');
     }
   }
 

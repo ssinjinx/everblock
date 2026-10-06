@@ -73,7 +73,7 @@ const check = (name, ok, info) => { results.push({ name, ok }); console.log((ok 
       if (p.hp < p.maxHp * 0.25) p.hp = p.maxHp * 0.5;
       const log = document.getElementById('chatLog').innerText;
       const healer = g.mercs.find((m) => m.role === 'healer'), tank = g.mercs.find((m) => m.role === 'tank');
-      return { alive: !!(t && t.alive), thp: t ? t.hp : 0, php: p.hp, pmax: p.maxHp, healCast: !!(healer && healer.casting) || /Sister Maelin begins casting|Maelin.*heal/i.test(log), tankHit: t && t.hate && tank ? (t.hate.get(tank) || 0) : 0, frozen: !!window.__frozen, mercNear: g.mercs.every((m) => m.pos.distanceTo(p.pos) < 8) };
+      return { alive: !!(t && t.alive), thp: t ? t.hp : 0, php: p.hp, pmax: p.maxHp, healCast: !!(healer && healer.casting) || /Sister Maelin starts chanting|Maelin.*heal/i.test(log), tankHit: t && t.hate && tank ? (t.hate.get(tank) || 0) : 0, frozen: !!window.__frozen, mercNear: g.mercs.every((m) => m.pos.distanceTo(p.pos) < 8) };
     });
     if (st.healCast) sawHeal = true;
     if (st.tankHit > 0) sawTank = true;
@@ -86,11 +86,11 @@ const check = (name, ok, info) => { results.push({ name, ok }); console.log((ok 
     if (!st.alive) break;
     fightInfo = st;
   }
-  const after = await page.evaluate(() => { const g = EB.game; const log = document.getElementById('chatLog').innerText; return { killed: !(g.target && g.target.alive), party: /party experience/.test(log), heals: (log.match(/Sister Maelin begins casting/g) || []).length, taunts: /Borin Stoutshield taunts|taunt/i.test(log), mercs: g.mercs.map((m) => `${m.name} ${Math.ceil(m.hp)}/${m.maxHp}`), log: log.split('\n').slice(-14).join('\n') }; });
+  const after = await page.evaluate(() => { const g = EB.game; const log = document.getElementById('chatLog').innerText; return { killed: !(g.target && g.target.alive), party: /shared XP/.test(log), heals: (log.match(/Sister Maelin begins casting/g) || []).length, taunts: /Borin Stoutshield taunts|taunt/i.test(log), mercs: g.mercs.map((m) => `${m.name} ${Math.ceil(m.hp)}/${m.maxHp}`), log: log.split('\n').slice(-14).join('\n') }; });
   console.log(after.log);
   check('group killed target', after.killed, { mercs: after.mercs });
   check('tank engaged (hate on tank)', sawTank);
-  check('party experience split', after.party);
+  check('party experience split (shared XP message)', after.party);
   // make the player hurt, confirm cleric heals
   await page.evaluate(() => { const g = EB.game, p = g.player; g.setTarget(null); p.autoAttack = false; p.hp = Math.floor(p.maxHp * 0.4); });
   await page.waitForTimeout(6000);
@@ -186,7 +186,7 @@ const check = (name, ok, info) => { results.push({ name, ok }); console.log((ok 
   await page.keyboard.up('KeyW');
   await page.waitForFunction(() => EB.game.world.zoneId === 'frostfang' && !EB.game.zoning, null, { timeout: 20000 });
   await page.waitForTimeout(1500);
-  const zinfo = await page.evaluate(() => { const g = EB.game; return { zone: g.world.zoneId, name: g.world.zoneName, pos: g.player.pos.toArray().map((v) => +v.toFixed(1)), mobs: g.mobs.length, mercs: g.mercs.map((m) => +m.pos.distanceTo(g.player.pos).toFixed(1)), entered: /You have entered The Frostfang/.test(document.getElementById('chatLog').innerText), types: [...new Set(g.mobs.map((m) => m.type))], lv: [Math.min(...g.mobs.map((m) => m.level)), Math.max(...g.mobs.map((m) => m.level))] }; });
+  const zinfo = await page.evaluate(() => { const g = EB.game; return { zone: g.world.zoneId, name: g.world.zoneName, pos: g.player.pos.toArray().map((v) => +v.toFixed(1)), mobs: g.mobs.length, mercs: g.mercs.map((m) => +m.pos.distanceTo(g.player.pos).toFixed(1)), entered: /You wander into The Frostfang/.test(document.getElementById('chatLog').innerText), types: [...new Set(g.mobs.map((m) => m.type))], lv: [Math.min(...g.mobs.map((m) => m.level)), Math.max(...g.mobs.map((m) => m.level))] }; });
   check('walked through zone line into Frostfang', zinfo.zone === 'frostfang' && zinfo.entered && fadeShot, zinfo);
   check('mercs followed across zone', zinfo.mercs.length === 2 && zinfo.mercs.every((d) => d < 6));
   // scenic shot at the outpost looking north toward the warcamp / keep

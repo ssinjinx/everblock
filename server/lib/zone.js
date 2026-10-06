@@ -65,7 +65,7 @@ class ZoneSim {
     return !this.world.raycast(a.pos.x, ay, a.pos.z, dx / d, dy / d, dz / d, d, (bb) => BLOCKS[bb].opaque);
   }
   isMezzed(m) { return this.time < (m.mezUntil || 0); }
-  log(m, c) { // AI chatter ("begins to cast", "shouts for help") goes to players near the speaking entity
+  log(m, c) { // AI chatter ("starts chanting", "shouts for help") goes to players near the speaking entity
     const at = this._logPos; if (!at) return;
     for (const s of this.sessions) if (s.proxy && s.proxy.pos.distanceTo(at) < 50) s.send({ t: 'log', m, c });
   }

@@ -176,11 +176,11 @@ if (/^https?:/.test(location.protocol)) {
     <div class="sub">Sell from the list below, or right-click items in your bags (I).</div>
   </div>
   <div id="trainerWin" class="win panelwin hidden">
-    <div class="wtitle">Guildmaster <span class="x" data-close="trainerWin">✕</span></div>
+    <div class="wtitle">Guild Coach <span class="x" data-close="trainerWin">✕</span></div>
     <div id="trainList"></div>
   </div>
   <div id="mercWin" class="win panelwin hidden">
-    <div class="wtitle">Mercenary Liaison <span class="x" data-close="mercWin">✕</span></div>
+    <div class="wtitle">Sellsword Recruiter <span class="x" data-close="mercWin">✕</span></div>
     <div id="mercList"></div>
   </div>
   <div id="bookWin" class="win panelwin hidden">
@@ -214,11 +214,11 @@ if (/^https?:/.test(location.protocol)) {
         <b>C</b> consider target &bull; <b>X</b> sit / stand (faster regen)<br>
         <b>F1</b> target yourself &bull; <b>F2-F5</b> target group members (heals &amp; buffs land on your friendly target)</p>
         <h4>Group</h4>
-        <p>Hire mercenaries from <b>Liaison Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Click ⚙ in the group window to set stance (passive / balanced / aggressive), heal threshold, and hand them gear. Dead mercenaries can be revived for a fee (E on Brenna or the Revive button). Necromancers summon a pet and command it with the pet bar above the hotbar, <b>P</b> (pet window) or <b>/pet attack | backoff | follow | guard | sit</b>. Experience is split EQ-style.</p>
+        <p>Hire mercenaries from <b>Recruiter Brenna</b> in Everblock Keep (E to talk). The Cleric heals and buffs, the Warrior tanks and taunts. Click ⚙ in the group window to set stance (passive / balanced / aggressive), heal threshold, and hand them gear. Dead mercenaries can be revived for a fee (E on Brenna or the Revive button). Necromancers summon a pet and command it with the pet bar above the hotbar, <b>P</b> (pet window) or <b>/pet attack | backoff | follow | guard | sit</b>. Experience is split the old-school way.</p>
         <h4>Factions</h4>
-        <p>Killing gnolls, orcs and Sandreaver bandits (and finishing quests) changes your standing with the Guards, the Hollis Rangers, the Sunward Caravan and the bandits themselves. <b>C</b> shows how a creature or NPC regards you; merchants charge more (or refuse) when they dislike you, and factions only attack on sight at Threateningly or worse. <b>/faction</b> lists your standings.</p>
+        <p>Killing gnolls, orcs and Sandreaver bandits (and finishing quests) changes your standing with the Guards, the Hollis Rangers, the Sunward Caravan and the bandits themselves. <b>C</b> shows how a creature or NPC regards you; merchants charge more (or refuse) when they dislike you, and factions only attack on sight at Hostile or worse. <b>/faction</b> lists your standings.</p>
         <h4>Interaction</h4>
-        <p><b>E</b> loot corpse / talk to merchant, guildmaster, soulbinder<br><b>H</b> hail target (quest givers offer work) &bull; <b>I</b> inventory &bull; <b>Enter</b> chat/commands<br><b>N</b> toggle minimap &bull; <b>M</b> sound &bull; <b>Shift+M</b> music &bull; <b>?</b> / <b>F10</b> this help</p>
+        <p><b>E</b> loot corpse / talk to merchant, guild coach, soul notary<br><b>H</b> hail target (quest givers offer work) &bull; <b>I</b> inventory &bull; <b>Enter</b> chat/commands<br><b>N</b> toggle minimap &bull; <b>M</b> sound &bull; <b>Shift+M</b> music &bull; <b>?</b> / <b>F10</b> this help</p>
       </div>
       <div>
         <h4>Building</h4>
@@ -233,14 +233,14 @@ if (/^https?:/.test(location.protocol)) {
         <p>Con colors: <span style="color:#36d436">green</span> &lt; <span style="color:#6fe0ff">light blue</span> &lt; <span style="color:#4f7bff">blue</span> &lt; <span style="color:#fff">white</span> &lt; <span style="color:#ffe23a">yellow</span> &lt; <span style="color:#ff3a3a">red</span>.
         Creatures that con green or grey give little or no experience.<br>
         When you die you return to your bind point without your gear. Run back and loot your corpse (a yellow arrow points the way).<br>
-        Train new spells and skills at Guildmaster Aldric as you level. The Sunken Crypt lies to the northeast. The North Pass leads to the <b>Frostfang Reaches</b> (levels 8-15) &mdash; walk through the shimmering zone line.<br>Quests: Merchant Tiloria, Guard Halric, Guard Mossen, Scout Hollis and Trapper Gunnar (Frostfang). Epic chain: <b>The Warden's Legacy</b> begins with Soulbinder Kerra.</p>
+        Train new spells and skills at Guild Coach Aldric as you level. The Sunken Crypt lies to the northeast. The North Pass leads to the <b>Frostfang Reaches</b> (levels 8-15) &mdash; walk through the shimmering zone line.<br>Quests: Merchant Tiloria, Guard Halric, Guard Mossen, Scout Hollis and Trapper Gunnar (Frostfang). Epic chain: <b>The Warden's Legacy</b> begins with Soul-Notary Kerra.</p>
       </div>
     </div>
   </div>
-  <div id="deathScreen" class="hidden"><div class="big">You have been slain!</div><div id="deathSub">Returning to your bind point...</div></div>
+  <div id="deathScreen" class="hidden"><div class="big">You have been flattened!</div><div id="deathSub">Returning to your bind point...</div></div>
 </div>
 <div id="tooltip" class="hidden"></div>
-<div id="zoneFade"><div>LOADING, PLEASE WAIT...</div></div>
+<div id="zoneFade"><div>LOADING, PLEASE GO MAKE A SANDWICH...</div></div>
 
 <script src="vendor/three.min.js"></script>
 <script src="src/util.js"></script>

@@ -77,7 +77,7 @@
       const sp = SPELLS[id];
       this.casting = { id, sp, target, t: sp.cast };
       this.mana -= sp.mana;
-      if (game.player.pos.distanceTo(this.pos) < 50) game.log(`${this.name} begins to cast a spell. <${sp.name}>`, 'spell');
+      if (game.player.pos.distanceTo(this.pos) < 50) game.log(`${this.name} starts chanting: <${sp.name}>`, 'spell');
     }
     finishCast(game) {
       const c = this.casting; this.casting = null;
@@ -95,7 +95,7 @@
       } else if (sp.kind === 'buff') {
         t.buffs = t.buffs.filter((b) => b.id !== c.id);
         t.buffs.push({ id: c.id, name: sp.name, left: sp.dur, buff: sp.buff });
-        if (t === game.player) game.log(`You feel brave. (${this.name} casts ${sp.name} on you)`, 'spell');
+        if (t === game.player) game.log(`You feel pepped up! (${this.name} casts ${sp.name} on you)`, 'spell');
         EB.fx.buff(t, 0xfff0a0);
       }
     }
@@ -138,7 +138,7 @@
               this.tauntT = 6;
               let top = 0; for (const v of foe.hate.values()) top = Math.max(top, v);
               foe.addHate(this, top - (foe.hate.get(this) || 0) + 30); foe.target = this;
-              game.log(`${this.name} taunts ${foe.name} to ignore others and attack him!`, 'other');
+              game.log(`${this.name} taunts ${foe.name} with a truly hurtful joke. It forgets everyone else!`, 'other');
             }
           }
         } else if (this.isPet && this.petMode === 'sit') { /* stay put */ }
@@ -165,12 +165,12 @@
       const tank = this.role === 'tank', w = this.equip.primary && ITEMS[this.equip.primary.id];
       this.swing = this.isPet ? 2.2 : w && w.delay ? w.delay : tank ? 2.4 : 3.0; this.attackT = 0.01;
       const verb = this.isPet ? 'hits' : w ? { slash: 'slashes', pierce: 'pierces', crush: 'crushes' }[w.verb] || 'hits' : tank ? 'slashes' : 'crushes';
-      if (Math.random() > U.clamp(0.72 + (this.level - foe.level) * 0.05, 0.3, 0.95)) { game.log(`${this.name} tries to hit ${foe.name}, but misses!`, 'other'); foe.addHate(this, 1); return; }
+      if (Math.random() > U.clamp(0.72 + (this.level - foe.level) * 0.05, 0.3, 0.95)) { game.log(`${this.name} tries to hit ${foe.name}, but whiffs!`, 'other'); foe.addHate(this, 1); return; }
       let max = Math.max(2, Math.floor(((tank || this.isPet ? 7 : 5) * 2) * (1 + this.level / 12)));
       if (w && w.dmg) max = Math.max(max, Math.floor(w.dmg * 2 * (1 + this.level / 12)));
       max += Math.floor(this.statSum('STR') / 5);
       const dmg = U.randInt(Math.max(1, Math.floor(max / 4)), max);
-      game.log(`${this.name} ${verb} ${foe.name} for ${dmg} points of damage.`, 'other');
+      game.log(`${this.name} ${verb} ${foe.name} for ${dmg} damage.`, 'other');
       game.damageMob(foe, dmg, this);
     }
   }

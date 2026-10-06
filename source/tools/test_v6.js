@@ -101,13 +101,13 @@ const step = (s) => console.log('==', s);
 
     step('chat');
     await say(A, 'Hail, Borin! Want to hunt?');
-    check('/say (plain chat) reaches the nearby player', await waitChat(B, /Annika says, 'Hail, Borin! Want to hunt\?'/));
+    check('/say (plain chat) reaches the nearby player', await waitChat(B, /Annika says: "Hail, Borin! Want to hunt\?"/));
     await say(B, '/ooc Sure, lead the way.');
     check('/ooc reaches everyone', await waitChat(A, /Borin.*Sure, lead the way/));
     await say(B, '/tell annika meet me by the fountain');
-    check('/tell is delivered', await waitChat(A, /Borin tells you, 'meet me by the fountain'/));
+    check('/tell is delivered', await waitChat(A, /Borin whispers to you: "meet me by the fountain"/));
     await say(A, '/who');
-    check('/who lists both players', await waitChat(A, /Borin/) && (await waitChat(A, /2 players/i)));
+    check('/who lists both players', await waitChat(A, /Borin/) && (await waitChat(A, /2 adventurers/i)));
 
     step('pose for the "two players" screenshot');
     await Promise.all([walkTo(B, 129.5, 141), walkTo(A, 128.5, 145.5)]);
@@ -161,7 +161,7 @@ const step = (s) => console.log('==', s);
     await A.waitForTimeout(1200);
     const xp1 = { a: await A.evaluate(() => EB.game.player.xp), b: await B.evaluate(() => EB.game.player.xp) };
     check('shared XP: both group members gained experience', xp1.a > xp0.a && xp1.b > xp0.b, { xp0, xp1 });
-    check('group XP message shown', await waitChat(B, /party experience|experience/i));
+    check('group XP message shown', await waitChat(B, /shared XP|XP\)/));
 
     step('loot the corpse');
     const coins0 = await A.evaluate(() => EB.game.player.coins);

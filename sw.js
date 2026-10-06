@@ -1,7 +1,7 @@
 // Everblock service worker: caches the single-file game for offline play.
 // Network-first for the page (so a new version is picked up as soon as you are online), cache fallback offline.
 // VERSION is stamped with the build hash at publish time; a new version replaces the old cache.
-const VERSION = 'everblock-307f079206fe';
+const VERSION = 'everblock-ca3fbfddf6b5';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
