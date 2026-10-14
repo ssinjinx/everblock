@@ -6,7 +6,8 @@
   // tiles: [top, side, bottom] indices into the procedural atlas
   const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, WATER: 5, LOG: 6, LEAVES: 7, COBBLE: 8,
     PLANKS: 9, BRICK: 10, MOSSY: 11, LANTERN: 12, BEDROCK: 13, ROOF: 14, GRAVEL: 15, CRYPT: 16, WOOL: 17, SNOW: 18, ICE: 19, PINE: 20, BLACKSTONE: 21, BANNER: 22,
-    SANDSTONE: 23, CARVED: 24, GOLD: 25, CACTUS: 26, PALM: 27, DUNE: 28, BRAZIER: 29 };
+    SANDSTONE: 23, CARVED: 24, GOLD: 25, CACTUS: 26, PALM: 27, DUNE: 28, BRAZIER: 29,
+    MUD: 30, MANGROVE: 31, MOSS: 32, GLOWCAP: 33, BASALT: 34, ASH: 35, MAGMA: 36, OBSIDIAN: 37, PORTAL: 38, MARBLE: 39, AWNING: 40 };
   const BLOCKS = [];
   function def(id, name, tiles, opts) { BLOCKS[id] = Object.assign({ id, name, tiles, solid: true, opaque: true, water: false, emissive: false }, opts || {}); }
   def(B.AIR, 'Air', [0, 0, 0], { solid: false, opaque: false });
@@ -40,6 +41,18 @@
   def(B.PALM, 'Palm Fronds', [31, 31, 31]);
   def(B.DUNE, 'Dune Sand', [32, 32, 32]);
   def(B.BRAZIER, 'Spirit Brazier', [33, 33, 33], { emissive: true });
+  // v7: The Soggybottom Mire, The Cinderpeak Caldera and The Bizarre Bazaar
+  def(B.MUD, 'Bog Mud', [34, 34, 34]);
+  def(B.MANGROVE, 'Mangrove Wood', [36, 35, 36]);
+  def(B.MOSS, 'Hanging Moss', [37, 37, 37]);
+  def(B.GLOWCAP, 'Glowcap Mushroom', [38, 38, 38], { emissive: true });
+  def(B.BASALT, 'Basalt', [39, 39, 39]);
+  def(B.ASH, 'Volcanic Ash', [40, 40, 40]);
+  def(B.MAGMA, 'Crusty Magma', [41, 41, 41], { emissive: true });
+  def(B.OBSIDIAN, 'Obsidian', [42, 42, 42]);
+  def(B.PORTAL, 'Portal Stone', [43, 43, 43], { emissive: true });
+  def(B.MARBLE, 'Bazaar Marble', [44, 44, 44]);
+  def(B.AWNING, 'Striped Awning', [45, 45, 45]);
   const BUILDABLE = [B.COBBLE, B.PLANKS, B.BRICK, B.STONE, B.DIRT, B.LOG, B.LEAVES, B.LANTERN, B.ICE];
 
   // ---------- Races ----------
@@ -173,6 +186,70 @@
     healing_potion:    { name: 'Minor Healing Potion', value: 30, stack: true, use: { heal: 45 }, icon: '🧪' },
     greater_potion:    { name: 'Healing Potion', value: 120, stack: true, use: { heal: 150 }, icon: '🧪' },
     bread:             { name: 'Suspiciously Crusty Bread', value: 3, stack: true, use: { heal: 10 }, icon: '🍞' },
+    // ---- v7: Bizarre Bazaar vendor goods ----
+    grand_potion:      { name: 'Grande Healing Latte', value: 1200, stack: true, use: { heal: 900 }, icon: '🧪' },
+    traveler_rations:  { name: 'Trail Mix (Mostly Raisins)', value: 25, stack: true, use: { heal: 60 }, icon: '🥜' },
+    journeyman_blade:  { name: 'Journeyman Slicer', slot: 'primary', dmg: 19, delay: 2.6, verb: 'slash', stats: { STR: 3 }, value: 4500, icon: '⚔' },
+    journeyman_dagger: { name: 'Journeyman Pokestick', slot: 'primary', dmg: 15, delay: 1.9, verb: 'pierce', stats: { DEX: 4 }, value: 4200, icon: '🗡' },
+    journeyman_mace:   { name: 'Journeyman Bonker', slot: 'primary', dmg: 20, delay: 2.8, verb: 'crush', stats: { STR: 3 }, value: 4500, icon: '🔨' },
+    journeyman_staff:  { name: 'Journeyman Thinking Stick', slot: 'primary', dmg: 13, delay: 3.0, verb: 'crush', stats: { INT: 7, WIS: 7 }, mana: 60, value: 4800, icon: '🦯' },
+    expert_blade:      { name: 'Expert Slicer (Still Under Warranty)', slot: 'primary', dmg: 24, delay: 2.6, verb: 'slash', stats: { STR: 5, STA: 3 }, value: 14000, icon: '⚔' },
+    expert_dagger:     { name: 'Expert Pokestick', slot: 'primary', dmg: 19, delay: 1.9, verb: 'pierce', stats: { DEX: 6, AGI: 4 }, value: 14000, icon: '🗡' },
+    expert_staff:      { name: 'Expert Thinking Stick', slot: 'primary', dmg: 16, delay: 3.0, verb: 'crush', stats: { INT: 10, WIS: 10 }, mana: 110, value: 15000, icon: '🦯' },
+    bazaar_helm:       { name: 'Haggler\'s Helm', slot: 'head', ac: 12, stats: { STA: 3 }, value: 3500, icon: '⛑' },
+    bazaar_breastplate:{ name: 'Off-the-Rack Breastplate', slot: 'chest', ac: 20, stats: { STA: 4 }, value: 7000, icon: '🦺' },
+    bazaar_robe:       { name: 'Discount Archmage Robe', slot: 'chest', ac: 10, stats: { INT: 6, WIS: 6 }, mana: 70, value: 6500, icon: '👘' },
+    bazaar_gauntlets:  { name: 'Bargain-Bin Gauntlets', slot: 'hands', ac: 10, stats: { STR: 3 }, value: 3000, icon: '🧤' },
+    bazaar_greaves:    { name: 'Slightly Squeaky Greaves', slot: 'legs', ac: 14, stats: { STA: 3 }, value: 4000, icon: '👖' },
+    bazaar_boots:      { name: 'Marketplace Loafers', slot: 'feet', ac: 10, stats: { AGI: 3 }, value: 3000, icon: '🥾' },
+    bazaar_cloak:      { name: 'Window-Shopper Cloak', slot: 'back', ac: 8, stats: { STA: 3, AGI: 3 }, value: 3500, icon: '🧥' },
+    bazaar_shield:     { name: 'Kite Shield (Kite Not Included)', slot: 'secondary', ac: 16, stats: { STA: 3 }, value: 4500, icon: '🛡' },
+    // ---- v7: The Soggybottom Mire (levels 25-32) ----
+    croc_tooth:        { name: 'Crocodile Chomper', value: 140, stack: true, icon: '🦷' },
+    frog_leg:          { name: 'Froglodyte Drumstick', value: 110, stack: true, icon: '🍗' },
+    wisp_essence:      { name: 'Bottled Whisper', value: 220, stack: true, icon: '✨' },
+    troll_hide:        { name: 'Bog Troll Hide (Damp)', value: 180, stack: true, icon: '🟫' },
+    soggy_scroll:      { name: 'Soggy Sermon Scroll', value: 160, stack: true, icon: '📜' },
+    gatorhide_boots:   { name: 'Crocskin Wellies', slot: 'feet', ac: 13, stats: { AGI: 5, STA: 3 }, value: 6000, icon: '🥾' },
+    froglodyte_spear:  { name: 'Froglodyte Frog-Gig', slot: 'primary', dmg: 22, delay: 2.7, verb: 'pierce', stats: { STR: 5, DEX: 4 }, value: 6500, icon: '🗡' },
+    lilypad_shield:    { name: 'Laminated Lilypad Shield', slot: 'secondary', ac: 18, stats: { STA: 5 }, value: 6000, icon: '🛡' },
+    bog_robe:          { name: 'Robe of the Damp Clergy', slot: 'chest', ac: 12, stats: { INT: 8, WIS: 8 }, mana: 90, value: 7000, icon: '👘' },
+    wisp_ring:         { name: 'Ring of Quiet Whispers', slot: 'ring', stats: { INT: 7, WIS: 7 }, mana: 70, value: 8000, icon: '💍' },
+    troll_vest:        { name: 'Troll-Hide Vest', slot: 'chest', ac: 24, stats: { STA: 6, STR: 4 }, hp: 60, value: 8000, icon: '🦺' },
+    drowned_wraps:     { name: 'Waterlogged Hand Wraps', slot: 'hands', ac: 12, stats: { STA: 4, WIS: 4 }, value: 7000, icon: '🧤' },
+    mire_waders:       { name: 'Mirewatch Waders', slot: 'legs', ac: 16, stats: { STA: 5, AGI: 5 }, hp: 50, value: 9000, icon: '👖' },
+    gnashjaw_necklace: { name: "Gnashjaw's Tooth Necklace", slot: 'neck', ac: 8, stats: { STR: 7, STA: 7 }, hp: 80, value: 12000, icon: '📿', rare: true },
+    ribbitus_crown:    { name: "Chief Ribbitus's Lily Crown", slot: 'head', ac: 16, stats: { STA: 6, WIS: 6 }, hp: 60, value: 12000, icon: '👑', rare: true },
+    soggs_censer:      { name: "Deacon Soggs's Leaky Censer", slot: 'secondary', stats: { INT: 8, WIS: 8 }, mana: 100, value: 12000, icon: '🪬', rare: true },
+    glubb_scepter:     { name: 'Scepter of the Bloated One', slot: 'primary', dmg: 22, delay: 3.0, verb: 'crush', stats: { INT: 14, WIS: 14, STA: 6 }, hp: 80, mana: 180, value: 30000, icon: '🦯', rare: true },
+    mire_greatsword:   { name: 'Mirewalker Greatsword', slot: 'primary', dmg: 33, delay: 3.4, verb: 'slash', stats: { STR: 10, STA: 8 }, hp: 90, value: 30000, icon: '⚔', rare: true },
+    bloated_girdle:    { name: 'Surprisingly Stretchy Cloak', slot: 'back', ac: 12, stats: { STA: 8, AGI: 6 }, hp: 80, value: 20000, icon: '🧥', rare: true },
+    swamp_signet:      { name: 'Signet of the Bog Baron', slot: 'ring', ac: 8, stats: { STR: 8, STA: 8, AGI: 8, DEX: 8, WIS: 8, INT: 8, CHA: 8 }, hp: 100, mana: 100, value: 30000, icon: '💍', rare: true },
+    idol_of_glubb:     { name: 'Idol of Glubb', value: 0, quest: true, icon: '🗿' },
+    // ---- v7: The Cinderpeak Caldera (levels 32-40) ----
+    cinder_pelt:       { name: 'Smoldering Hound Pelt', value: 240, stack: true, icon: '🐺' },
+    ember_core:        { name: 'Ember Sprite Core', value: 300, stack: true, icon: '🔥' },
+    salamander_scale:  { name: 'Salamander Scale (Hot)', value: 260, stack: true, icon: '🦎' },
+    obsidian_shard:    { name: 'Obsidian Shard', value: 350, stack: true, icon: '🔷' },
+    giant_knuckle:     { name: 'Magma Giant Knuckle', value: 400, stack: true, icon: '✊' },
+    ash_badge:         { name: 'Ashen Cult Pin', value: 280, stack: true, icon: '🔺' },
+    emberstep_boots:   { name: 'Emberstep Boots', slot: 'feet', ac: 16, stats: { AGI: 7, STA: 4 }, hp: 40, value: 14000, icon: '🥾' },
+    spark_ring:        { name: 'Ring of Constant Sparks', slot: 'ring', stats: { INT: 9, WIS: 9 }, hp: 40, mana: 100, value: 16000, icon: '💍' },
+    scaled_leggings:   { name: 'Salamander-Scale Leggings', slot: 'legs', ac: 20, stats: { STA: 6, AGI: 4 }, value: 14000, icon: '👖' },
+    obsidian_shield:   { name: 'Obsidian Door-Shield', slot: 'secondary', ac: 26, stats: { STA: 7 }, hp: 60, value: 18000, icon: '🛡' },
+    magma_maul:        { name: 'Magma Giant Maul', slot: 'primary', dmg: 36, delay: 3.6, verb: 'crush', stats: { STR: 10, STA: 8 }, value: 20000, icon: '🔨' },
+    giant_forged_helm: { name: 'Giant-Forged Pot Helm', slot: 'head', ac: 20, stats: { STA: 6, STR: 4 }, value: 16000, icon: '⛑' },
+    cultist_robe:      { name: 'Robe of the Ashen Cult', slot: 'chest', ac: 14, stats: { INT: 10, WIS: 10 }, mana: 130, value: 17000, icon: '👘' },
+    zealot_blade:      { name: 'Zealot\'s Hot Take Blade', slot: 'primary', dmg: 27, delay: 2.5, verb: 'slash', stats: { STR: 7, DEX: 6 }, value: 18000, icon: '⚔' },
+    ashguard_bracer:   { name: 'Ashguard Bracer', slot: 'hands', ac: 18, stats: { STR: 6, STA: 6 }, hp: 70, value: 20000, icon: '🧤' },
+    scorchmaw_collar:  { name: "Scorchmaw's Studded Collar", slot: 'neck', ac: 10, stats: { AGI: 8, STA: 8 }, hp: 100, value: 24000, icon: '📿', rare: true },
+    kindleton_mantle:  { name: "Brother Kindleton's Mantle", slot: 'back', ac: 14, stats: { INT: 10, WIS: 10 }, mana: 120, value: 24000, icon: '🧣', rare: true },
+    brasskull_hammer:  { name: "Brasskull's Anvil Hammer", slot: 'primary', dmg: 38, delay: 3.4, verb: 'crush', stats: { STR: 12, STA: 10 }, hp: 120, value: 40000, icon: '🔨', rare: true },
+    unquenched_blade:  { name: 'The Unquenched Blade', slot: 'primary', dmg: 34, delay: 2.5, verb: 'slash', stats: { STR: 14, DEX: 10, AGI: 8 }, hp: 150, value: 60000, icon: '⚔', rare: true },
+    caldera_crown:     { name: 'Crown of the Caldera', slot: 'head', ac: 26, stats: { INT: 14, WIS: 14, STA: 10 }, hp: 120, mana: 200, value: 60000, icon: '👑', rare: true },
+    molten_plate:      { name: 'Molten Heartplate', slot: 'chest', ac: 40, stats: { STR: 10, STA: 12 }, hp: 160, value: 60000, icon: '🦺', rare: true },
+    caldera_signet:    { name: 'Signet of the Flamebreaker', slot: 'ring', ac: 10, stats: { STR: 10, STA: 10, AGI: 10, DEX: 10, WIS: 10, INT: 10, CHA: 10 }, hp: 150, mana: 150, value: 60000, icon: '💍', rare: true },
+    pyrrhax_heart:     { name: 'Still-Warm Heart of Pyrrhax', value: 0, quest: true, icon: '❤' },
   };
   const EQUIP_SLOTS = ['head', 'neck', 'back', 'chest', 'hands', 'legs', 'feet', 'ring', 'primary', 'secondary'];
 
@@ -268,6 +345,51 @@
     chaotic_feedback:{ name: 'Mic Feedback', classes: { enchanter: 18 }, mana: 70, cast: 2.5, recast: 6, kind: 'nuke', dmg: [75, 95], perLvl: 3, school: 'magic', desc: 'Mind-shattering feedback.' },
     clarity_ii:   { name: 'Big Brain Juice II', classes: { enchanter: 20 }, mana: 90, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 9 }, dur: 1800, friendly: true, ic: 'drop', desc: '+9 mana per tick.' },
     scourge:      { name: 'Plague Rat Energy', classes: { shaman: 23 }, mana: 80, cast: 2.5, recast: 6, kind: 'dot', tick: [28, 34], perLvl: 1.2, dur: 30, school: 'disease', desc: 'A virulent plague rots the target over 30 seconds.' },
+    // ---- v7: levels 26-40 for every class ----
+    belly_flop:   { name: 'Belly Flop', classes: { warrior: 26 }, ic: 'shieldbash', mana: 0, cast: 0, recast: 14, kind: 'skill', dmg: [80, 110], perLvl: 3, verb: 'belly flop', desc: 'Hurl your entire body at the target. Instant. Dignity sold separately.' },
+    unshakeable:  { name: 'Unshakeable Vibes', classes: { warrior: 30 }, ic: 'shield', mana: 0, cast: 0, recast: 180, kind: 'buff', buff: { ac: 40, hp: 120 }, dur: 60, self: true, skill: true, desc: 'Nothing can ruin your mood: +40 AC, +120 HP for 60s.' },
+    leg_sweep:    { name: 'Ankle Biter Sweep', classes: { warrior: 34 }, ic: 'boot', mana: 0, cast: 0, recast: 18, kind: 'stun', dur: 2.5, dmg: [30, 50], skill: true, desc: 'Sweep the target off its feet, stunning it. Instant.' },
+    chaos_tornado:{ name: 'Whirling Dervish Tantrum', classes: { warrior: 38 }, ic: 'sword', mana: 0, cast: 0, recast: 24, kind: 'skill', dmg: [150, 210], perLvl: 5, verb: 'tantrum', desc: 'Spin like a toddler denied candy. Huge damage. Instant.' },
+    complete_overhaul:{ name: 'Complete Overhaul', classes: { cleric: 27 }, mana: 220, cast: 4, recast: 2, kind: 'heal', amt: [500, 600], perLvl: 6, friendly: true, desc: 'Takes it to the shop and gives it the full service. A huge heal.' },
+    holy_clapback:{ name: 'Holy Clap Back', classes: { cleric: 30 }, mana: 110, cast: 2.5, recast: 7, kind: 'nuke', dmg: [170, 220], perLvl: 4, school: 'magic', desc: 'A divine and devastating comeback.' },
+    aegis_concern:{ name: 'Aegis of Mild Concern', classes: { cleric: 33, paladin: 35 }, mana: 180, cast: 4, recast: 3, kind: 'buff', buff: { ac: 40, hp: 150 }, dur: 2400, friendly: true, desc: '+40 AC, +150 HP. Someone up there is mildly worried about you.' },
+    group_hug_xl: { name: 'Group Hug of Healing XL', classes: { cleric: 36 }, mana: 260, cast: 4.5, recast: 10, kind: 'groupheal', amt: [260, 320], perLvl: 5, desc: 'Heals your whole group a huge amount. Everyone squeeze in.' },
+    restraining_order:{ name: 'Divine Restraining Order', classes: { cleric: 39 }, mana: 180, cast: 3, recast: 8, kind: 'nuke', dmg: [260, 320], perLvl: 5, school: 'magic', undead: 2, desc: 'Legally binding holy fire. Double damage against the undead.' },
+    sizzle_reel:  { name: 'Sizzle Reel', classes: { wizard: 27 }, mana: 200, cast: 3.5, recast: 9, kind: 'nuke', dmg: [300, 360], perLvl: 5, school: 'fire', desc: 'A highlight montage of everything on fire.' },
+    glacial_paperwork:{ name: 'Glacial Paperwork', classes: { wizard: 30 }, mana: 60, cast: 1.5, recast: 10, kind: 'root', dur: 32, desc: 'Buries the target in forms. It cannot move until they are filed.' },
+    shielding_bulk:{ name: 'Shielding (Bulk Warehouse)', classes: { wizard: 32, enchanter: 33, necromancer: 34 }, mana: 110, cast: 3.5, recast: 3, kind: 'buff', buff: { ac: 18, hp: 110 }, dur: 2400, self: true, desc: '+18 AC, +110 HP. Membership required.' },
+    thunder_bolt: { name: 'Thunder Thighs Bolt', classes: { wizard: 34 }, mana: 230, cast: 3.5, recast: 8, kind: 'nuke', dmg: [380, 450], perLvl: 6, school: 'magic', desc: 'Lightning with leg day energy.' },
+    meteor_thoughts:{ name: 'Meteor Shower Thoughts', classes: { wizard: 38 }, mana: 290, cast: 4.5, recast: 11, kind: 'nuke', dmg: [480, 560], perLvl: 7, school: 'fire', desc: 'What if rocks, but on fire, but on them?' },
+    pocket_sand:  { name: 'Pocket Sand', classes: { rogue: 27 }, ic: 'star', mana: 0, cast: 0, recast: 22, kind: 'stun', dur: 3, dmg: [20, 30], skill: true, desc: 'Sha-sha-sha! Stuns the target. Instant.' },
+    extra_sauce:  { name: 'Extra Spicy Dagger Sauce', classes: { rogue: 30 }, ic: 'dagger', mana: 0, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 35 }, dur: 60, self: true, skill: true, desc: '+35% melee damage for 60s. Ghost pepper edition.' },
+    backpoke_deluxe:{ name: 'Backpoke Deluxe', classes: { rogue: 33 }, ic: 'dagger', mana: 0, cast: 0, recast: 18, kind: 'skill', dmg: [180, 240], perLvl: 5, verb: 'poke', desc: 'The premium poke. Instant.' },
+    retirement_package:{ name: 'Early Retirement Package', classes: { rogue: 38 }, ic: 'dagger', mana: 0, cast: 0, recast: 30, kind: 'skill', dmg: [280, 360], perLvl: 7, verb: 'retire', desc: 'A very generous, very final offer. Instant.' },
+    triple_pew:   { name: 'Pew Pew Pew', classes: { ranger: 27 }, mana: 0, cast: 0, recast: 10, kind: 'skill', archery: true, range: 36, dmg: [100, 140], perLvl: 3.5, verb: 'shoot', ic: 'arrow', desc: 'Three arrows, one target (LOS required).' },
+    bark_pro:     { name: 'Skin like Hardwood (Pro)', classes: { ranger: 30 }, mana: 90, cast: 3, recast: 3, kind: 'buff', buff: { ac: 20, hp: 90 }, dur: 2000, friendly: true, ic: 'bark', desc: '+20 AC, +90 HP.' },
+    wildfire:     { name: 'Wildfire Hashtag', classes: { ranger: 33 }, mana: 110, cast: 2, recast: 8, kind: 'dot', tick: [40, 50], perLvl: 1.5, dur: 24, school: 'fire', desc: 'Trending: the target, on fire, for 24 seconds.' },
+    arbor_heal:   { name: 'Arbor Day Ointment', classes: { ranger: 36 }, mana: 110, cast: 2.5, recast: 3, kind: 'heal', amt: [240, 300], perLvl: 5, friendly: true, ic: 'leaf', desc: 'A potent heal. Plant a tree afterwards.' },
+    hawkeye:      { name: 'Hawkeye Hat Trick', classes: { ranger: 39 }, mana: 0, cast: 0, recast: 16, kind: 'skill', archery: true, range: 44, dmg: [190, 250], perLvl: 5, verb: 'shoot', ic: 'arrow', desc: 'A ridiculous trick shot from very far away.' },
+    elbow_drop:   { name: 'Holy Elbow Drop', classes: { paladin: 27 }, mana: 80, cast: 1, recast: 12, kind: 'stun', dur: 3.5, dmg: [70, 95], desc: 'Off the top rope, with divine sanction. Stuns the target.' },
+    spa_deluxe:   { name: 'Spa Day Deluxe', classes: { paladin: 30 }, mana: 130, cast: 2.5, recast: 3, kind: 'heal', amt: [260, 320], perLvl: 5, friendly: true, desc: 'Cucumber slices included. A strong paladin heal.' },
+    rage_yodel:   { name: 'Righteous Rage Yodel', classes: { paladin: 33 }, mana: 40, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 25 }, dur: 90, self: true, ic: 'fury', desc: '+25% melee damage for 90s. Instant. The neighbours have complained.' },
+    repellent_xl: { name: 'Undead Repellent XL', classes: { paladin: 36 }, mana: 120, cast: 2.5, recast: 6, kind: 'nuke', dmg: [180, 230], perLvl: 4, school: 'magic', undead: 2, desc: 'Industrial strength. Double damage against the undead.' },
+    hug_of_valor: { name: 'Group Hug of Valor', classes: { paladin: 39 }, mana: 220, cast: 4, recast: 10, kind: 'groupheal', amt: [180, 230], perLvl: 4, desc: 'Heals your whole group. Firm handshakes all round.' },
+    polar_vortex: { name: 'Polar Vortex Grumble', classes: { shaman: 27 }, mana: 120, cast: 2.5, recast: 6, kind: 'nuke', dmg: [180, 230], perLvl: 4, school: 'cold', desc: 'A grumpy blast of arctic spirit air.' },
+    dialup:       { name: 'Dial-Up Slowdown', classes: { shaman: 29 }, mana: 90, cast: 2.5, recast: 8, kind: 'slow', dur: 90, desc: 'Connects the target to 56k. Its attacks are much slower for 90s.' },
+    ox_energy_ii: { name: 'Big Ox Energy II', classes: { shaman: 32 }, mana: 150, cast: 3, recast: 3, kind: 'buff', buff: { hp: 150, ac: 12 }, dur: 2400, friendly: true, ic: 'bark', desc: '+150 HP, +12 AC.' },
+    plague_supreme:{ name: 'Plague Rat Supreme', classes: { shaman: 35 }, mana: 140, cast: 2.5, recast: 6, kind: 'dot', tick: [45, 55], perLvl: 1.5, dur: 30, school: 'disease', desc: 'Extra cheese, extra plague. Rots the target over 30 seconds.' },
+    mega_mend:    { name: 'Ancestral Mega-Mend', classes: { shaman: 38 }, mana: 230, cast: 4, recast: 2, kind: 'heal', amt: [480, 560], perLvl: 6, friendly: true, desc: 'Your ancestors chip in for a huge heal.' },
+    bear_hug:     { name: 'Vampiric Bear Hug', classes: { necromancer: 26 }, mana: 110, cast: 2.5, recast: 4, kind: 'nuke', lifetap: true, dmg: [170, 210], perLvl: 4, school: 'life', ic: 'heart', desc: 'Squeezes the life out of the target and into you.' },
+    middle_manager:{ name: 'Skeletal Middle Manager', classes: { necromancer: 28 }, mana: 220, cast: 9, recast: 10, kind: 'pet', petLvl: 28, desc: 'Raise a skeletal middle manager (level 28). It schedules meetings with your enemies.' },
+    pyro_pimple:  { name: 'Pyroclastic Pimple', classes: { necromancer: 31 }, mana: 120, cast: 2.5, recast: 6, kind: 'dot', tick: [40, 50], perLvl: 1.5, dur: 30, school: 'fire', desc: 'Do not pop it. Burns the target over 30 seconds.' },
+    lich_lackey:  { name: 'Lich-Adjacent Lackey', classes: { necromancer: 33 }, mana: 260, cast: 9, recast: 10, kind: 'pet', petLvl: 33, desc: 'Raise a lackey who has met a lich once (level 33).' },
+    soul_smoothie_xl:{ name: 'Soul Smoothie XL', classes: { necromancer: 35 }, mana: 200, cast: 3, recast: 8, kind: 'nuke', lifetap: true, dmg: [260, 320], perLvl: 5, school: 'life', ic: 'heart', desc: 'Large size, extra soul. Heals you for the damage dealt.' },
+    doom_butler:  { name: 'Doom Butler Deluxe', classes: { necromancer: 38 }, mana: 320, cast: 10, recast: 10, kind: 'pet', petLvl: 38, desc: 'Raise an armored doom butler (level 38). It also does windows.' },
+    lullaby:      { name: 'Hypno-Lullaby', classes: { enchanter: 27 }, mana: 90, cast: 2, recast: 5, kind: 'mez', dur: 36, maxLvl: 35, ic: 'eye', desc: 'Sings the target to sleep (mesmerize, up to level 35). Any damage wakes it.' },
+    clarity_iii:  { name: 'Big Brain Juice III', classes: { enchanter: 30 }, mana: 140, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 14 }, dur: 2100, friendly: true, ic: 'drop', desc: '+14 mana per tick. Now with extra electrolytes.' },
+    disco_flash:  { name: 'Disco Inferno Flash', classes: { enchanter: 32 }, mana: 90, cast: 1.5, recast: 12, kind: 'stun', dur: 5, dmg: [30, 45], desc: 'A blinding mirror-ball flash that stuns the target.' },
+    mind_melt:    { name: 'Mind Melt Feedback', classes: { enchanter: 35 }, mana: 170, cast: 2.5, recast: 6, kind: 'nuke', dmg: [220, 270], perLvl: 5, school: 'magic', desc: 'Psychic feedback so loud it melts thoughts.' },
+    mega_mesmer:  { name: 'Mega Mesmer', classes: { enchanter: 37 }, mana: 120, cast: 2, recast: 5, kind: 'mez', dur: 45, maxLvl: 42, ic: 'eye', desc: 'A mesmerize so powerful it works on bosses\' cousins (up to level 42). Any damage wakes it.' },
     dazzle:       { name: 'Razzle Dazzle', classes: { enchanter: 24 }, mana: 70, cast: 2, recast: 5, kind: 'mez', dur: 40, maxLvl: 27, ic: 'eye', desc: 'A powerful, sparkly mesmerize (up to level 27). Any damage wakes it.' },
   };
 
@@ -348,6 +470,57 @@
     ankhetra: { name: 'Pharaoh Ankhet-Ra the Eternal', lvl: [25, 25], model: 'biped', color: 0xd8c898, scale: 1.75, weapon: true, glow: 0xffd040, aggro: 18, aggressive: true, faction: 'undead', social: true, verb: 'crush', delay: 2.6, speed: 3.5, named: true, hpMult: 3.6, dmgMult: 1.35,
       caster: { name: 'Sunfire Curse', dmg: [70, 110], cast: 3, cd: 14, range: 26 }, heals: { name: 'Eternal Renewal', amt: [500, 700], cast: 3, cd: 30, range: 0, self: true },
       factionHits: [['sunward', 40]], loot: [['pharaoh_heart', 1.0], ['sunforged_khopesh', 0.5], ['pharaoh_crook', 0.5], ['ankh_amulet', 0.5], ['golden_scarab', 1.0]] },
+    // ---- v7: The Soggybottom Mire (zone 4, levels 25-32) ----
+    bog_croc: { name: 'a mire crocodile', lvl: [25, 27], model: 'quad', color: 0x4a5a2a, scale: 1.5, aggro: 11, aggressive: true, faction: 'croc', social: false, verb: 'chomp', delay: 2.4, speed: 3.6,
+      loot: [['croc_tooth', 0.7], ['gatorhide_boots', 0.05]] },
+    gnashjaw: { name: 'Old Gnashjaw', lvl: [29, 29], model: 'quad', color: 0x2e3a1a, scale: 2.1, aggro: 15, aggressive: true, faction: 'croc', social: false, verb: 'chomp', delay: 2.2, speed: 3.8, named: true, hpMult: 2.0, dmgMult: 1.25, glow: 0xd0e040,
+      loot: [['gnashjaw_necklace', 0.65], ['gatorhide_boots', 0.4], ['croc_tooth', 1.0]] },
+    froglodyte: { name: 'a froglodyte warrior', lvl: [26, 28], model: 'biped', color: 0x5a8a3a, scale: 0.95, weapon: true, aggro: 13, aggressive: true, faction: 'frog', social: true, verb: 'stab', delay: 2.3, speed: 4.0, flee: true,
+      loot: [['frog_leg', 0.7], ['froglodyte_spear', 0.05], ['lilypad_shield', 0.04]] },
+    frog_priest: { name: 'a froglodyte bog-priest', lvl: [27, 29], model: 'biped', color: 0x4a6a8a, scale: 0.95, glow: 0x80ff90, aggro: 13, aggressive: true, faction: 'frog', social: true, verb: 'hit', delay: 2.6, speed: 3.6, flee: true,
+      caster: { name: 'Swamp Gas Burp', dmg: [70, 100], cast: 2.5, cd: 12, range: 24 },
+      heals: { name: 'Mudpack Mending', amt: [220, 300], cast: 2, cd: 9, range: 22 }, buffs: { name: 'Slime Coat', ward: 0.25, dur: 45, cast: 2, cd: 18, range: 18, color: 0x80ff90 },
+      loot: [['frog_leg', 0.6], ['bog_robe', 0.05]] },
+    ribbitus: { name: 'Chief Ribbitus the Unhoppable', lvl: [30, 30], model: 'biped', color: 0x3a7a2a, scale: 1.25, weapon: true, glow: 0xffe040, aggro: 16, aggressive: true, faction: 'frog', social: true, verb: 'stab', delay: 2.1, speed: 4.2, named: true, hpMult: 2.1, dmgMult: 1.25,
+      loot: [['ribbitus_crown', 0.65], ['froglodyte_spear', 0.5], ['frog_leg', 1.0]] },
+    swamp_wisp: { name: 'a will-o-the-whisper', lvl: [28, 30], model: 'biped', color: 0x6ad8a8, scale: 0.9, glow: 0xa0ffd0, aggro: 14, aggressive: true, faction: 'wisp', social: true, verb: 'zap', delay: 2.2, speed: 4.4,
+      caster: { name: 'Spooky Whisper', dmg: [80, 115], cast: 2.2, cd: 10, range: 26 }, loot: [['wisp_essence', 0.6], ['wisp_ring', 0.04]] },
+    bog_troll: { name: 'a bog troll', lvl: [29, 31], model: 'biped', color: 0x5a6a4a, scale: 1.6, aggro: 13, aggressive: true, faction: 'troll', social: true, verb: 'smash', delay: 2.8, speed: 3.6, hpMult: 1.4,
+      heals: { name: 'Gross Regeneration', amt: [260, 340], cast: 1.5, cd: 20, range: 0, self: true }, loot: [['troll_hide', 0.75], ['troll_vest', 0.05], ['superior_potion', 0.15]] },
+    drowned_zealot: { name: 'a waterlogged zealot', lvl: [29, 31], model: 'biped', color: 0x6a8a7a, scale: 1.05, aggro: 12, aggressive: true, faction: 'drowned', social: true, verb: 'hit', delay: 2.5, speed: 3.0, hpMult: 1.2,
+      loot: [['soggy_scroll', 0.7], ['drowned_wraps', 0.06]] },
+    soggs: { name: 'Deacon Soggs', lvl: [31, 31], model: 'biped', color: 0x3a4a6a, scale: 1.15, glow: 0x60ffb0, aggro: 15, aggressive: true, faction: 'drowned', social: true, verb: 'hit', delay: 2.4, speed: 3.4, named: true, hpMult: 2.2, dmgMult: 1.2,
+      caster: { name: 'Damp Sermon', dmg: [100, 140], cast: 2.6, cd: 11, range: 26 }, heals: { name: 'Baptism by Bog', amt: [400, 520], cast: 2.5, cd: 12, range: 24 },
+      loot: [['soggs_censer', 0.6], ['bog_robe', 0.5], ['soggy_scroll', 1.0]] },
+    glubb: { name: 'Hierophant Glubb the Bloated', lvl: [32, 32], model: 'biped', color: 0x4a7a3a, scale: 2.2, weapon: true, glow: 0x80ff60, aggro: 18, aggressive: true, faction: 'drowned', social: true, verb: 'belly-bump', delay: 2.6, speed: 3.2, named: true, hpMult: 3.8, dmgMult: 1.35,
+      caster: { name: 'Tidal Belch', dmg: [140, 200], cast: 3, cd: 14, range: 26 }, heals: { name: 'Bloating Renewal', amt: [900, 1200], cast: 3, cd: 30, range: 0, self: true },
+      factionHits: [['mirewatch', 40]], loot: [['idol_of_glubb', 1.0], ['glubb_scepter', 0.5], ['mire_greatsword', 0.5], ['bloated_girdle', 0.5], ['soggy_scroll', 1.0]] },
+    // ---- v7: The Cinderpeak Caldera (zone 5, levels 32-40) ----
+    cinder_hound: { name: 'a cinder hound', lvl: [32, 34], model: 'quad', color: 0x4a2a22, scale: 0.95, glow: 0xff6020, aggro: 15, aggressive: true, faction: 'hound', social: true, verb: 'bite', delay: 2.0, speed: 4.8, flee: true,
+      loot: [['cinder_pelt', 0.7], ['emberstep_boots', 0.04]] },
+    scorchmaw: { name: 'Scorchmaw the Overcooked', lvl: [36, 36], model: 'quad', color: 0x2a1410, scale: 1.3, glow: 0xff8020, aggro: 17, aggressive: true, faction: 'hound', social: true, verb: 'bite', delay: 1.9, speed: 5.0, named: true, hpMult: 1.9, dmgMult: 1.25,
+      loot: [['scorchmaw_collar', 0.65], ['emberstep_boots', 0.4], ['cinder_pelt', 1.0]] },
+    ember_sprite: { name: 'an ember sprite', lvl: [33, 35], model: 'biped', color: 0xff9040, scale: 0.75, glow: 0xffc060, aggro: 14, aggressive: true, faction: 'sprite', social: true, verb: 'singe', delay: 2.1, speed: 4.6,
+      caster: { name: 'Spicy Spark', dmg: [110, 150], cast: 2.2, cd: 10, range: 26 }, loot: [['ember_core', 0.6], ['spark_ring', 0.04]] },
+    salamander: { name: 'a lava salamander', lvl: [33, 35], model: 'snake', color: 0xc04018, scale: 1.4, aggro: 10, aggressive: true, faction: 'salamander', social: false, verb: 'bite', delay: 2.3, speed: 3.4,
+      loot: [['salamander_scale', 0.7], ['scaled_leggings', 0.05]] },
+    obsidian_golem: { name: 'an obsidian golem', lvl: [35, 37], model: 'biped', color: 0x26222e, scale: 1.9, glow: 0xff5010, aggro: 12, aggressive: true, faction: 'golem', social: true, verb: 'pummel', delay: 3.0, speed: 3.2, hpMult: 1.5,
+      loot: [['obsidian_shard', 0.75], ['obsidian_shield', 0.05]] },
+    magma_giant: { name: 'a magma giant', lvl: [36, 38], model: 'biped', color: 0x8a3a22, scale: 2.2, glow: 0xff6020, aggro: 14, aggressive: true, faction: 'firegiant', social: true, verb: 'crush', delay: 3.0, speed: 3.5, hpMult: 1.5,
+      loot: [['giant_knuckle', 0.8], ['magma_maul', 0.05], ['giant_forged_helm', 0.05], ['grand_potion', 0.1]] },
+    ash_zealot: { name: 'an Ashen Cult zealot', lvl: [34, 36], model: 'biped', color: 0x3a2224, scale: 1.0, weapon: true, aggro: 13, aggressive: true, faction: 'ashcult', social: true, verb: 'slash', delay: 2.3, speed: 4.0, flee: true,
+      loot: [['ash_badge', 0.7], ['zealot_blade', 0.04], ['traveler_rations', 0.2]] },
+    ash_pyro: { name: 'an Ashen Cult pyromancer', lvl: [35, 37], model: 'biped', color: 0x7a2a1a, scale: 1.0, glow: 0xff7030, aggro: 13, aggressive: true, faction: 'ashcult', social: true, verb: 'hit', delay: 2.6, speed: 3.6, flee: true,
+      caster: { name: 'Bonfire of the Vanities', dmg: [130, 175], cast: 2.5, cd: 12, range: 24 },
+      heals: { name: 'Cauterize (Ouch)', amt: [380, 480], cast: 2, cd: 9, range: 22 }, buffs: { name: 'Fire Hype', haste: 0.3, dur: 45, cast: 2, cd: 20, range: 18, color: 0xff7030 },
+      loot: [['ash_badge', 0.7], ['cultist_robe', 0.05]] },
+    kindleton: { name: 'Brother Kindleton, Hype Man of the Flame', lvl: [37, 37], model: 'biped', color: 0x1e1012, scale: 1.1, weapon: true, glow: 0xff4020, aggro: 16, aggressive: true, faction: 'ashcult', social: true, verb: 'slash', delay: 2.0, speed: 4.2, named: true, hpMult: 2.0, dmgMult: 1.25,
+      caster: { name: 'Hot Take', dmg: [150, 200], cast: 2.4, cd: 12, range: 24 }, loot: [['kindleton_mantle', 0.65], ['zealot_blade', 0.5], ['ash_badge', 1.0]] },
+    brasskull: { name: 'Forgemaster Brasskull', lvl: [38, 38], model: 'biped', color: 0x6a2a1a, scale: 2.4, weapon: true, glow: 0xffa040, aggro: 16, aggressive: true, faction: 'firegiant', social: true, verb: 'hammer', delay: 3.0, speed: 3.5, named: true, hpMult: 2.6, dmgMult: 1.3,
+      loot: [['brasskull_hammer', 0.6], ['giant_forged_helm', 0.5], ['giant_knuckle', 1.0]] },
+    pyrrhax: { name: 'Pyrrhax the Unquenched', lvl: [40, 40], model: 'biped', color: 0x5a1a10, scale: 2.8, weapon: true, glow: 0xff5010, aggro: 20, aggressive: true, faction: 'firegiant', social: true, verb: 'incinerate', delay: 2.8, speed: 3.6, named: true, hpMult: 4.6, dmgMult: 1.4,
+      caster: { name: 'Caldera Eruption', dmg: [200, 280], cast: 3, cd: 13, range: 28 }, heals: { name: 'Stoke the Furnace', amt: [1400, 1800], cast: 3, cd: 32, range: 0, self: true },
+      factionHits: [['ashguard', 40]], loot: [['pyrrhax_heart', 1.0], ['unquenched_blade', 0.5], ['caldera_crown', 0.5], ['molten_plate', 0.5], ['grand_potion', 1.0]] },
   };
   // v5: faction standing. Kills adjust standing; standing drives con messages, aggression and merchant prices.
   const FACTIONS = {
@@ -357,6 +530,12 @@
     gnoll:   { name: 'Darkpaws Gnoll Homeowners Assn.', start: -800 },
     orc:     { name: 'Frostfang Orcs', start: -800 },
     bandit:  { name: 'Sandreaver Bandits', start: -800 },
+    // v7
+    mirewatch: { name: 'The Mirewatch', start: 0 },
+    frog:    { name: 'Froglodyte Croak Collective', start: -800 },
+    ashguard: { name: 'Ashguard Expedition', start: 0 },
+    ashcult: { name: 'The Ashen Cult (Very Hot Right Now)', start: -800 },
+    bazaar:  { name: 'Bizarre Bazaar Merchants Guild', start: 100 },
   };
   // faction hits applied when a mob of the given (social) faction dies; per-mob factionHits add to these
   const KILL_FACTION = {
@@ -365,6 +544,11 @@
     giant: [['hollis', 4]],
     undead: [['guards', 1]],
     bandit: [['bandit', -14], ['sunward', 10]],
+    frog: [['frog', -14], ['mirewatch', 10]],
+    drowned: [['mirewatch', 2]],
+    troll: [['mirewatch', 3]],
+    ashcult: [['ashcult', -14], ['ashguard', 10]],
+    firegiant: [['ashguard', 3]],
   };
   // standing tiers (min value -> label, con phrase)
   const STANDINGS = [
@@ -388,6 +572,9 @@
     13: { name: 'Shadow Steve', desc: 'A brooding shadow knight.', color: 0x3a3a4a },
     18: { name: 'Bonaparte', desc: 'A bone knight with big ambitions.', color: 0xd8d0b8 },
     23: { name: 'Mummy Dearest', desc: 'A sand-wrapped revenant.', color: 0xc8b890 },
+    28: { name: 'Gary From Accounting', desc: 'A skeletal middle manager. Loves a spreadsheet, hates your enemies.', color: 0xd8e0c8 },
+    33: { name: 'Lord Lichtenstein', desc: 'A lich-adjacent lackey in a very nice robe.', color: 0x6a3a8a },
+    38: { name: 'Jeeves the Dreadful', desc: 'An armored doom butler. Impeccable manners, terrible intentions.', color: 0x2a2a34 },
   };
   function mercCost(role, L) { return (role === 'healer' ? 25 : 20) + L * L * 10; }
 
@@ -447,6 +634,22 @@
       done: 'The heart of Ankhet-Ra... at last, it can be burned. The whole caravan is in your debt, Tombbreaker. Take this signet.' },
   });
 
+  // v7: Soggybottom Mire + Cinderpeak Caldera quests
+  Object.assign(QUESTS, {
+    frog_legs: { name: 'Drumsticks for the Mirewatch', giver: 'Warden Marisol', item: 'frog_leg', count: 4, coins: 12000, reward: 'mire_waders', rewardCount: 1, xp: 90000, faction: [['mirewatch', 80], ['frog', -60]],
+      offer: 'The froglodytes of the Croaking Shallows raid our boardwalks every night. Bring me 4 Froglodyte Drumsticks and the Mirewatch will kit you out with proper waders.',
+      done: 'Four drumsticks! Cook is going to be thrilled. Here, these waders will keep the leeches out. Mostly.' },
+    bloated_idol: { name: 'The Bloated Hierophant', giver: 'Hedge-Witch Grizelda', item: 'idol_of_glubb', count: 1, coins: 40000, reward: 'swamp_signet', rewardCount: 1, xp: 160000, title: 'Bog Baron', faction: [['mirewatch', 200]],
+      offer: 'Deep in the Sunken Temple of Glubb, a bloated frog-priest preaches to the drowned. As long as his idol stands, the dead keep rising out of the muck. Slay Hierophant Glubb and bring me his idol.',
+      done: 'Ugh, it is still damp. Good! Into the cauldron it goes. Take this signet, Bog Baron, the swamp owes you.' },
+    cult_pins: { name: 'Pins of the Ashen Cult', giver: 'Captain Emberly', item: 'ash_badge', count: 4, coins: 30000, reward: 'ashguard_bracer', rewardCount: 1, xp: 200000, faction: [['ashguard', 80], ['ashcult', -60]],
+      offer: 'The Ashen Cult camps on the slopes west of here, chanting about how fire is "very in right now". Bring me 4 of their pins and wear the bracer of the Ashguard.',
+      done: 'Four pins! That will cool them down. Wear this bracer, you have earned it.' },
+    unquenched: { name: 'Quench the Unquenched', giver: 'Sage Cindral', item: 'pyrrhax_heart', count: 1, coins: 100000, reward: 'caldera_signet', rewardCount: 1, xp: 400000, title: 'Flamebreaker', faction: [['ashguard', 200]],
+      offer: 'Inside the Molten Forge in the heart of the caldera, Pyrrhax the Unquenched stokes the mountain toward eruption. Bring me his still-warm heart and I will put it on ice. Literally. I have a bucket.',
+      done: 'Into the bucket it goes. Hissss. The mountain sleeps again, Flamebreaker. This signet is yours.' },
+  });
+
   // Con colors: grey green lightblue blue white yellow red
   function conColor(plLvl, mobLvl) {
     const d = mobLvl - plLvl;
@@ -467,13 +670,21 @@
     blue: 'looks like you would win, probably', white: 'looks like a coin flip with teeth', yellow: 'looks like a bad decision', red: 'looks like it would use you as a mop!',
   };
 
-  function xpToNext(L) { return Math.floor(80 * L * L + 20 * L); }
-  const MAX_LEVEL = 25;
+  // v7: the curve is unchanged up to 25; past that each level costs progressively more (about 16 even-con kills per level at 39)
+  function xpToNext(L) { return Math.floor((80 * L * L + 20 * L) * (L > 25 ? 1 + (L - 25) * 0.06 : 1)); }
+  const MAX_LEVEL = 40;
   // merchant inventories (stock key on the NPC)
   const STOCKS = {
     general: ['healing_potion', 'greater_potion', 'bread', 'cloth_cap', 'cloth_pants', 'rawhide_gloves', 'leather_boots', 'leather_tunic', 'wooden_shield', 'bronze_long_sword', 'fine_steel_dagger', 'oak_staff'],
     desert: ['superior_potion', 'greater_potion', 'waterskin', 'bread', 'steel_scimitar', 'dune_staff', 'desert_cloak', 'scorpion_shield'],
     fence: ['superior_potion', 'waterskin', 'sand_scimitar', 'venom_stinger', 'bandit_leathers', 'dune_robe'],
+    // v7
+    mire: ['superior_potion', 'greater_potion', 'traveler_rations', 'bread', 'gatorhide_boots', 'lilypad_shield', 'journeyman_staff'],
+    caldera: ['grand_potion', 'superior_potion', 'traveler_rations', 'waterskin', 'emberstep_boots', 'scaled_leggings', 'expert_blade'],
+    bz_weapons: ['bronze_long_sword', 'fine_steel_dagger', 'oak_staff', 'steel_scimitar', 'journeyman_blade', 'journeyman_dagger', 'journeyman_mace', 'journeyman_staff', 'expert_blade', 'expert_dagger', 'expert_staff'],
+    bz_armor: ['leather_tunic', 'leather_boots', 'wooden_shield', 'bazaar_helm', 'bazaar_breastplate', 'bazaar_robe', 'bazaar_gauntlets', 'bazaar_greaves', 'bazaar_boots', 'bazaar_cloak', 'bazaar_shield'],
+    bz_supplies: ['bread', 'traveler_rations', 'waterskin', 'healing_potion', 'greater_potion', 'superior_potion', 'grand_potion'],
+    bz_buyer: [],
   };
 
   // ---------- formulas (shared by the browser game and the multiplayer server) ----------

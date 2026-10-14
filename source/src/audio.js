@@ -38,6 +38,12 @@
     // v5: Phrygian dominant (hijaz) over a low drone for the Sunscorched Expanse; a slow, hollow tomb theme
     desert: { bpm: 92, root: 164.8, scale: [0, 1, 4, 5, 7, 8, 10], prog: [0, 1, 0, 6], lead: [0, 1, 2, -1, 1, 0, -1, 1, 4, -1, 3, 2, 1, -1, 0, -1], wave: 'triangle', drone: true },
     tomb: { bpm: 50, root: 98.0, scale: [0, 1, 4, 5, 7, 8, 10], prog: [0, 1, 5, 1], lead: [0, -1, -1, 1, -1, -1, 0, -1, -1, -1, 4, -1, 5, -1, 1, -1], wave: 'sine', drone: true, quiet: true },
+    // v7: a sticky, swaying bayou waltz-ish loop; a heavy volcanic march; a bouncy market tune; two dungeon themes
+    swamp: { bpm: 70, root: 155.6, scale: [0, 2, 3, 5, 7, 8, 11], prog: [0, 3, 4, 0], lead: [0, -1, 3, 2, -1, 0, -1, -1, 4, 3, -1, 2, 0, -1, -1, -1], wave: 'triangle', drone: true },
+    bog: { bpm: 52, root: 103.8, scale: [0, 1, 3, 5, 7, 8, 11], prog: [0, 1, 4, 0], lead: [0, -1, -1, 1, -1, -1, -1, -1, 4, -1, -1, 3, -1, -1, 1, -1], wave: 'sine', drone: true, quiet: true },
+    volcano: { bpm: 100, root: 130.8, scale: [0, 1, 3, 5, 7, 8, 10], prog: [0, 5, 6, 0], lead: [0, 0, -1, 3, -1, 2, 1, -1, 0, 0, -1, 4, -1, 3, 1, -1], wave: 'triangle', drone: true },
+    forge: { bpm: 60, root: 87.3, scale: [0, 1, 3, 5, 6, 8, 10], prog: [0, 1, 0, 6], lead: [0, -1, -1, -1, 1, -1, 0, -1, -1, -1, 4, -1, 3, -1, 1, -1], wave: 'sine', drone: true, quiet: true },
+    bazaar: { bpm: 108, root: 220.0, scale: [0, 2, 4, 5, 7, 9, 10], prog: [0, 3, 4, 3], lead: [4, 5, 4, 2, 0, -1, 2, 4, 5, -1, 4, 2, 1, -1, 0, -1], wave: 'triangle' },
   };
   let musicOn = true, mood = null, musicGain = null, nextT = 0, step = 0, timer = null;
   const hz = (m, deg, oct) => { const n = m.scale.length, o = Math.floor(deg / n); const d = ((deg % n) + n) % n; return m.root * Math.pow(2, (m.scale[d] + 12 * (o + (oct || 0))) / 12); };
@@ -62,7 +68,7 @@
       if (m.drone && !m.quiet && (pos === 0 || pos === 3 || pos === 6 || pos === 10)) note(pos === 0 ? 90 : 180, nextT, 0.09, 'sine', pos === 0 ? 0.06 : 0.03, musicGain); // frame-drum pulse
       const l = m.lead[pos];
       if (l >= 0 && (bar % 2 === 0 || pos % 4 === 0)) note(hz(m, ch + l, 0), nextT, beat * 1.8, m.wave, 0.035, musicGain);
-      if (mood !== 'crypt' && mood !== 'tomb' && pos % 4 === 2) note(hz(m, ch + 4, 1), nextT, beat * 0.6, 'sine', 0.012, musicGain);
+      if (!MOODS[mood].quiet && mood !== 'crypt' && pos % 4 === 2) note(hz(m, ch + 4, 1), nextT, beat * 0.6, 'sine', 0.012, musicGain);
       nextT += beat; step++;
     }
   }

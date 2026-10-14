@@ -8,6 +8,8 @@
   const isSpell = (id) => !!SPELLS[id] && !SPELLS[id].skill && SPELLS[id].kind !== 'skill';
 
   const SAVE_KEY = 'everblock_save_v1';
+  const BANK_SLOTS = 48;
+  const D_ZONES = EB.WORLD.ZONES;
   EB.SAVE_KEY = SAVE_KEY;
   EB.loadSave = () => { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } };
 
@@ -44,6 +46,10 @@
       this.buffs = (c.buffs || []).filter((b) => b.left > 0);
       this.bind = c.bind || null;
       this.played = c.played || 0;
+      // v7: First Bank of Bizarre vault (48 slots + coin)
+      this.bank = Array.isArray(c.bank) ? c.bank.slice(0, BANK_SLOTS).map((x) => (x && ITEMS[x.id] ? x : null)) : [];
+      while (this.bank.length < BANK_SLOTS) this.bank.push(null);
+      this.bankCoins = c.bankCoins > 0 ? Math.floor(c.bankCoins) : 0;
       this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3();
       if (c.pos) this.pos.set(c.pos[0], c.pos[1], c.pos[2]);
       this.yaw = c.yaw != null ? c.yaw : Math.PI; this.pitch = -0.12;
@@ -74,7 +80,7 @@
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
       return { name: this.name, race: this.race, cls: this.cls, level: this.level, xp: this.xp, stats: this.base, coins: this.coins, inv: this.inv, equip: this.equip,
-        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
+        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, bank: this.bank, bankCoins: this.bankCoins, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
     }
   }
 
@@ -189,7 +195,7 @@
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`Town Crier: Greetings, ${pl.name}. New in v6: multiplayer! Choose Play Online on the start screen to join an Everblock server (anyone can host one; see SERVER.md) and hunt, chat and group with other players. From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      ui.log(`Town Crier: Greetings, ${pl.name}. New in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
       if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soul-Notary Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guild Coach Aldric says: "Welcome, young ${RACES[pl.race].name.toLowerCase()}. Go bully the rats and snakes outside the walls. Come back when you have grown, and stretch first."`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
@@ -207,7 +213,9 @@
         for (const m of this.mobs) m.removeFrom(this.scene);
         for (const n of this.npcs) n.removeFrom(this.scene);
         for (const c of this.pcorpses) { this.otherCorpses.push(c.toSave()); c.removeFrom(this.scene); }
-        for (const zm of this.zoneMeshes) { this.scene.remove(zm); zm.geometry.dispose(); zm.material.dispose(); }
+        for (const zm of this.zoneMeshes) { this.scene.remove(zm); zm.geometry.dispose(); if (zm.material.map && zm.userData.portal === 1) zm.material.map.dispose(); zm.material.dispose(); }
+        for (const p of this.zonePlates || []) { this.scene.remove(p); if (p.material.map) p.material.map.dispose(); p.material.dispose(); }
+        this.zonePlates = [];
         this.world.dispose();
       }
       if (this.target) this.setTarget(null);
@@ -227,11 +235,15 @@
       }
       this.otherCorpses = keep;
       for (const zl of world.zoneLines) {
-        const wdt = zl.x1 - zl.x0, cx = (zl.x0 + zl.x1) / 2, gy = world.surfaceY(cx, zl.at);
+        if (zl.portal) { this.addPortalMesh(zl); continue; }
+        const alongX = zl.axis === 'x', wdt = alongX ? zl.z1 - zl.z0 : zl.x1 - zl.x0, c = alongX ? (zl.z0 + zl.z1) / 2 : (zl.x0 + zl.x1) / 2;
+        const gy = alongX ? world.surfaceY(zl.at, c) : world.surfaceY(c, zl.at);
         const m = new THREE.Mesh(new THREE.PlaneGeometry(wdt, 7), new THREE.MeshBasicMaterial({ color: 0x9fe0ff, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false, fog: false }));
-        m.position.set(cx, gy + 3.5, zl.at); m.renderOrder = 3;
+        if (alongX) { m.position.set(zl.at, gy + 3.5, c); m.rotation.y = Math.PI / 2; } else m.position.set(c, gy + 3.5, zl.at);
+        m.renderOrder = 3;
         this.scene.add(m); this.zoneMeshes.push(m);
       }
+      if (D_ZONES[zoneId] && D_ZONES[zoneId].safe) setTimeout(() => this.log('You feel safe here. Weapons are peace-bonded in the Bazaar: no fighting, no digging, just shopping.', 'help'), 600);
       if (arrive) { pl.pos.set(arrive.x, world.surfaceY(arrive.x, arrive.z), arrive.z); pl.yaw = arrive.yaw; pl.vel.set(0, 0, 0); }
       for (const m of this.mercs) { m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.3, pl.pos.z + 1.2); m.nav.reset(); m.casting = null; }
       this.updateSpawns(true);
@@ -239,18 +251,49 @@
       if (this.net) this.net.zoneLoaded(zoneId, this._zoneVia || 'bind');
       this._zoneVia = null;
     }
+    // v7: an animated, glowing swirl inside a portal frame
+    addPortalMesh(zl) {
+      const cx = (zl.x0 + zl.x1) / 2, y = zl.y + 2.5, z = zl.at;
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+      const g = cv.getContext('2d'), grd = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+      grd.addColorStop(0, 'rgba(255,240,255,1)'); grd.addColorStop(0.35, 'rgba(190,120,255,0.9)'); grd.addColorStop(0.75, 'rgba(90,40,200,0.65)'); grd.addColorStop(1, 'rgba(40,10,120,0)');
+      g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+      g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 2;
+      for (let a = 0; a < 3; a++) { g.beginPath(); for (let t = 0; t < 60; t++) { const r = t * 0.5, ang = t * 0.22 + a * 2.09; g.lineTo(32 + Math.cos(ang) * r, 32 + Math.sin(ang) * r); } g.stroke(); }
+      const tex = new THREE.CanvasTexture(cv);
+      const mk = (w, h, op) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+      const a = mk(3, 5, 0.85), b = mk(4.2, 4.2, 0.55);
+      a.position.set(cx, y, z); b.position.set(cx, y, z + 0.02);
+      a.userData.portal = 1; b.userData.portal = 2; a.renderOrder = b.renderOrder = 3;
+      this.scene.add(a); this.scene.add(b); this.zoneMeshes.push(a, b);
+      if (EB.ent && EB.ent.makeNameplate) {
+        const pl = EB.ent.makeNameplate(zl.label, '#e0b0ff', '<Portal - walk in or press E>');
+        pl.position.set(cx, zl.y + 6.9, z); pl.scale.set(4.4, 0.82, 1); this.scene.add(pl);
+        (this.zonePlates = this.zonePlates || []).push(pl);
+      }
+    }
+    nearPortal(r) {
+      const pl = this.player; let best = null, bd = r || 3.2;
+      for (const zl of this.world.zoneLines) {
+        if (!zl.portal) continue;
+        const d = Math.hypot((zl.x0 + zl.x1) / 2 - pl.pos.x, zl.at - pl.pos.z);
+        if (d < bd && Math.abs(pl.pos.y - zl.y) < 4) { bd = d; best = zl; }
+      }
+      return best;
+    }
     changeZone(zl) {
       if (this.zoning) return;
       this.zoning = true;
       const pl = this.player;
       pl.autoAttack = false; pl.casting = null; $('castBar').classList.add('hidden');
       const fade = $('zoneFade');
-      fade.querySelector('div').textContent = 'LOADING, PLEASE GO MAKE A SANDWICH...';
+      fade.querySelector('div').textContent = zl.portal ? 'WHOOSH! TELEPORTING YOUR MOLECULES (MOSTLY IN ORDER)...' : 'LOADING, PLEASE GO MAKE A SANDWICH...';
+      if (zl.portal) EB.audio.heal();
       fade.classList.add('on');
       setTimeout(() => {
         try {
           this._zoneVia = 'line'; this.loadZone(zl.to, zl.arrive);
-          this.log(`You wander into ${this.world.zoneName}.`, 'ding');
+          this.log(zl.portal ? `You step through the portal and pop out in ${this.world.zoneName}.` : `You wander into ${this.world.zoneName}.`, 'ding');
           ui.center(this.world.zoneName, 'Zone', 2.5);
           this.save();
         } catch (e) { console.error(e); }
@@ -332,6 +375,8 @@
       document.querySelectorAll('#gfxBtns button').forEach((b) => { b.onclick = () => this.applyGfx(b.dataset.gfx); });
       this.applyGfx(this.gfxPref, true);
       $('btnLootAll').onclick = () => this.lootAll();
+      $('btnBankCoin').onclick = () => this.bankCoin(true);
+      $('btnBankCoinOut').onclick = () => this.bankCoin(false);
       $('chatInput').addEventListener('keydown', (e) => {
         e.stopPropagation();
         if (e.key === 'Enter') { const v = e.target.value.trim(); e.target.value = ''; e.target.classList.add('hidden'); e.target.blur(); if (v) this.command(v); this.updateClickPrompt(); }
@@ -426,6 +471,7 @@
       this.windows.delete(id); $(id).classList.add('hidden'); ui.hideTip();
       if (id === 'lootWin' && was) this.onLootClosed();
       if (id === 'merchantWin') this.merchant = null;
+      if (id === 'bankWin') this.banker = null;
       this.updateClickPrompt();
     }
     toggleWin(id) { if (this.windows.has(id)) this.closeWin(id); else this.openWin(id); }
@@ -439,6 +485,7 @@
       else if (id === 'bookWin') this.renderBook();
       else if (id === 'mercCfgWin') this.renderMercCfg();
       else if (id === 'petWin') this.renderPetWin();
+      else if (id === 'bankWin') this.renderBank();
     }
 
     // ---------- targeting ----------
@@ -456,7 +503,7 @@
       this.setTarget(list[i]);
     }
     // ---------- v5 factions ----------
-    npcFaction(n) { return n.faction || { everblock: 'guards', frostfang: 'hollis', desert: 'sunward' }[this.world.zoneId] || 'guards'; }
+    npcFaction(n) { return n.faction || { everblock: 'guards', frostfang: 'hollis', desert: 'sunward', swamp: 'mirewatch', caldera: 'ashguard', bazaar: 'bazaar' }[this.world.zoneId] || 'guards'; }
     entFaction(e) { if (!e) return null; if (e.kind === 'npc') return this.npcFaction(e); if (e.kind === 'mob' && D.FACTIONS[e.def.faction]) return e.def.faction; return null; }
     standing(f) { const v = this.player.faction[f]; return v == null ? 0 : v; }
     // tracked-faction mobs only attack on sight when you are Hostile (KOS) or worse
@@ -510,8 +557,21 @@
         'Fence Jabari': `Psst. The Sandreavers pay well for what they need... if they trust you. (Press E to trade)`,
         'Sunward Guard Tamit': `The Sandreavers hide in the rocks to the east. Their mystics mend their wounds - kill those first.`,
         'Sunward Guard Omari': `The Great Pyramid lies to the north. The dead there do not rest, and Pharaoh Ankhet-Ra still sits upon his throne.`,
+        // v7
+        'Bazaar Crier Mumbles': `Welcome to the Bizarre Bazaar, ${pl.name}! Trainers for every class on the west row, vendors to the east, the bank to the south, and portals home along the north promenade. No fighting! We just had the floors done.`,
+        'Vaultkeeper Coinsworth': `Your valuables are safe with us, ${pl.name}. Mostly. Press E to open your vault.`,
+        'Mirewatch Sentry Doyle': `The froglodytes of the Croaking Shallows are west of here. They croak before they stab, at least.`,
+        'Mirewatch Sentry Fen': `Mind the crocodiles, and whatever you do, do not go into the Sunken Temple to the southwest. Something big and damp lives there.`,
+        'Ashguard Sentry Vulk': `The Ashen Cult camps on the northern slopes. The forge in the crater is worse.`,
+        'Ashguard Sentry Pyra': `Stay off the glowing rocks. Actually, they are fine. Just... warm.`,
+        'Bog-Notary Pip': `Even in a swamp, a soul needs a mailing address, ${pl.name}. Press E and I will bind you here.`,
+        'Flamewarden Ignatia': `The mountain may erupt, but your soul will be fine, ${pl.name}. Press E to bind here.`,
+        'Soul-Notary Bartleby': `I would prefer not to... just kidding. Press E and I will bind your soul to the Bazaar.`,
+        'Sellsword Agent Rook': `Mercenaries for every budget, ${pl.name}. Press E to browse.`,
       };
       if (this.world.zoneId === 'desert' && t.npcKind === 'guard' && !special[t.name]) special[t.name] = 'Keep your waterskin full and your blade sharp.';
+      if (t.npcKind === 'trainer' && t.data && t.data.cls) special[t.name] = t.data.cls === pl.cls ? `Ah, a fellow ${CLASSES[pl.cls].name}! I teach every ${CLASSES[pl.cls].name} trick from level 1 to ${D.MAX_LEVEL}. (Press E to train)` : `I only coach ${CLASSES[t.data.cls].name}s, ${pl.name}. Your coach is somewhere on this row; look for the ${CLASSES[pl.cls].name} Trainer sign.`;
+      if (t.npcKind === 'banker' && !special[t.name]) special[t.name] = `Press E to open your vault, ${pl.name}.`;
       setTimeout(() => this.log(`${t.name} says: "${special[t.name] || lines[t.npcKind]}"`, 'say'), 400);
     }
     updateTargetWin() {
@@ -522,7 +582,7 @@
       if (t.kind === 'mob') {
         if (t.alive) { const f = this.entFaction(t); color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : f ? D.standingOf(this.standing(f)).label : t.def.aggressive ? 'Hostile' : 'Meh'}`; }
         else { name = t.corpseName(); color = '#b0a080'; info = 'Press E to loot'; }
-      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guild Coach - press E to train', binder: 'Soul Notary - press E to bind', guard: 'Guard', quest: 'Quest giver - press E' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
+      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guild Coach - press E to train', binder: 'Soul Notary - press E to bind', guard: 'Guard', quest: 'Quest giver - press E', banker: 'Banker - press E for your vault' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
       else if (t.kind === 'pcorpse') { color = '#ffcc66'; info = 'Your corpse - press E to loot'; }
       else if (t.kind === 'merc') { color = '#70ff70'; info = `Group member - Level ${t.level} ${t.role === 'healer' ? 'Cleric' : 'Warrior'} Mercenary`; }
       else if (t.kind === 'pc') { color = t.grouped ? '#70ff70' : '#9fd8ff'; info = `${t.grouped ? 'Group member - ' : 'Player - '}Level ${t.level} ${RACES[t.race].name} ${CLASSES[t.cls].name}`; }
@@ -999,6 +1059,8 @@
       const pl = this.player;
       let t = this.target;
       const near = (e) => e && e.pos.distanceTo(pl.pos) < 5;
+      const portal = this.nearPortal(3.2);
+      if (portal && !(t && near(t) && t.kind === 'npc' && t.pos.distanceTo(pl.pos) < Math.hypot((portal.x0 + portal.x1) / 2 - pl.pos.x, portal.at - pl.pos.z))) { this.changeZone(portal); return; }
       if (!(t && near(t) && (t.kind === 'npc' || t.kind === 'pcorpse' || (t.kind === 'mob' && !t.alive)))) {
         t = null; let bd = 5;
         for (const e of [...this.pcorpses, ...this.mobs.filter((m) => !m.alive), ...this.npcs.filter((n) => n.npcKind !== 'guard')]) {
@@ -1021,7 +1083,11 @@
         return;
       }
       if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says: "Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}"`, 'say'); this.openWin('merchantWin'); }
-      else if (t.npcKind === 'trainer') this.openWin('trainerWin');
+      else if (t.npcKind === 'trainer') {
+        if (t.data && t.data.cls && t.data.cls !== pl.cls) { this.hail(); return; }
+        this.trainerNpc = t; this.openWin('trainerWin');
+      }
+      else if (t.npcKind === 'banker') { this.banker = t; this.log(`${t.name} says: "Your vault, ${pl.name}. Please do not put frogs in it."`, 'say'); this.openWin('bankWin'); }
       else if (t.npcKind === 'liaison') this.openWin('mercWin');
       else if ((t.npcKind === 'guard' || t.npcKind === 'quest') && this.questFor(t)) this.openDialog(t);
       else if (t.npcKind === 'quest') this.hail();
@@ -1197,7 +1263,7 @@
     trainCost(L) { return L <= 1 ? 0 : L * L * 12; }
     renderTrainer() {
       const pl = this.player, list = $('trainList');
-      list.innerHTML = `<div class="sub">Guild Coach Aldric teaches ${CLASSES[pl.cls].name}s. Your coin: ${U.coinStr(pl.coins)}</div>`;
+      list.innerHTML = `<div class="sub">${this.trainerNpc ? this.trainerNpc.name : 'Guild Coach Aldric'} teaches ${CLASSES[pl.cls].name}s (levels 1-${D.MAX_LEVEL}). Your coin: ${U.coinStr(pl.coins)}</div>`;
       const ids = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[pl.cls]).sort((a, b) => SPELLS[a].classes[pl.cls] - SPELLS[b].classes[pl.cls]);
       for (const id of ids) {
         const sp = SPELLS[id], L = sp.classes[pl.cls];
@@ -1218,6 +1284,48 @@
       const hs = pl.hotbar.indexOf(null);
       if (hs >= 0) pl.hotbar[hs] = id; else this.log('Your hotbar is full. Use the spellbook (K) to rearrange it.', 'sys');
       EB.audio.ding(); this.rebuildHotbar(); this.renderGems(); this.renderTrainer(); this.save();
+    }
+
+    // ---------- v7: bank ----------
+    renderBank() {
+      const pl = this.player, mk = (grid, arr, fn) => {
+        const g = $(grid); g.innerHTML = '';
+        arr.forEach((item, i) => {
+          const el = document.createElement('div'); el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+          el.innerHTML = ui.slotHTML(item);
+          if (item) { el.onclick = () => fn(i); ui.tooltipFor(el, () => ui.itemTip(item.id)); }
+          g.appendChild(el);
+        });
+      };
+      $('bankTitle').firstChild.textContent = `${this.banker ? this.banker.name : 'Bank'} - vault coin: ${U.coinStr(pl.bankCoins)} `;
+      mk('bankGrid', pl.bank, (i) => this.bankWithdraw(i));
+      mk('bankBag', pl.inv, (i) => this.bankDeposit(i));
+    }
+    bankDeposit(i) {
+      const pl = this.player, it = pl.inv[i]; if (!it) return false;
+      const I = ITEMS[it.id];
+      if (I.quest) { this.log('The Vaultkeeper refuses to store quest items. "Too much paperwork."', 'sys'); return false; }
+      let slot = I.stack ? pl.bank.findIndex((s) => s && s.id === it.id) : -1;
+      if (slot >= 0) pl.bank[slot].count += it.count;
+      else { slot = pl.bank.indexOf(null); if (slot < 0) { this.log('Your vault is full!', 'sys'); return false; } pl.bank[slot] = { id: it.id, count: it.count }; }
+      pl.inv[i] = null;
+      this.log(`You deposit ${it.count > 1 ? it.count + ' ' : 'a '}${I.name} in your vault.`, 'loot');
+      EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
+      return true;
+    }
+    bankWithdraw(i) {
+      const pl = this.player, it = pl.bank[i]; if (!it) return false;
+      if (!this.addItem(it.id, it.count)) return false;
+      pl.bank[i] = null;
+      this.log(`You withdraw ${it.count > 1 ? it.count + ' ' : 'a '}${ITEMS[it.id].name} from your vault.`, 'loot');
+      EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
+      return true;
+    }
+    bankCoin(dep) {
+      const pl = this.player;
+      if (dep) { if (!pl.coins) return; pl.bankCoins += pl.coins; this.log(`You deposit ${U.coinStr(pl.coins)}.`, 'loot'); pl.coins = 0; }
+      else { if (!pl.bankCoins) return; pl.coins += pl.bankCoins; this.log(`You withdraw ${U.coinStr(pl.bankCoins)}.`, 'loot'); pl.bankCoins = 0; }
+      EB.audio.loot(); this.renderBank(); this.save();
     }
 
     // ---------- group / mercenaries / pets ----------
@@ -1650,7 +1758,11 @@
       for (const c of this.pcorpses) dot(c, '#ffcc33', 2);
       for (const m of this.mercs) dot(m, '#50ff50', 1.8);
       ctx.strokeStyle = '#9fe0ff'; ctx.lineWidth = 2;
-      for (const zl of this.world.zoneLines) { ctx.beginPath(); ctx.moveTo(zl.x0, zl.at); ctx.lineTo(zl.x1, zl.at); ctx.stroke(); }
+      for (const zl of this.world.zoneLines) {
+        ctx.strokeStyle = zl.portal ? '#d080ff' : '#9fe0ff'; ctx.beginPath();
+        if (zl.axis === 'x') { ctx.moveTo(zl.at, zl.z0); ctx.lineTo(zl.at, zl.z1); } else { ctx.moveTo(zl.x0, zl.at); ctx.lineTo(zl.x1, zl.at); }
+        ctx.stroke();
+      }
       ctx.restore();
       const f = pl.forward();
       ctx.save(); ctx.translate(S / 2, S / 2); ctx.rotate(Math.atan2(-f.x, f.z) + Math.PI);
@@ -1683,7 +1795,9 @@
     }
 
     // ---------- building ----------
+    noBuildHere() { const zi = D_ZONES[this.world.zoneId]; if (zi && zi.safe) { this.throttled('nobuild', 2, 'The Merchants Guild forbids renovations in the Bazaar.', 'sys'); return true; } return false; }
     breakBlock() {
+      if (this.noBuildHere()) return;
       const e = this.eyePos(), d = this.camDir();
       const h = this.world.raycast(e.x, e.y, e.z, d.x, d.y, d.z, 6);
       if (!h) return;
@@ -1692,6 +1806,7 @@
       this.world.setBlock(h.x, h.y, h.z, B.AIR); EB.audio.block();
     }
     placeBlock() {
+      if (this.noBuildHere()) return;
       const e = this.eyePos(), d = this.camDir();
       const h = this.world.raycast(e.x, e.y, e.z, d.x, d.y, d.z, 6);
       if (!h) return;
@@ -1900,7 +2015,7 @@
     updateLights() {
       const pl = this.player, w = this.world, lights = this.lampLights; if (!lights || !w.lanterns || !this.lightsOn) { this.litCount = 0; return; }
       const night = this.nightF != null ? this.nightF : 0.5;
-      const underground = this.lastZone === 'The Sunken Crypt' || this.lastZone === 'Tomb of Ankhet-Ra' || this.lastZone === 'The Great Pyramid' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
+      const underground = EB.WORLD.DUNGEON_ZONES.has(this.lastZone) || this.lastZone === 'The Great Pyramid' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
       const near = [];
       for (const p of w.lanterns.values()) {
         const dx = p.x + 0.5 - pl.pos.x, dz = p.z + 0.5 - pl.pos.z, dy = p.y - pl.pos.y;
@@ -2047,7 +2162,10 @@
       for (const e of this.mobs) { const dc = fit(e); e.plate.visible = dc > 2.2 && e.pos.distanceTo(pl.pos) < (e === this.target ? 80 : 38); }
       for (const e of this.npcs) { const dc = fit(e); e.plate.visible = dc > 2.2 && e.pos.distanceTo(pl.pos) < 30; }
       for (const e of this.mercs) e.plate.visible = fit(e) > 2.2;
-      for (const zm of this.zoneMeshes) zm.material.opacity = 0.2 + 0.12 * Math.sin(this.time * 3);
+      for (const zm of this.zoneMeshes) {
+        if (zm.userData.portal) { zm.rotation.z += dt * (zm.userData.portal === 1 ? 1.4 : -0.9); zm.material.opacity = (zm.userData.portal === 1 ? 0.75 : 0.45) + 0.15 * Math.sin(this.time * 4); }
+        else zm.material.opacity = 0.2 + 0.12 * Math.sin(this.time * 3);
+      }
       if (this.target) { const t = this.target; this.ring.visible = true; this.ring.position.set(t.pos.x, t.pos.y + 0.06, t.pos.z); const pu = 1 + Math.sin(this.time * 5) * 0.06; this.ring.scale.setScalar(Math.max(0.8, t.hw * 2.2) * pu * (t.model && t.model.width ? Math.max(0.6, t.model.width / 0.6) * 0.5 + 0.5 : 1)); this.ring.rotation.z += dt * 0.8; this.ring.material.opacity = 0.75 + Math.sin(this.time * 5) * 0.2; }
       this.world.updateChunks(this.camera.position.x, this.camera.position.z, 7, 2);
       this.hudT -= dt;
@@ -2058,7 +2176,10 @@
         this.drawMinimap();
         if (this.questDirty || (this.questT = (this.questT || 0) + 1) % 10 === 0) { this.questDirty = false; this.renderQuests(); }
         this.updateLights();
-        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.world.zoneId === 'desert' ? (this.lastZone === 'Tomb of Ankhet-Ra' ? 'tomb' : 'desert') : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
+        const zid = this.world.zoneId;
+        EB.audio.setMood(zid === 'frostfang' ? 'frost' : zid === 'desert' ? (this.lastZone === 'Tomb of Ankhet-Ra' ? 'tomb' : 'desert')
+          : zid === 'swamp' ? (this.lastZone === 'Sunken Temple of Glubb' ? 'bog' : 'swamp') : zid === 'caldera' ? (this.lastZone === 'The Molten Forge' ? 'forge' : 'volcano') : zid === 'bazaar' ? 'bazaar'
+          : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
         const z = this.world.zoneAt(pl.pos.x, pl.pos.y, pl.pos.z);
         if (z !== this.lastZone) { if (this.lastZone) { this.log(`You wander into ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
       }

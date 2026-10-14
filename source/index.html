@@ -175,6 +175,15 @@ if (/^https?:/.test(location.protocol)) {
     <div id="merchList"></div>
     <div class="sub">Sell from the list below, or right-click items in your bags (I).</div>
   </div>
+  <div id="bankWin" class="win panelwin hidden">
+    <div class="wtitle" id="bankTitle">First Bank of Bizarre <span class="x" data-close="bankWin">✕</span></div>
+    <div class="sub">Click an item in your bags to deposit it; click a vault slot to withdraw. Your vault follows your character everywhere (and to the server).</div>
+    <div class="sub bankHdr">Vault</div>
+    <div id="bankGrid"></div>
+    <div class="sub bankHdr">Your bags</div>
+    <div id="bankBag"></div>
+    <div class="btnRow"><button id="btnBankCoin">Deposit all coin</button><button id="btnBankCoinOut">Withdraw coin</button><button data-close="bankWin">Done</button></div>
+  </div>
   <div id="trainerWin" class="win panelwin hidden">
     <div class="wtitle">Guild Coach <span class="x" data-close="trainerWin">✕</span></div>
     <div id="trainList"></div>

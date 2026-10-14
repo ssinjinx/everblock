@@ -52,6 +52,7 @@ function sanitizeSave(rec, data, ctx) {
   out.name = rec.name; out.race = rec.race; out.cls = rec.cls; out.level = L; out.xp = rec.xp; out.stats = rec.stats.slice();
   out.coins = Math.floor(num(c.coins, 0, 1e8, 0));
   out.inv = bag(c.inv, 24);
+  out.bank = bag(c.bank, 48); out.bankCoins = Math.floor(num(c.bankCoins, 0, 1e9, 0)); // v7: First Bank of Bizarre vault
   out.equip = equipMap(c.equip);
   const learnable = (s) => SPELLS[s] && SPELLS[s].classes[rec.cls] && SPELLS[s].classes[rec.cls] <= L;
   out.spells = Array.isArray(c.spells) ? [...new Set(c.spells.filter(learnable))] : undefined;

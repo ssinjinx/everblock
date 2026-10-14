@@ -819,6 +819,24 @@
   function petOpts(lvl) {
     const P = Object.assign({}, HUMAN, { skeleton: true, skull: true, skin: 0xe8e2c8, torsoW: 0.44, armW: 0.14, eyeGlow: 0x60ff90 }), gear = {};
     if (lvl >= 8) { gear.weapon = { kind: 'sword', o: { metal: METAL.rusty } }; gear.shield = { kind: 'shield_bone', o: {} }; P.rags = 0x4a3a2a; }
+    // v7 pets
+    if (lvl >= 38) {
+      Object.assign(P, { skin: 0x1a1a22, eyeGlow: 0xff3040, cloak: 0x2a0a12, pauldron: 0x3a3a46, spikes: true, rags: null, crown: null });
+      gear.weapon = { kind: 'greatsword', o: { metal: METAL.dark, glow: 0xff3040 } }; gear.shield = null;
+      gear.helm = { kind: 'helm_horned', o: { S: P.headS, color: 0x2a2a34 } };
+      return { rig: 'human', P, gear, scale: 1.3 };
+    }
+    if (lvl >= 33) {
+      Object.assign(P, { skin: 0xd8d0e8, eyeGlow: 0xc070ff, cloak: 0x4a2a6a, mantle: 0x6a3a8a, necklace: 0xd8b050, crown: 0xc070ff, rags: null });
+      gear.weapon = { kind: 'staff', o: { orb: 0xc070ff, wood: 0x2a1a3a } }; gear.shield = null;
+      return { rig: 'human', P, gear, scale: 1.2 };
+    }
+    if (lvl >= 28) {
+      Object.assign(P, { skin: 0xd8e0c8, eyeGlow: 0x60ff60, pauldron: 0x5a6a5a, tabard: 0x2a4a3a, emblem: 0xd8e0c8, rags: null });
+      gear.weapon = { kind: 'mace', o: { metal: METAL.steel, glow: 0x60ff60 } }; gear.shield = { kind: 'shield_crest', o: { color: 0x2a4a3a } };
+      gear.helm = { kind: 'helm_metal', o: { S: P.headS, color: 0x5a6a5a } };
+      return { rig: 'human', P, gear, scale: 1.2 };
+    }
     if (lvl >= 23) {
       Object.assign(P, { skin: 0x2a2a34, eyeGlow: 0x60ffd0, cloak: 0x1e3a5a, pauldron: 0xd8b050, rags: null, crown: 0xd8b050 });
       gear.weapon = { kind: 'scimitar', o: { metal: METAL.gold, glow: 0x60ffd0 } }; gear.offhand = { kind: 'scimitar', o: { metal: METAL.gold } }; gear.shield = null;
@@ -853,6 +871,7 @@
       case 'merchant': outfit(P, 'cloth', col); P.apron = 0xd8c8a0; P.fezHat = r() < 0.4 ? 0xa03030 : null; P.torsoW = 0.56; break;
       case 'trainer': outfit(P, 'robe', col); P.trim = 0xd8b050; P.hair = 0xd8d8d8; P.beard = 'long'; P.beardColor = 0xe0e0e0; gear.weapon = { kind: 'staff', o: {} }; break;
       case 'binder': outfit(P, 'robe', col); P.hood = shade(col, 0.8); P.trim = 0x80c0ff; P.necklace = 0x80c0ff; break;
+      case 'banker': outfit(P, 'cloth', col); P.apron = 0xe8c040; P.fezHat = 0x2a6a3a; P.necklace = 0xe8c040; P.torsoW = 0.58; break;
       case 'liaison': outfit(P, 'leather'); P.mantle = shade(col, 0.9); P.gloves = 0x5a3a22; gear.weapon = { kind: 'sword', o: {} }; break;
       default: outfit(P, r() < 0.5 ? 'cloth' : 'leather', col); if (r() < 0.4) P.headband = shade(col, 0.8);
     }
@@ -946,6 +965,69 @@
         const gear = boss ? { weapon: { kind: 'greatsword', o: { metal: METAL.ice, glow: 0x80ffff } }, helm: { kind: 'helm_giant', o: { S: 0.42 } } } : { weapon: { kind: 'club', o: { wood: 0x5a4a3a } } };
         if (boss) { P.crown = null; P.mantle = 0xa8c8e8; P.pauldron = 0xa8e0ff; P.spikes = true; P.necklace = 0xa8e0ff; }
         return { rig: 'human', P, gear, style: 'brute', glow: boss ? 0x80ffff : null };
+      }
+      // ---- v7: The Soggybottom Mire ----
+      case 'bog_croc': case 'gnashjaw': {
+        const boss = type === 'gnashjaw';
+        return { rig: 'quad', P: { color: c, belly: 0xb8b878, bodyLen: 1.7, bodyW: 0.62, bodyH: 0.34, legLen: 0.2, headS: 0.32, snoutLen: 0.62, fangs: true, teeth: true, tailLen: 1.0, tailW: 0.22, tailColor: shade(c, 0.85), ridge: shade(c, 0.6), claws: true, paw: shade(c, 0.8), eye: boss ? 0xe0f040 : 0xd8b020, eyeGlow: boss, ears: null }, style: 'rat', glow: boss ? 0xd0e040 : null };
+      }
+      case 'froglodyte': case 'frog_priest': case 'ribbitus': case 'glubb': case 'soggs': {
+        const priest = type === 'frog_priest' || type === 'soggs', chief = type === 'ribbitus', boss = type === 'glubb';
+        const P = H({ skin: c, hair: null, ears: null, wideMouth: true, mouth: 0x2a1a10, eyes: boss ? 0xff6040 : 0xf0e040, eyeGlow: boss || chief, eyeWhite: 0xe8e8a0, spots: shade(c, 0.7), hunch: 0.15, headS: 0.46,
+          bareChest: true, shirt: shade(c, 1.25), shirtLow: shade(c, 1.1), sleeve: c, pants: 0x4a5a2a, feet: c, bigFeet: true, loincloth: 0x6a4a2a, belt: 0x3a2a14, legLen: 0.6, torsoW: boss ? 0.68 : 0.5, torsoD: boss ? 0.5 : 0.32 });
+        const gear = {};
+        if (priest || boss) { outfit(P, 'robe', priest ? 0x3a4a6a : 0x4a2a5a); P.trim = 0x80ff90; P.necklace = 0xd8c060; P.hood = null; gear.weapon = { kind: 'staff', o: { orb: 0x80ff90, wood: 0x3a2a14 } }; }
+        else gear.weapon = { kind: 'spear', o: { metal: chief ? METAL.gold : METAL.rusty, glow: chief ? 0xffe040 : null } };
+        if (!priest && !boss) gear.shield = { kind: 'shield_wood', o: {} };
+        if (chief || boss) { P.crown = boss ? 0x80ff60 : 0xffe040; P.mantle = boss ? 0x2a4a2a : 0x6a8a3a; }
+        return { rig: 'human', P, gear, style: boss ? 'brute' : 'humanoid', glow: boss ? 0x80ff60 : priest ? 0x80ff90 : null };
+      }
+      case 'swamp_wisp': {
+        const P = H({ djinn: true, skin: c, vortex: 0x8ad8b8, glowC: 0xd0ffe8, hair: 0xe0fff0, hairStyle: 'long', ears: 'pointy', eyes: 0xd0ffe8, eyeGlow: true, eyeWhite: 0xa0ffd0, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: c, torsoW: 0.42, shoulderW: 0.3 });
+        return { rig: 'human', P, gear: {}, style: 'beast', glow: 0xa0ffd0 };
+      }
+      case 'bog_troll': {
+        const P = H({ skin: c, hair: 0x2a3a1a, hairStyle: 'wild', ears: 'big', bigNose: true, tusks: true, jaw: true, heavyBrow: true, eyes: 0xe0a020, torsoW: 0.6, torsoD: 0.4, shoulderW: 0.4, armW: 0.2, armLen: 0.9, legW: 0.24, hunch: 0.28,
+          bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: 0x3a3a2a, feet: shade(c, 0.8), bigFeet: true, loincloth: 0x4a3a1a, spots: 0x3a4a2a, claws: 0x2a2a1a, belt: 0x2a1a10 });
+        return { rig: 'human', P, gear: { weapon: { kind: 'club', o: { wood: 0x4a3a1a } } }, style: 'brute' };
+      }
+      case 'drowned_zealot': {
+        const P = H({ skin: c, wraps: 0x7a9a7a, faceWraps: 0x6a8a6a, eyes: 0x60ffb0, eyeGlow: true, eyeWhite: 0x101010, bareChest: true, shirt: 0x5a7a6a, shirtLow: 0x4a6a5a, sleeve: c, longSleeve: true, pants: 0x3a4a3a, belt: 0x2a3a2a, feet: shade(c, 0.85), hunch: 0.2, hair: null, ears: null, rags: true });
+        return { rig: 'human', P, gear: {}, style: 'ghoul' };
+      }
+      // ---- v7: The Cinderpeak Caldera ----
+      case 'cinder_hound': case 'scorchmaw': {
+        const boss = type === 'scorchmaw';
+        return { rig: 'quad', P: { color: c, belly: 0x2a1410, bodyLen: boss ? 1.3 : 1.15, bodyW: 0.5, bodyH: 0.5, legLen: 0.56, headS: 0.38, snoutLen: 0.3, fangs: true, bushy: true, tailLen: 0.4, tailW: 0.12, tailTip: 0xffa030, ruff: 0xff6020, ridge: 0xff9040, claws: true, eye: 0xffd040, eyeGlow: true }, style: 'wolf', glow: boss ? 0xff8020 : 0xff6020 };
+      }
+      case 'ember_sprite': {
+        const P = H({ djinn: true, skin: c, vortex: 0xff8030, glowC: 0xffe0a0, hair: 0xffe080, hairStyle: 'topknot', ears: 'pointy', eyes: 0xfff0c0, eyeGlow: true, eyeWhite: 0xffd080, angryBrow: true, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: c, torsoW: 0.44, shoulderW: 0.3 });
+        return { rig: 'human', P, gear: {}, style: 'beast', glow: 0xffc060 };
+      }
+      case 'salamander': return { rig: 'snake', P: { color: c, band: 0x3a1008, pattern: 0xffa030 }, style: 'snake', glow: 0xff7020 };
+      case 'obsidian_golem': {
+        const P = H({ skin: c, hair: null, ears: null, heavyBrow: true, jaw: true, eyes: 0xff6020, eyeGlow: true, torsoW: 0.72, torsoD: 0.48, shoulderW: 0.46, armW: 0.25, armLen: 0.88, legW: 0.28, headS: 0.4,
+          bareChest: true, shirt: c, shirtLow: shade(c, 0.8), sleeve: c, pants: shade(c, 0.9), feet: shade(c, 0.8), bigFeet: true, spots: 0xff5010, warpaint: 0xff5010, belt: shade(c, 0.7), buckle: 0xff5010 });
+        return { rig: 'human', P, gear: {}, style: 'brute', glow: 0xff5010 };
+      }
+      case 'magma_giant': case 'brasskull': case 'pyrrhax': {
+        const fm = type === 'brasskull', boss = type === 'pyrrhax';
+        const P = H({ skin: c, hair: 0xff6020, hairStyle: boss ? 'mohawk' : 'wild', beard: 'long', beardColor: 0xff8030, ears: 'big', heavyBrow: true, jaw: true, bigNose: true, eyes: 0xffd040, eyeGlow: true, torsoW: 0.64, torsoD: 0.4, shoulderW: 0.42, armW: 0.21, legW: 0.25,
+          bareChest: !fm, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: 0x2a1a14, belt: 0x1a1010, buckle: 0xffa040, feet: shade(c, 0.7), warpaint: 0xffa040, loincloth: boss ? null : 0x3a2014 });
+        const gear = {};
+        if (fm) { P.apron = 0x3a2a1a; P.gloves = 0x2a1a10; P.bracer = 0xc08a4a; gear.weapon = { kind: 'mace', o: { metal: METAL.bronze, glow: 0xffa040 } }; gear.helm = { kind: 'helm_metal', o: { S: 0.42, color: 0x8a6a3a } }; }
+        else if (boss) { P.crown = 0xffa020; P.mantle = 0x2a0a08; P.pauldron = 0x2a1a1a; P.spikes = true; P.necklace = 0xffa020; P.bracer = 0xffa020; gear.weapon = { kind: 'greatsword', o: { metal: METAL.dark, glow: 0xff5010 } }; gear.cloak = { color: 0x3a0a08, collar: 0xff5010 }; }
+        else gear.weapon = { kind: 'club', o: { wood: 0x2a1a14 } };
+        return { rig: 'human', P, gear, style: 'brute', glow: boss ? 0xff5010 : 0xff6020 };
+      }
+      case 'ash_zealot': case 'ash_pyro': case 'kindleton': {
+        const pyro = type === 'ash_pyro', boss = type === 'kindleton';
+        const P = H({ skin: 0xc89070, hair: 0x1a1410, ears: 'round', eyes: boss ? 0xff4020 : 0x2a1a0a, eyeGlow: boss || pyro, angryBrow: true, pants: 0x2a1a1a, boots: 0x1a1010, belt: 0x3a1a10, buckle: 0xff7030 });
+        const gear = {};
+        if (pyro) { outfit(P, 'robe', c); P.trim = 0xff7030; P.hood = 0x3a1010; P.necklace = 0xff7030; gear.weapon = { kind: 'staff', o: { orb: 0xff7030, wood: 0x1a1010 } }; }
+        else { outfit(P, 'leather'); P.shirt = c; P.shirtLow = shade(c, 0.85); P.sleeve = shade(c, 0.9); P.trim = 0xc03020; P.hood = boss ? 0x1a0a0a : 0x4a1a14; P.veil = 0x2a1010; P.gloves = 0x2a1a10; gear.weapon = { kind: 'sword', o: { metal: boss ? METAL.dark : METAL.steel, glow: boss ? 0xff4020 : null } }; }
+        if (boss) { P.mantle = 0x5a1a10; P.pauldron = 0x3a2a2a; gear.offhand = { kind: 'sword', o: { metal: METAL.dark, glow: 0xff4020 } }; gear.cloak = { color: 0x5a1a10, collar: 0xff4020 }; }
+        return { rig: 'human', P, gear, style: 'humanoid', glow: boss ? 0xff4020 : pyro ? 0xff7030 : null };
       }
       default: return null;
     }

@@ -284,7 +284,7 @@ class EverblockServer {
     const eq = {}; if (m.equip && typeof m.equip === 'object') for (const sl of D.EQUIP_SLOTS) if (m.equip[sl] && ITEMS[m.equip[sl].id] && ITEMS[m.equip[sl].id].slot === sl) eq[sl] = { id: m.equip[sl].id };
     p.equip = eq;
     p.title = typeof m.title === 'string' ? m.title.slice(0, 40) : '';
-    p.look.mercs = (Array.isArray(m.mercs) ? m.mercs.slice(0, 3) : []).map((x) => ({ role: MERCS[x && x.role] || (x && x.role === 'pet') ? x.role : 'tank', petLvl: Math.max(1, Math.min(30, (x && x.petLvl) | 0 || 3)), name: String((x && x.name) || '').slice(0, 30), equip: {} }));
+    p.look.mercs = (Array.isArray(m.mercs) ? m.mercs.slice(0, 3) : []).map((x) => ({ role: MERCS[x && x.role] || (x && x.role === 'pet') ? x.role : 'tank', petLvl: Math.max(1, Math.min(40, (x && x.petLvl) | 0 || 3)), name: String((x && x.name) || '').slice(0, 30), equip: {} }));
     s.zone.broadcast(this.pinfo(s));
   }
   on_save(s, m) {
@@ -385,6 +385,7 @@ class EverblockServer {
   }
   on_blk(s, m) {
     if (!this.opts.allowBuild) return s.sys('Building is disabled on this server.');
+    if (EB.WORLD.ZONES[s.zone.id] && EB.WORLD.ZONES[s.zone.id].safe) return s.sys('The Merchants Guild forbids renovations in the Bazaar.');
     const z = s.zone, w = z.world, x = m.x | 0, y = m.y | 0, zz = m.z | 0, b = m.b | 0;
     if (!w.inBounds(x, y, zz) || !ipLimit('s' + s.proxy.pid, 'blk', 12, 6)) return;
     if (b !== B.AIR && !D.BUILDABLE.includes(b)) return;

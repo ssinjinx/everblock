@@ -44,11 +44,12 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
     const newMobs = ['sand_scorpion', 'szyrix', 'bandit', 'bandit_mystic', 'rahzik', 'mummy', 'tomb_priest', 'sethek', 'sand_giant', 'gorukh', 'dust_djinn', 'ankhetra'];
     return { cap: D.MAX_LEVEL, per, mobs: newMobs.every((m) => D.MOBS[m]), pets: !!(D.PETS[18] && D.PETS[23]), xp25: D.xpToNext(24) > D.xpToNext(20) };
   });
-  check('MAX_LEVEL is 25', data.cap === 25);
+  check('MAX_LEVEL is at least 25 (v7 raised it to 40)', data.cap >= 25, data.cap);
   check('every class gets new abilities in the 16-25 range (and some reach 21+)', Object.values(data.per).every((p) => p.hi >= 2 && p.max >= 21), data.per);
   check('12 new desert/tomb monsters and level 18/23 necro pets defined', data.mobs && data.pets);
+  const EB_CAP = data.cap;
   const lv = await ev(() => { const g = EB.game, p = g.player; p.xp = 0; for (let i = 0; i < 30; i++) g.gainXP(5e7); return { lvl: p.level, xp: p.xp }; });
-  check('XP gain stops at level 25', lv.lvl === 25, lv);
+  check('XP gain stops at the level cap', lv.lvl === EB_CAP, lv);
   await ev(() => { const p = EB.game.player; p.level = 22; p.maxHp = p.hp = 5000; p.xp = 0; });
 
   // ---------------------------------------------------------------- zone

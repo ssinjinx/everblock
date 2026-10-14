@@ -107,6 +107,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
 .islot .ct { position: absolute; right: 3px; bottom: 1px; color: #fff; font-weight: bold; }
 .islot.rare .nm { color: #ffb040; }
 #bagGrid, #lootGrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+#bankGrid, #bankBag { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.bankHdr { margin-top: 6px; color: #f0d070; }
 #lootGrid { grid-template-columns: repeat(5, 70px); }
 #statsBox { font-family: Verdana, sans-serif; font-size: 12px; line-height: 1.5; }
 #statsBox b { color: #f3c85a; }

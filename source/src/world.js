@@ -11,10 +11,15 @@
     everblock: { name: 'Everblock', area: 'The Everblock Wilds', sky: { day: 0x87b5e8, night: 0x0a0f24 } },
     frostfang: { name: 'The Frostfang Highlands', area: 'The Frostfang Highlands', sky: { day: 0xb8cce0, night: 0x0c1428 } },
     desert: { name: 'The Sunscorched Expanse', area: 'The Sunscorched Expanse', sky: { day: 0xf2cf98, night: 0x160e24 } },
+    // v7
+    swamp: { name: 'The Soggybottom Mire', area: 'The Soggybottom Mire', sky: { day: 0x9fb090, night: 0x08120c } },
+    caldera: { name: 'The Cinderpeak Caldera', area: 'The Cinderpeak Caldera', sky: { day: 0xc89a7a, night: 0x1a0806 } },
+    bazaar: { name: 'The Bizarre Bazaar', area: 'The Bizarre Bazaar', sky: { day: 0xa8c4f0, night: 0x1a1236 }, safe: true },
   };
+  const ZONE_SEED = { everblock: 0, frostfang: 7777, desert: 31337, swamp: 4242, caldera: 5151, bazaar: 6060 };
   // v5: zone 3 layout
   const DS = { outpost: { x: 128, z: 222 }, oasis: { x: 62, z: 190, r: 14 }, hideout: { x: 196, z: 164 }, flats1: { x: 80, z: 132 }, flats2: { x: 188, z: 106 }, colossi: { x: 56, z: 62 }, djinn: { x: 206, z: 44 }, pyramid: { x: 128, z: 70 } };
-  const DUNGEON_ZONES = new Set(['The Sunken Crypt', 'Tomb of Ankhet-Ra']);
+  const DUNGEON_ZONES = new Set(['The Sunken Crypt', 'Tomb of Ankhet-Ra', 'Sunken Temple of Glubb', 'The Molten Forge']);
   const FF = { outpost: { x: 128, z: 236 }, warcamp: { x: 78, z: 118 }, keep: { x: 158, z: 52 }, lake: { x: 200, z: 196, r: 26 }, yetis: { x: 196, z: 112 } };
   const LAYOUT = {
     town: { x: 128, z: 128, half: 22, g: 24 },
@@ -25,6 +30,7 @@
     forest: { x: 120, z: 46, r: 46 },
   };
 
+  const LIGHT_BLOCKS = new Set([B.LANTERN, B.BRAZIER, B.GLOWCAP, B.PORTAL]);
   // ---------------- Texture atlas ----------------
   function makeAtlas() {
     const TS = 16, N = 16;
@@ -122,6 +128,30 @@
     noiseTile(32, [226, 178, 112], 16, (x, y, c) => ((y + Math.round(Math.sin(x * 0.7) * 1.5)) % 5 === 0 ? [c[0] + 18, c[1] + 16, c[2] + 12] : c));
     // 33 spirit brazier (emissive teal flame in a bronze bowl)
     noiseTile(33, [120, 250, 220], 40, (x, y, c) => ((x < 2 || x > 13 || y > 12) ? [110, 80, 40] : y < 3 ? [60, 140, 130] : (Math.abs(x - 7.5) < 2 && y > 5) ? [230, 255, 250] : c));
+    // ---- v7 tiles ----
+    // 34 bog mud
+    noiseTile(34, [78, 66, 44], 22, (x, y, c) => (rnd() < 0.08 ? [c[0] + 18, c[1] + 22, c[2] + 6] : (x + y * 3) % 11 === 0 ? [52, 44, 30] : c));
+    // 35 mangrove bark (dark, twisted), 36 mangrove top
+    noiseTile(35, [74, 58, 46], 18, (x, y, c) => ((x + Math.round(Math.sin(y * 0.8) * 1.5)) % 4 === 0 ? [44, 34, 28] : rnd() < 0.05 ? [70, 96, 50] : c));
+    noiseTile(36, [120, 96, 70], 14, (x, y, c) => { const d = Math.hypot(x - 7.5, y - 7.5); return (Math.floor(d) % 3 === 0 || d > 7) ? [70, 54, 40] : c; });
+    // 37 hanging moss
+    noiseTile(37, [86, 110, 58], 44, (x, y, c) => (x % 3 === 0 && rnd() < 0.6 ? [58, 78, 40] : rnd() < 0.08 ? [140, 156, 90] : c));
+    // 38 glowcap mushroom (emissive cyan cap with spots)
+    noiseTile(38, [80, 230, 220], 30, (x, y, c) => (y > 9 ? ((x > 5 && x < 10) ? [210, 220, 200] : [30, 60, 40]) : (Math.hypot(x - 5, y - 4) < 1.6 || Math.hypot(x - 11, y - 6) < 1.3) ? [230, 255, 250] : c));
+    // 39 basalt (hex-ish columns)
+    noiseTile(39, [58, 54, 58], 16, (x, y, c) => ((x % 5 === 0) || (y % 6 === (x / 5 | 0) % 2 * 3)) ? [34, 32, 36] : c);
+    // 40 volcanic ash
+    noiseTile(40, [96, 90, 90], 30, (x, y, c) => (rnd() < 0.05 ? [160, 70, 40] : rnd() < 0.1 ? [60, 56, 58] : c));
+    // 41 crusty magma (emissive: dark crust over glowing cracks)
+    noiseTile(41, [255, 120, 30], 50, (x, y, c) => { const k = Math.sin(x * 0.9 + Math.sin(y * 0.7) * 2) + Math.cos(y * 0.8 - x * 0.3); return k > 0.7 ? [60, 30, 24] : k > 0.3 ? [180, 60, 20] : [255, 180 + rnd() * 60, 60]; });
+    // 42 obsidian
+    noiseTile(42, [28, 20, 40], 12, (x, y, c) => ((x - y + 16) % 9 === 0 ? [90, 70, 130] : (x + y) % 13 === 0 ? [60, 46, 90] : c));
+    // 43 portal stone (emissive violet runes)
+    noiseTile(43, [120, 70, 200], 20, (x, y, c) => ((x < 1 || x > 14 || y < 1 || y > 14) ? [50, 30, 80] : ((x + y) % 5 === 0 || (x - y + 16) % 7 === 0) ? [230, 200, 255] : c));
+    // 44 bazaar marble
+    noiseTile(44, [226, 220, 210], 10, (x, y, c) => ((x === 0 || y === 0) ? [180, 170, 160] : (x * 3 + y * 7) % 23 === 0 ? [190, 160, 200] : c));
+    // 45 striped awning
+    noiseTile(45, [210, 60, 60], 14, (x, y, c) => (Math.floor(x / 4) % 2 ? [240, 226, 196] : c));
     const tex = new THREE.CanvasTexture(cv);
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
     if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; else tex.encoding = THREE.sRGBEncoding;
@@ -144,7 +174,7 @@
       const ZI = ZONES[this.zoneId];
       this.zoneName = ZI.name; this.defaultArea = ZI.area; this.sky = ZI.sky;
       this.zoneLines = [];
-      this.seed = ((seed >>> 0) + (this.zoneId === 'everblock' ? 0 : this.zoneId === 'desert' ? 31337 : 7777)) >>> 0;
+      this.seed = ((seed >>> 0) + (ZONE_SEED[this.zoneId] || 0)) >>> 0;
       this.scene = scene;
       this.data = new Uint8Array(W * D * H);
       this.height = new Int16Array(W * D);
@@ -224,6 +254,9 @@
     generate() {
       if (this.zoneId === 'frostfang') { this.genFrostfang(); this.finish(); return; }
       if (this.zoneId === 'desert') { this.genDesert(); this.finish(); return; }
+      if (this.zoneId === 'swamp') { this.genMire(); this.finish(); return; }
+      if (this.zoneId === 'caldera') { this.genCaldera(); this.finish(); return; }
+      if (this.zoneId === 'bazaar') { this.genBazaar(); this.finish(); return; }
       const s = this.seed;
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
         const h = this.terrainHeight(x, z);
@@ -247,13 +280,14 @@
       this.buildDungeon();
       this.buildSpawns();
       this.buildNorthPass();
+      this.buildTownPortal('everblock', LAYOUT.town.g);
       this.finish();
     }
     finish() {
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.computeHeightColumn(x, z);
       // lantern positions for dynamic point lights
       this.lanterns = new Map();
-      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN || this.data[i] === B.BRAZIER) this.lanterns.set(i, this.idxPos(i));
+      for (let i = 0; i < this.data.length; i++) if (LIGHT_BLOCKS.has(this.data[i])) this.lanterns.set(i, this.idxPos(i));
       this.buildMapColors();
       this.renderMap();
     }
@@ -436,6 +470,7 @@
       this.npcs.push({ kind: 'binder', name: 'Scout Hollis', x: O.x - 2.5, y: g + 1, z: O.z - 2.5, color: 0x3a6a3a, sub: '<Ranger Outpost>' });
       this.npcs.push({ kind: 'quest', name: 'Trapper Gunnar', x: O.x + 4.5, y: g + 1, z: O.z - 3.5, color: 0x7a5a3a, sub: '<Trapper>' });
       this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 3.5 };
+      this.buildTownPortal('frostfang', g);
       this.zones.push({ name: 'Hollis Outpost', x0: O.x - 7, x1: O.x + 7, z0: O.z - 7, z1: O.z + 7 });
     }
     buildWarcamp() {
@@ -495,6 +530,7 @@
       h += dune;
       let e = Math.min(x, z, W - 1 - x, D - 1 - z);
       if (Math.abs(x - 128) < 9 && z > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e);
+      if (Math.abs(z - 128) < 9 && (x < 56 || x > 200)) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(z - 128)) + e); // v7: west + east passes
       if (e < 20) h += Math.pow(20 - e, 1.3) * 1.3;
       const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
       if (dl < DS.oasis.r) h = Math.min(h, U.lerp(18, Math.max(h, 24), U.smoothstep(DS.oasis.r * 0.45, DS.oasis.r, dl)));
@@ -502,6 +538,7 @@
       flat(DS.outpost, 14, 24, 27, true); flat(DS.hideout, 13, 22, 27); flat(DS.pyramid, 27, 38, 27, true);
       flat(DS.colossi, 14, 24, 27); flat(DS.djinn, 11, 19, 28); flat(DS.flats1, 10, 20, 26); flat(DS.flats2, 10, 20, 26);
       if (Math.abs(x - 128) < 6 && z > 206) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(x - 128)));
+      if (Math.abs(z - 128) < 6 && (x < 50 || x > 206)) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(z - 128)));
       this._dune = dune;
       return Math.max(3, Math.min(H - 6, Math.round(h)));
     }
@@ -509,6 +546,7 @@
       for (const k of ['outpost', 'hideout', 'colossi', 'djinn']) if (Math.hypot(x - DS[k].x, z - DS[k].z) < 20) return true;
       if (Math.max(Math.abs(x - DS.pyramid.x), Math.abs(z - DS.pyramid.z)) < 30) return true;
       if (Math.abs(x - 128) < 6 && z > 200) return true;
+      if (Math.abs(z - 128) < 6 && (x < 52 || x > 204)) return true;
       return false;
     }
     dsRoad(x0, z0, x1, z1) {
@@ -564,7 +602,15 @@
       this.dsRoad(DS.outpost.x, DS.outpost.z - 10, P.x, P.z + 34);
       this.dsRoad(DS.outpost.x + 12, DS.outpost.z - 4, DS.hideout.x - 12, DS.hideout.z + 6);
       this.dsRoad(DS.outpost.x - 12, DS.outpost.z - 2, DS.oasis.x + 16, DS.oasis.z + 4);
+      this.dsRoad(DS.outpost.x - 16, DS.outpost.z - 4, 40, 128); this.dsRoad(40, 128, 2, 128);
+      this.dsRoad(DS.outpost.x + 16, DS.outpost.z - 4, 225, 196); this.dsRoad(225, 196, 225, 128); this.dsRoad(225, 128, 253, 128);
       this.buildSunwardOutpost(); this.buildHideout(); this.buildColossi(); this.buildDjinnRest(); this.buildPyramid();
+      // v7: west pass -> The Soggybottom Mire, east pass -> The Cinderpeak Caldera
+      for (const x of [4, 18, 34, 221, 237, 251]) for (const z of [122, 134]) this.sandPost(x, this.topY(x, z) + 1, z);
+      this.zoneLines.push({ x0: 0, x1: 2.2, z0: 123, z1: 134, to: 'swamp', arrive: { x: 249.5, z: 128.5, yaw: -Math.PI / 2 }, label: 'The Soggybottom Mire', axis: 'x', at: 0.6 });
+      this.zoneLines.push({ x0: W - 2.2, x1: W, z0: 123, z1: 134, to: 'caldera', arrive: { x: 6.5, z: 128.5, yaw: Math.PI / 2 }, label: 'The Cinderpeak Caldera', axis: 'x', at: W - 0.6 });
+      this.zones.push({ name: 'Mirebound Pass', x0: 0, x1: 40, z0: 118, z1: 138 });
+      this.zones.push({ name: 'Cinder Road', x0: 214, x1: 255, z0: 118, z1: 138 });
       this.zoneLines.push({ x0: 123, x1: 134, z0: D - 2.2, z1: D, to: 'frostfang', arrive: { x: 128.5, z: 6.5, yaw: 0 }, label: 'The Frostfang Highlands', axis: 'z', at: D - 0.6 });
       this.zones.push({ name: 'Frostfang Road', x0: 120, x1: 136, z0: 236, z1: 255 });
       this.zones.push({ name: 'Oasis of Sahra', x0: DS.oasis.x - 20, x1: DS.oasis.x + 20, z0: DS.oasis.z - 20, z1: DS.oasis.z + 20 });
@@ -619,6 +665,7 @@
       this.npcs.push({ kind: 'guard', name: 'Sunward Guard Omari', x: O.x - 3.5, y, z: O.z - hz + 2.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
       void T;
       this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 5.5 };
+      this.buildTownPortal('desert', g);
       this.zones.push({ name: 'Sunward Outpost', x0: O.x - hx, x1: O.x + hx, z0: O.z - hz, z1: O.z + hz });
     }
     buildHideout() {
@@ -1051,7 +1098,7 @@
     setBlock(x, y, z, b, record = true) {
       if (!this.inBounds(x, y, z)) return false;
       this.data[this.idx(x, y, z)] = b;
-      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN || b === B.BRAZIER) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
+      if (this.lanterns) { const i = this.idx(x, y, z); if (LIGHT_BLOCKS.has(b)) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
       if (record) this.edits[this.idx(x, y, z)] = b;
       const oldH = this.height[x + z * W];
       this.computeHeightColumn(x, z);
@@ -1120,6 +1167,392 @@
     }
   }
 
+  // ======================= v7: portals, The Soggybottom Mire, The Cinderpeak Caldera, The Bizarre Bazaar =======================
+  const MR = { outpost: { x: 206, z: 128 }, shallows: { x: 124, z: 84 }, temple: { x: 74, z: 178 }, wisps: { x: 150, z: 206 }, trolls: { x: 60, z: 66 }, crocs1: { x: 158, z: 146 }, crocs2: { x: 104, z: 216 }, crocs3: { x: 182, z: 58 } };
+  const CD = { outpost: { x: 44, z: 128 }, cult: { x: 96, z: 58 }, golems: { x: 100, z: 202 }, hounds: { x: 96, z: 140 }, sprites: { x: 204, z: 216 }, salamanders: { x: 204, z: 42 }, crater: { x: 172, z: 128, r: 30 } };
+  const BZ = { x: 128, z: 128, g: 24, half: 36 };
+  // town <-> Bazaar portals. x0 = west pillar, z = frame row; the walk-in opening is x0+1..x0+3; dz = which side you step out on
+  const PORTALS = {
+    everblock: { x0: 142, z: 134, dz: -3, label: 'Everblock Keep' },
+    frostfang: { x0: 116, z: 238, dz: -3, label: 'Hollis Outpost' },
+    desert: { x0: 129, z: 215, dz: 3, label: 'Sunward Outpost' },
+    swamp: { x0: 196, z: 119, dz: 3, label: 'Mirewatch Landing' },
+    caldera: { x0: 38, z: 119, dz: 3, label: 'Ashguard Camp' },
+  };
+  const BZ_ORDER = ['everblock', 'frostfang', 'desert', 'swamp', 'caldera'];
+  const BZ_PZ = 98;
+  const bzPortal = (zone) => ({ x0: 106 + BZ_ORDER.indexOf(zone) * 9, z: BZ_PZ, dz: 3 });
+  const portalArrive = (P) => ({ x: P.x0 + 2.5, z: P.z + 0.5 + P.dz, yaw: P.dz > 0 ? 0 : Math.PI });
+  const BAZAAR_TRAINERS = [
+    ['warrior', 'Coach Brawnhilda'], ['cleric', 'Brother Fixwell'], ['wizard', 'Magus Kablooey'], ['rogue', 'Shady Pete'], ['ranger', 'Robin Hoodie'],
+    ['paladin', 'Sir Polishington'], ['shaman', 'Grandmother Howl'], ['necromancer', 'Mortimer Gloom'], ['enchanter', 'Madame Swirl'],
+  ];
+  Object.assign(World.prototype, {
+    // a glowing two-pillar portal frame; walking through the opening (or pressing E next to it) zones you
+    portalFrame(x0, g, z, to, arrive, label, dz) {
+      this.fill(x0 - 1, g + 1, z - 1, x0 + 5, g + 8, z + 1, B.AIR);
+      this.fill(x0 - 1, g - 2, z - 2, x0 + 5, g, z + 2, B.STONE);
+      this.fill(x0 - 1, g, z - 2, x0 + 5, g, z + 2, B.MARBLE);
+      for (const x of [x0, x0 + 4]) this.fill(x, g + 1, z, x, g + 5, z, B.PORTAL);
+      this.fill(x0, g + 6, z, x0 + 4, g + 6, z, B.PORTAL);
+      this.rawSet(x0 + 2, g + 7, z, B.GOLD);
+      this.zoneLines.push({ portal: true, x0: x0 + 1, x1: x0 + 4, z0: z + 0.15, z1: z + 0.85, y: g + 1, to, arrive, label, axis: 'z', at: z + 0.5, out: dz });
+    },
+    buildTownPortal(zone, g) {
+      const P = PORTALS[zone];
+      this.portalFrame(P.x0, g, P.z, 'bazaar', portalArrive(bzPortal(zone)), 'The Bizarre Bazaar', P.dz);
+    },
+    // a fortified hall dungeon: entry -> (west | nave | east) -> sanctum
+    buildHall(C, g, M, name) {
+      const cx = C.x, cz = C.z, hx = 14, hz = 20, top = g + 8;
+      this.fill(cx - hx - 2, g + 1, cz - hz - 2, cx + hx + 2, H - 1, cz + hz + 5, B.AIR);
+      this.fill(cx - hx - 2, g - 3, cz - hz - 2, cx + hx + 2, g, cz + hz + 5, M.floor);
+      for (let y = g + 1; y <= top; y++) for (let z = cz - hz; z <= cz + hz; z++) for (let x = cx - hx; x <= cx + hx; x++) {
+        if (x !== cx - hx && x !== cx + hx && z !== cz - hz && z !== cz + hz) continue;
+        this.rawSet(x, y, z, (y === g + 1 || y === top || (x + z) % 6 === 0) ? M.accent : M.wall);
+      }
+      this.fill(cx - hx, top + 1, cz - hz, cx + hx, top + 1, cz + hz, M.roof);
+      for (let i = -hx; i <= hx; i += 2) for (const z of [cz - hz, cz + hz]) this.rawSet(cx + i, top + 2, z, M.accent);
+      for (let i = -hz; i <= hz; i += 2) for (const x of [cx - hx, cx + hx]) this.rawSet(x, top + 2, cz + i, M.accent);
+      for (const wz of [cz + 7, cz - 7]) { this.fill(cx - hx, g + 1, wz, cx + hx, top, wz, M.wall); this.fill(cx - 1, g + 1, wz, cx + 1, g + 4, wz, B.AIR); }
+      for (const wx of [cx - 5, cx + 5]) { this.fill(wx, g + 1, cz - 6, wx, top, cz + 6, M.wall); this.fill(wx, g + 1, cz - 1, wx, g + 4, cz + 1, B.AIR); }
+      this.fill(cx - 1, g + 1, cz + hz, cx + 1, g + 5, cz + hz, B.AIR);
+      for (const dx of [-2, 2]) { this.fill(cx + dx, g + 1, cz + hz + 1, cx + dx, g + 6, cz + hz + 1, M.accent); this.rawSet(cx + dx, g + 7, cz + hz + 1, M.light); }
+      // pillars, lights and the boss dais
+      for (const [x, z] of [[cx - 9, cz + 11], [cx + 9, cz + 11], [cx - 9, cz + 17], [cx + 9, cz + 17], [cx - 9, cz - 11], [cx + 9, cz - 11], [cx - 9, cz - 17], [cx + 9, cz - 17]]) this.fill(x, g + 1, z, x, top, z, M.accent);
+      for (const [x, z] of [[cx - hx + 1, cz + 14], [cx + hx - 1, cz + 14], [cx - hx + 1, cz], [cx + hx - 1, cz], [cx - 4, cz - 3], [cx + 4, cz + 3], [cx - hx + 1, cz - 14], [cx + hx - 1, cz - 14], [cx, cz - hz + 1]]) this.rawSet(x, g + 4, z, M.light);
+      this.fill(cx - 4, g + 1, cz - hz + 3, cx + 4, g + 1, cz - hz + 8, M.accent);
+      if (M.pool) { this.fill(cx - 3, g, cz - 3, cx - 2, g, cz + 3, M.pool); this.fill(cx + 2, g, cz - 3, cx + 3, g, cz + 3, M.pool); }
+      this.zones.push({ name, x0: cx - hx, x1: cx + hx, z0: cz - hz, z1: cz + hz, yMax: top });
+      return { floor: g + 1, entrance: { x: cx + 0.5, z: cz + hz + 3.5 },
+        rooms: { entry: { x: cx + 0.5, z: cz + 14.5 }, west: { x: cx - 9.5, z: cz + 0.5 }, nave: { x: cx + 0.5, z: cz + 0.5 }, east: { x: cx + 10.5, z: cz + 0.5 }, sanctum: { x: cx + 0.5, z: cz - 14.5 } } };
+    },
+    // a small fortified camp shared by both new outposts: platform, two huts, posts, NPCs, bind point and the Bazaar portal
+    buildCamp(zone, O, g, M, npcs, name) {
+      const hf = 12;
+      this.fill(O.x - hf - 1, g + 1, O.z - hf - 1, O.x + hf + 1, H - 1, O.z + hf + 1, B.AIR);
+      this.fill(O.x - hf - 1, g - 4, O.z - hf - 1, O.x + hf + 1, g - 1, O.z + hf + 1, M.base);
+      for (let z = O.z - hf; z <= O.z + hf; z++) for (let x = O.x - hf; x <= O.x + hf; x++) this.rawSet(x, g, z, (x + z) % 5 === 0 ? M.floor2 : M.floor);
+      for (let i = -hf; i <= hf; i += 4) for (const [x, z] of [[O.x + i, O.z - hf], [O.x + i, O.z + hf], [O.x - hf, O.z + i], [O.x + hf, O.z + i]]) {
+        if (Math.abs(z - O.z) <= 2 && x === O.x + hf) continue; // east gate
+        this.fill(x, g + 1, z, x, g + 2, z, M.post); this.rawSet(x, g + 3, z, M.light);
+      }
+      const shop = this.building(O.x - 10, O.z + 4, O.x - 4, O.z + 10, 4, M.wall, M.roof, 'n', g);
+      const temple = this.building(O.x + 2, O.z + 4, O.x + 8, O.z + 10, 5, M.wall2, M.roof, 'n', g);
+      this.rawSet(O.x - 2, g + 1, O.z - 2, M.post); this.rawSet(O.x - 2, g + 2, O.z - 2, M.light);
+      this.fill(O.x + 8, g + 1, O.z - 5, O.x + 8, g + 4, O.z - 5, M.post); this.fill(O.x + 8, g + 2, O.z - 4, O.x + 8, g + 4, O.z - 4, B.BANNER);
+      const y = g + 1;
+      for (const n of npcs) {
+        const at = n.at === 'shop' ? shop : n.at === 'temple' ? temple : { x: O.x + n.dx, z: O.z + n.dz };
+        this.npcs.push(Object.assign({ x: at.x, y, z: at.z }, n.d));
+      }
+      this.bind = { x: O.x - 2.5, y: g + 1, z: O.z + 0.5 };
+      this.buildTownPortal(zone, g);
+      this.zones.push({ name, x0: O.x - hf, x1: O.x + hf, z0: O.z - hf, z1: O.z + hf });
+    },
+    edgeRoad(x0, z0, x1, z1, ok, set) {
+      const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, cx = Math.round(x0 + (x1 - x0) * t), cz = Math.round(z0 + (z1 - z0) * t);
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+          const x = cx + dx, z = cz + dz; if (!this.inBounds(x, 1, z)) continue;
+          const y = this.topY(x, z), b = this.get(x, y, z);
+          if (ok(b)) set(x, y, z, b);
+        }
+      }
+    },
+
+    // ---------- Zone 4: The Soggybottom Mire (levels 25-32) ----------
+    mrHeight(x, z) {
+      const s = this.seed;
+      let h = 21 + U.fbm(x / 46, z / 46, s, 4) * 8 + (U.fbm(x / 13, z / 13, s + 5, 2) - 0.5) * 3;
+      let e = Math.min(x, z, W - 1 - x, D - 1 - z);
+      if (Math.abs(z - 128) < 9 && x > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(z - 128)) + e);
+      if (e < 20) h += Math.pow(20 - e, 1.3) * 1.3;
+      const flat = (c, r0, r1, target) => { const d = Math.hypot(x - c.x, z - c.z); if (d < r1) h = U.lerp(target, h, U.smoothstep(r0, r1, d)); };
+      flat(MR.outpost, 15, 24, 24); flat(MR.temple, 25, 34, 24); flat(MR.shallows, 8, 28, 21.8); flat(MR.trolls, 10, 20, 24); flat(MR.wisps, 8, 18, 23);
+      if (Math.abs(z - 128) < 6 && x > 212) h = U.lerp(h, 24, U.smoothstep(6, 3, Math.abs(z - 128)));
+      return Math.max(3, Math.min(H - 6, Math.round(h)));
+    },
+    mrProtected(x, z) {
+      if (Math.hypot(x - MR.outpost.x, z - MR.outpost.z) < 18) return true;
+      if (Math.max(Math.abs(x - MR.temple.x), Math.abs(z - MR.temple.z)) < 26) return true;
+      if (Math.abs(z - 128) < 6 && x > 210) return true;
+      return false;
+    },
+    mangrove(x, y, z, r) {
+      const th = 5 + Math.floor(r * 3);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { this.rawSet(x + dx, y, z + dz, B.MANGROVE); if (r > 0.4) this.rawSet(x + dx * 2, y - 1, z + dz * 2, B.MANGROVE); }
+      for (let i = 0; i < th; i++) this.rawSet(x, y + i, z, B.MANGROVE);
+      const top = y + th;
+      for (let dy = -1; dy <= 1; dy++) {
+        const rad = dy === 1 ? 1 : 3;
+        for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
+          if (dx * dx + dz * dz > rad * rad + 1) continue;
+          if (this.get(x + dx, top + dy, z + dz) === B.AIR) this.rawSet(x + dx, top + dy, z + dz, dy === 1 ? B.MOSS : B.LEAVES);
+        }
+      }
+      for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3], [2, 2], [-2, -2]]) if (U.hash2(x + dx, z + dz, this.seed + 3) < 0.6) {
+        const len = 1 + Math.floor(U.hash2(x + dz, z + dx, 5) * 3);
+        for (let k = 1; k <= len; k++) if (this.get(x + dx, top - 1 - k, z + dz) === B.AIR) this.rawSet(x + dx, top - 1 - k, z + dz, B.MOSS);
+      }
+    },
+    genMire() {
+      const s = this.seed, SEA2 = 22;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const h = this.mrHeight(x, z);
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 4 ? B.STONE : y < h ? (U.hash2(x, y * 7 + z, s) < 0.5 ? B.MUD : B.DIRT) : B.GRASS;
+          if (y === h && (h <= SEA2 || U.fbm(x / 9, z / 9, s + 21, 2) > 0.62)) b = B.MUD;
+          if (y === h && h > 38) b = B.MOSSY;
+          this.rawSet(x, y, z, b);
+        }
+        for (let y = h + 1; y <= SEA2; y++) this.rawSet(x, y, z, B.WATER);
+      }
+      // mangroves and glowcaps
+      let caps = 0;
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        if (this.mrProtected(x, z)) continue;
+        const y = this.topY(x, z), b = this.get(x, y, z), r = U.hash2(x, z, s + 3);
+        const dens = U.fbm(x / 34, z / 34, s + 44, 2) > 0.5 ? 0.03 : 0.008;
+        if ((b === B.GRASS || b === B.MUD || b === B.WATER) && U.hash2(x, z, s + 99) < dens) this.mangrove(x, (b === B.WATER ? this.floorBelow(x, y, z) : y + 1), z, r);
+        else if ((b === B.GRASS || b === B.MUD) && caps < 90 && U.hash2(x, z, s + 98) < 0.0022) { this.rawSet(x, y + 1, z, B.GLOWCAP); caps++; }
+      }
+      // boardwalks over the muck
+      const plank = (x, y, z, b) => { if (b === B.WATER) { let yy = y; while (yy > 1 && this.get(x, yy, z) === B.WATER) yy--; this.rawSet(x, SEA2, z, B.PLANKS); } else this.rawSet(x, y, z, B.PLANKS); };
+      const ok = (b) => b === B.GRASS || b === B.MUD || b === B.WATER;
+      const O = MR.outpost;
+      this.edgeRoad(254, 128, O.x + 12, 128, ok, plank);
+      this.edgeRoad(O.x - 12, O.z, MR.shallows.x + 26, MR.shallows.z + 10, ok, plank);
+      this.edgeRoad(O.x - 12, O.z + 4, MR.temple.x + 18, MR.temple.z - 6, ok, plank);
+      this.edgeRoad(O.x - 4, O.z + 12, MR.wisps.x + 10, MR.wisps.z - 8, ok, plank);
+      this.buildCamp('swamp', O, 24, { base: B.MUD, floor: B.PLANKS, floor2: B.MANGROVE, post: B.MANGROVE, light: B.LANTERN, wall: B.PLANKS, wall2: B.MANGROVE, roof: B.MOSS }, [
+        { at: 'temple', d: { kind: 'binder', name: 'Bog-Notary Pip', color: 0x5a7a4a, sub: '<Soul Notary>' } },
+        { at: 'shop', d: { kind: 'merchant', name: 'Swampmonger Odette', color: 0x6a5a3a, stock: 'mire', faction: 'mirewatch', sub: '<Swamp Supplies>' } },
+        { dx: 8.5, dz: -1.5, d: { kind: 'guard', name: 'Warden Marisol', color: 0x3a5a3a, sub: '<Mirewatch Warden>', tabard: 0x3a6a3a } },
+        { dx: 4.5, dz: -7.5, d: { kind: 'quest', name: 'Hedge-Witch Grizelda', color: 0x4a3a5a, sub: '<Hedge-Witch>' } },
+        { dx: 11.5, dz: -3.5, d: { kind: 'guard', name: 'Mirewatch Sentry Doyle', color: 0x3a5a3a, sub: '<Mirewatch>', tabard: 0x3a6a3a } },
+        { dx: 11.5, dz: 4.5, d: { kind: 'guard', name: 'Mirewatch Sentry Fen', color: 0x3a5a3a, sub: '<Mirewatch>', tabard: 0x3a6a3a } },
+      ], 'Mirewatch Landing');
+      this.buildFrogVillage();
+      const T = this.buildHall(MR.temple, 24, { floor: B.MUD, wall: B.MOSSY, accent: B.CRYPT, roof: B.MOSS, light: B.GLOWCAP, pool: B.WATER }, 'Sunken Temple of Glubb');
+      this.mireTemple = T;
+      this.zoneLines.push({ x0: W - 2.2, x1: W, z0: 123, z1: 134, to: 'desert', arrive: { x: 6.5, z: 128.5, yaw: Math.PI / 2 }, label: 'The Sunscorched Expanse', axis: 'x', at: W - 0.6 });
+      this.zones.push({ name: 'Mirebound Pass', x0: 220, x1: 255, z0: 118, z1: 138 });
+      this.zones.push({ name: 'The Croaking Shallows', x0: MR.shallows.x - 26, x1: MR.shallows.x + 26, z0: MR.shallows.z - 26, z1: MR.shallows.z + 26 });
+      this.zones.push({ name: 'The Drowned Grounds', x0: MR.temple.x - 26, x1: MR.temple.x + 26, z0: MR.temple.z - 26, z1: MR.temple.z + 26 });
+      this.zones.push({ name: 'Whisperfen', x0: MR.wisps.x - 18, x1: MR.wisps.x + 18, z0: MR.wisps.z - 18, z1: MR.wisps.z + 18 });
+      this.zones.push({ name: 'Troll Bottoms', x0: MR.trolls.x - 18, x1: MR.trolls.x + 18, z0: MR.trolls.z - 18, z1: MR.trolls.z + 18 });
+      const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
+      sp('bog_croc', MR.crocs1.x, MR.crocs1.z, 3, 12, 110, { alt: 'gnashjaw', altChance: 0.15 }); sp('bog_croc', MR.crocs2.x, MR.crocs2.z, 3, 12, 110); sp('bog_croc', MR.crocs3.x, MR.crocs3.z, 2, 10, 110);
+      sp('froglodyte', MR.shallows.x, MR.shallows.z, 4, 10, 110, { alt: 'ribbitus', altChance: 0.2 }); sp('froglodyte', MR.shallows.x + 10, MR.shallows.z - 10, 2, 4, 110);
+      sp('frog_priest', MR.shallows.x - 6, MR.shallows.z + 4, 2, 4, 120);
+      sp('swamp_wisp', MR.wisps.x, MR.wisps.z, 3, 10, 130); sp('swamp_wisp', 40, 128, 1, 6, 130);
+      sp('bog_troll', MR.trolls.x, MR.trolls.z, 3, 12, 150); sp('bog_troll', 150, 36, 1, 8, 150);
+      const R = T.rooms, fy = T.floor;
+      sp('drowned_zealot', R.entry.x, R.entry.z, 2, 3, 150, { y: fy });
+      sp('frog_priest', R.west.x, R.west.z, 1, 2, 150, { y: fy, lvl: [30, 31] }); sp('drowned_zealot', R.west.x, R.west.z + 2, 1, 2, 150, { y: fy });
+      sp('swamp_wisp', R.east.x, R.east.z, 2, 2, 150, { y: fy, lvl: [30, 31] });
+      sp('drowned_zealot', R.nave.x, R.nave.z + 3, 2, 2, 150, { y: fy, lvl: [30, 31] }); sp('soggs', R.nave.x, R.nave.z - 2, 1, 1, 480, { y: fy });
+      sp('glubb', R.sanctum.x, R.sanctum.z - 1, 1, 1, 900, { y: fy + 1 }); sp('drowned_zealot', R.sanctum.x - 5, R.sanctum.z + 3, 1, 1, 160, { y: fy, lvl: [31, 32] }); sp('drowned_zealot', R.sanctum.x + 5, R.sanctum.z + 3, 1, 1, 160, { y: fy, lvl: [31, 32] });
+    },
+    buildFrogVillage() {
+      const C = MR.shallows;
+      // mud-dome huts on little islands, lily-pad (moss) platforms
+      for (let i = 0; i < 6; i++) {
+        const a = i * 1.05 + 0.3, x = Math.round(C.x + Math.cos(a) * 13), z = Math.round(C.z + Math.sin(a) * 13);
+        this.fill(x - 3, 18, z - 3, x + 3, 22, z + 3, B.MUD);
+        this.fill(x - 3, 23, z - 3, x + 3, H - 1, z + 3, B.AIR);
+        for (let dy = 0; dy < 3; dy++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+          const rr = dx * dx + dz * dz + dy * dy * 1.6;
+          if (rr <= 6.5 && rr > 2.5) this.rawSet(x + dx, 23 + dy, z + dz, dy === 2 ? B.MOSS : B.MUD);
+        }
+        this.fill(x, 23, z + 2, x, 24, z + 2, B.AIR);
+        this.rawSet(x, 23, z, B.GLOWCAP);
+      }
+      for (let k = 0; k < 14; k++) { const x = C.x - 8 + Math.floor(U.hash2(k, 1, 7) * 16), z = C.z - 8 + Math.floor(U.hash2(k, 2, 7) * 16); if (this.get(x, 22, z) === B.WATER) this.rawSet(x, 22, z, B.MOSS); }
+      this.fill(C.x - 1, 21, C.z - 1, C.x + 1, 22, C.z + 1, B.MUD); this.fill(C.x, 23, C.z, C.x, 25, C.z, B.MANGROVE); this.fill(C.x - 1, 25, C.z, C.x + 1, 26, C.z, B.BANNER);
+    },
+
+    // ---------- Zone 5: The Cinderpeak Caldera (levels 32-40) ----------
+    cdHeight(x, z) {
+      const s = this.seed, K = CD.crater;
+      let h = 28 + U.fbm(x / 55, z / 55, s, 4) * 13 + (U.fbm(x / 15, z / 15, s + 5, 2) - 0.5) * 5;
+      let e = Math.min(x, z, W - 1 - x, D - 1 - z);
+      if (Math.abs(z - 128) < 9 && x < 56) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(z - 128)) + e);
+      if (e < 20) h += Math.pow(20 - e, 1.3) * 1.4;
+      const flat = (c, r0, r1, target) => { const d = Math.hypot(x - c.x, z - c.z); if (d < r1) h = U.lerp(target, h, U.smoothstep(r0, r1, d)); };
+      flat(CD.outpost, 15, 24, 28); flat(CD.cult, 13, 22, 30); flat(CD.golems, 12, 22, 30); flat(CD.hounds, 10, 22, 29);
+      // the caldera: a tall rim around a flat crater floor, with a pass cut through the west side
+      const dc = Math.hypot(x - K.x, z - K.z);
+      if (dc < 50) {
+        const rim = 50 - Math.abs(dc - 38) * 1.25;
+        if (dc > K.r) h = Math.max(h, U.lerp(h, rim, U.smoothstep(50, 40, dc)));
+        else h = 30;
+        if (dc >= K.r && x < K.x && Math.abs(z - 128) < 5) h = Math.min(h, 30 + Math.max(0, (dc - K.r - 14) * 0.25));
+      }
+      if (Math.abs(z - 128) < 6 && x < 50) h = U.lerp(h, 28, U.smoothstep(6, 3, Math.abs(z - 128)));
+      return Math.max(3, Math.min(H - 6, Math.round(h)));
+    },
+    cdProtected(x, z) {
+      if (Math.hypot(x - CD.outpost.x, z - CD.outpost.z) < 18) return true;
+      if (Math.hypot(x - CD.crater.x, z - CD.crater.z) < CD.crater.r + 2) return true;
+      if (Math.abs(z - 128) < 6 && (x < 52 || (x > 100 && x < CD.crater.x))) return true;
+      if (Math.hypot(x - CD.cult.x, z - CD.cult.z) < 16) return true;
+      return false;
+    },
+    genCaldera() {
+      const s = this.seed, K = CD.crater;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const h = this.cdHeight(x, z), dc = Math.hypot(x - K.x, z - K.z);
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 2 ? B.BASALT : B.ASH;
+          if (y === h) {
+            if (h > 41) b = U.hash2(x, z, s + 2) < 0.4 ? B.OBSIDIAN : B.BASALT;
+            const n = U.fbm(x / 30, z / 30, s + 61, 3);
+            if (!this.cdProtected(x, z) && Math.abs(n - 0.5) < 0.018 && h < 38) b = B.MAGMA;
+            if (dc < K.r && dc > 18 && U.fbm(x / 8, z / 8, s + 62, 2) > 0.6) b = B.MAGMA;
+            if (dc < K.r && b === B.ASH && U.hash2(x, z, s + 63) < 0.3) b = B.BASALT;
+          }
+          this.rawSet(x, y, z, b);
+        }
+      }
+      // basalt spires, charred trees and obsidian shards
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        if (this.cdProtected(x, z)) continue;
+        const y = this.topY(x, z), b = this.get(x, y, z), r = U.hash2(x, z, s + 3);
+        if (b !== B.ASH && b !== B.BASALT) continue;
+        if (U.hash2(x, z, s + 99) < 0.003) { const hh = 3 + Math.floor(r * 6); for (let i = 1; i <= hh; i++) this.rawSet(x, y + i, z, B.BASALT); if (r > 0.7) this.rawSet(x, y + hh + 1, z, B.OBSIDIAN); }
+        else if (U.hash2(x, z, s + 98) < 0.004) { const hh = 3 + Math.floor(r * 3); for (let i = 1; i <= hh; i++) this.rawSet(x, y + i, z, B.LOG); if (r > 0.5) this.rawSet(x + 1, y + hh - 1, z, B.LOG); }
+        else if (U.hash2(x, z, s + 97) < 0.002) { this.rawSet(x, y + 1, z, B.OBSIDIAN); if (r > 0.5) this.rawSet(x, y + 2, z, B.OBSIDIAN); }
+      }
+      const ok = (b) => b === B.ASH || b === B.BASALT || b === B.MAGMA || b === B.OBSIDIAN;
+      const road = (x, y, z) => this.rawSet(x, y, z, U.hash2(x, z, 5) < 0.6 ? B.GRAVEL : B.BASALT);
+      const O = CD.outpost;
+      this.edgeRoad(1, 128, O.x - 12, 128, ok, road);
+      this.edgeRoad(O.x + 12, 128, K.x - 4, 128, ok, road);
+      this.edgeRoad(O.x, O.z - 12, CD.cult.x - 4, CD.cult.z + 14, ok, road);
+      this.edgeRoad(O.x, O.z + 12, CD.golems.x - 6, CD.golems.z - 12, ok, road);
+      this.buildCamp('caldera', O, 28, { base: B.BASALT, floor: B.BASALT, floor2: B.OBSIDIAN, post: B.OBSIDIAN, light: B.BRAZIER, wall: B.BASALT, wall2: B.OBSIDIAN, roof: B.ROOF }, [
+        { at: 'temple', d: { kind: 'binder', name: 'Flamewarden Ignatia', color: 0xc85a2a, sub: '<Soul Notary>' } },
+        { at: 'shop', d: { kind: 'merchant', name: 'Quartermaster Brann', color: 0x5a3a2a, stock: 'caldera', faction: 'ashguard', sub: '<Expedition Supplies>' } },
+        { dx: 8.5, dz: -1.5, d: { kind: 'guard', name: 'Captain Emberly', color: 0x8a2a1a, sub: '<Ashguard Captain>', tabard: 0x8a2a1a } },
+        { dx: 4.5, dz: -7.5, d: { kind: 'quest', name: 'Sage Cindral', color: 0x3a2a4a, sub: '<Volcanologist>' } },
+        { dx: 11.5, dz: -3.5, d: { kind: 'guard', name: 'Ashguard Sentry Vulk', color: 0x8a2a1a, sub: '<Ashguard>', tabard: 0x8a2a1a } },
+        { dx: 11.5, dz: 4.5, d: { kind: 'guard', name: 'Ashguard Sentry Pyra', color: 0x8a2a1a, sub: '<Ashguard>', tabard: 0x8a2a1a } },
+      ], 'Ashguard Camp');
+      this.buildCultCamp(); this.buildGolemField();
+      const F = this.buildHall(K, 30, { floor: B.BASALT, wall: B.OBSIDIAN, accent: B.BASALT, roof: B.BASALT, light: B.BRAZIER, pool: B.MAGMA }, 'The Molten Forge');
+      this.forge = F;
+      this.zoneLines.push({ x0: 0, x1: 2.2, z0: 123, z1: 134, to: 'desert', arrive: { x: 249.5, z: 128.5, yaw: -Math.PI / 2 }, label: 'The Sunscorched Expanse', axis: 'x', at: 0.6 });
+      this.zones.push({ name: 'Cinder Road', x0: 0, x1: 30, z0: 118, z1: 138 });
+      this.zones.push({ name: 'The Caldera Floor', x0: K.x - K.r, x1: K.x + K.r, z0: K.z - K.r, z1: K.z + K.r });
+      this.zones.push({ name: 'The Ashen Cult Encampment', x0: CD.cult.x - 18, x1: CD.cult.x + 18, z0: CD.cult.z - 18, z1: CD.cult.z + 18 });
+      this.zones.push({ name: 'The Glass Garden', x0: CD.golems.x - 18, x1: CD.golems.x + 18, z0: CD.golems.z - 18, z1: CD.golems.z + 18 });
+      this.zones.push({ name: 'The Cinderpeak Rim', x0: K.x - 50, x1: K.x + 50, z0: K.z - 50, z1: K.z + 50 });
+      const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
+      sp('cinder_hound', CD.hounds.x, CD.hounds.z, 4, 14, 110, { alt: 'scorchmaw', altChance: 0.15 }); sp('cinder_hound', 150, 214, 2, 10, 110);
+      sp('ember_sprite', CD.sprites.x, CD.sprites.z, 3, 10, 120); sp('ember_sprite', 60, 210, 2, 8, 120);
+      sp('salamander', CD.salamanders.x, CD.salamanders.z, 3, 10, 120); sp('salamander', K.x + 20, K.z + 10, 2, 4, 130);
+      sp('obsidian_golem', CD.golems.x, CD.golems.z, 3, 12, 150);
+      sp('ash_zealot', CD.cult.x, CD.cult.z, 4, 9, 120, { alt: 'kindleton', altChance: 0.2 }); sp('ash_pyro', CD.cult.x - 5, CD.cult.z - 3, 2, 4, 130);
+      sp('magma_giant', 226, 186, 2, 10, 160); sp('magma_giant', K.x - 20, K.z - 12, 1, 3, 160);
+      const R = F.rooms, fy = F.floor;
+      sp('obsidian_golem', R.entry.x, R.entry.z, 2, 3, 160, { y: fy, lvl: [36, 37] });
+      sp('magma_giant', R.west.x, R.west.z, 1, 1, 170, { y: fy }); sp('obsidian_golem', R.west.x, R.west.z + 3, 1, 1, 170, { y: fy });
+      sp('ash_pyro', R.east.x, R.east.z, 2, 2, 160, { y: fy, lvl: [37, 38] });
+      sp('magma_giant', R.nave.x, R.nave.z + 3, 2, 2, 170, { y: fy, lvl: [37, 38] }); sp('brasskull', R.nave.x, R.nave.z - 2, 1, 1, 600, { y: fy });
+      sp('pyrrhax', R.sanctum.x, R.sanctum.z - 1, 1, 1, 1200, { y: fy + 1 }); sp('obsidian_golem', R.sanctum.x - 6, R.sanctum.z + 3, 1, 1, 170, { y: fy, lvl: [38, 39] }); sp('obsidian_golem', R.sanctum.x + 6, R.sanctum.z + 3, 1, 1, 170, { y: fy, lvl: [38, 39] });
+    },
+    buildCultCamp() {
+      const C = CD.cult, g = this.topY(C.x, C.z);
+      this.fill(C.x - 15, g + 1, C.z - 15, C.x + 15, H - 1, C.z + 15, B.AIR);
+      const tent = (tx, tz, c) => { const ty = this.topY(tx, tz) + 1; for (let l = 0; l < 3; l++) for (let dz = -2; dz <= 2; dz++) { this.rawSet(tx - 2 + l, ty + l, tz + dz, c); this.rawSet(tx + 2 - l, ty + l, tz + dz, c); } for (let dz = -2; dz <= 2; dz++) this.rawSet(tx, ty + 3, tz + dz, B.OBSIDIAN); };
+      tent(C.x - 8, C.z - 6, B.BANNER); tent(C.x + 7, C.z - 7, B.WOOL); tent(C.x - 7, C.z + 7, B.BANNER); tent(C.x + 8, C.z + 6, B.BANNER);
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2, x = Math.round(C.x + Math.cos(a) * 12), z = Math.round(C.z + Math.sin(a) * 12), t = this.topY(x, z); this.fill(x, t + 1, z, x, t + 3, z, B.OBSIDIAN); this.rawSet(x, t + 4, z, B.BRAZIER); }
+      this.fill(C.x - 1, g, C.z - 1, C.x + 1, g, C.z + 1, B.MAGMA);
+    },
+    buildGolemField() {
+      const C = CD.golems;
+      for (let i = 0; i < 26; i++) {
+        const x = C.x - 16 + Math.floor(U.hash2(i, 3, 11) * 32), z = C.z - 16 + Math.floor(U.hash2(i, 4, 11) * 32), t = this.topY(x, z), hh = 2 + Math.floor(U.hash2(i, 5, 11) * 6);
+        for (let k = 1; k <= hh; k++) this.rawSet(x, t + k, z, B.OBSIDIAN);
+        if (hh > 5) this.rawSet(x + 1, t + hh - 1, z, B.OBSIDIAN);
+      }
+    },
+
+    // ---------- The Bizarre Bazaar (safe hub) ----------
+    genBazaar() {
+      const s = this.seed, C = BZ, g = C.g;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const d = Math.max(Math.abs(x - C.x), Math.abs(z - C.z));
+        const h = d <= 44 ? g : Math.min(H - 8, Math.round(g + (d - 44) * 0.55 + U.fbm(x / 20, z / 20, s, 3) * 10));
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 3 ? B.STONE : y < h ? B.DIRT : B.GRASS;
+          if (y === h && d <= C.half) b = ((x + z) & 1) && d % 6 === 0 ? B.SANDSTONE : B.MARBLE;
+          this.rawSet(x, y, z, b);
+        }
+      }
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        const d = Math.max(Math.abs(x - C.x), Math.abs(z - C.z)); if (d < 42) continue;
+        const y = this.topY(x, z); if (this.get(x, y, z) === B.GRASS && U.hash2(x, z, s + 99) < 0.03) this.tree(x, y + 1, z, U.hash2(x, z, s + 3));
+      }
+      // ornamental wall with lantern posts and banners
+      const wd = C.half + 2;
+      for (let i = -wd; i <= wd; i++) for (const [x, z] of [[C.x + i, C.z - wd], [C.x + i, C.z + wd], [C.x - wd, C.z + i], [C.x + wd, C.z + i]]) {
+        this.fill(x, g + 1, z, x, g + 3, z, B.BRICK); if ((i & 1) === 0) this.rawSet(x, g + 4, z, B.BRICK);
+        if (((i + wd) % 8) === 0) { this.rawSet(x, g + 4, z, B.LANTERN); this.fill(x, g + 2, z, x, g + 3, z, B.BANNER); }
+      }
+      // central fountain under a striped canopy
+      this.fill(C.x - 3, g + 1, C.z - 3, C.x + 3, g + 1, C.z + 3, B.MARBLE); this.fill(C.x - 2, g + 1, C.z - 2, C.x + 2, g + 1, C.z + 2, B.WATER);
+      this.fill(C.x - 2, g, C.z - 2, C.x + 2, g, C.z + 2, B.MARBLE); this.fill(C.x, g + 1, C.z, C.x, g + 3, C.z, B.GOLD); this.rawSet(C.x, g + 4, C.z, B.LANTERN);
+      // market stalls: posts, a striped awning, a counter and a hanging lantern
+      const stall = (x, z, face, c) => {
+        for (const [dx, dz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) this.fill(x + dx, g + 1, z + dz, x + dx, g + 3, z + dz, B.LOG);
+        for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) this.rawSet(x + dx, g + 4, z + dz, ((face === 'x' ? dz : dx) + 9) % 2 ? B.AWNING : c);
+        if (face === 'x') this.fill(x + 2, g + 1, z - 1, x + 2, g + 1, z + 1, B.PLANKS); else this.fill(x - 1, g + 1, z + 2, x + 1, g + 1, z + 2, B.PLANKS);
+        this.rawSet(x, g + 3, z, B.LANTERN);
+      };
+      const y = g + 1;
+      // trainers' row (west side), facing east
+      BAZAAR_TRAINERS.forEach(([cls, name], i) => {
+        const z = 104 + i * 6, x = 99;
+        stall(x, z, 'x', i % 2 ? B.BANNER : B.WOOL);
+        const cn = EB.data.CLASSES[cls].name;
+        this.npcs.push({ kind: 'trainer', cls, name, x: x + 0.5, y, z: z + 0.5, color: EB.data.CLASSES[cls].color, sub: `<${cn} Trainer>` });
+      });
+      // vendor lane (east side), facing west
+      const vendors = [
+        ['Blade Barker Bo', 'bz_weapons', '<Weapons>', 0x8a3a2a], ['Clanky Sue', 'bz_armor', '<Armor>', 0x5a5a6a],
+        ['Snackmonger Pim', 'bz_supplies', '<Potions & Provisions>', 0x3a7a4a], ['Honest Abe', 'bz_buyer', '<Buys Absolutely Anything>', 0x7a6a2a],
+      ];
+      vendors.forEach(([name, stock, sub, color], i) => {
+        const z = 108 + i * 10, x = 157;
+        stall(x, z, 'x', i % 2 ? B.BANNER : B.WOOL);
+        this.npcs.push({ kind: 'merchant', name, stock, sub, color, faction: 'bazaar', x: x + 0.5, y, z: z + 0.5 });
+      });
+      // the bank: a little gilded building on the south side
+      const bank = this.building(C.x - 7, C.z + 18, C.x + 7, C.z + 27, 5, B.MARBLE, B.GOLD, 'n', g);
+      this.npcs.push({ kind: 'banker', name: 'Vaultkeeper Coinsworth', x: bank.x, y, z: bank.z, color: 0x2a6a3a, sub: '<First Bank of Bizarre>', faction: 'bazaar' });
+      this.npcs.push({ kind: 'binder', name: 'Soul-Notary Bartleby', x: C.x - 6.5, y, z: C.z - 6.5, color: 0xdadaf0, sub: '<Soul Notary>' });
+      this.npcs.push({ kind: 'liaison', name: 'Sellsword Agent Rook', x: C.x + 8.5, y, z: C.z + 10.5, color: 0x2a7a4a, sub: '<Mercenaries for Hire>' });
+      this.npcs.push({ kind: 'quest', name: 'Bazaar Crier Mumbles', x: C.x + 4.5, y, z: C.z - 6.5, color: 0xa04080, sub: '<Town Crier>' });
+      for (const [x, z] of [[C.x - 12, C.z - 12], [C.x + 12, C.z - 12], [C.x - 12, C.z + 12], [C.x + 12, C.z + 12], [C.x - 22, C.z], [C.x + 22, C.z], [C.x, C.z + 14]]) this.lanternPost(x, g + 1, z);
+      // the portal promenade: one return portal per town
+      for (const zone of BZ_ORDER) {
+        const P = bzPortal(zone), T = PORTALS[zone];
+        this.portalFrame(P.x0, g, P.z, zone, portalArrive(T), T.label, P.dz);
+        this.lanternPost(P.x0 + 6, g + 1, P.z + 2);
+      }
+      this.bind = { x: C.x + 0.5, y: g + 1, z: C.z - 8.5 };
+      this.zones.push({ name: 'The Portal Promenade', x0: 98, x1: 158, z0: 94, z1: 103 });
+      this.zones.push({ name: "Trainers' Row", x0: 94, x1: 104, z0: 100, z1: 156 });
+      this.zones.push({ name: 'Vendor Lane', x0: 152, x1: 162, z0: 100, z1: 146 });
+      this.zones.push({ name: 'First Bank of Bizarre', x0: C.x - 7, x1: C.x + 7, z0: C.z + 18, z1: C.z + 27 });
+    },
+  });
+  EB.WORLD_V7 = { MR, CD, BZ, PORTALS, BZ_ORDER, bzPortal, portalArrive, BAZAAR_TRAINERS };
+
   EB.World = World;
-  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES, DS, DUNGEON_ZONES };
+  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES, DS, DUNGEON_ZONES, MR, CD, BZ, PORTALS };
 })();

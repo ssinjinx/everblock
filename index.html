@@ -130,6 +130,8 @@ input { font-family: Georgia, serif; background: #1a140c; color: #f0e0b0; border
 .islot .ct { position: absolute; right: 3px; bottom: 1px; color: #fff; font-weight: bold; }
 .islot.rare .nm { color: #ffb040; }
 #bagGrid, #lootGrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+#bankGrid, #bankBag { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.bankHdr { margin-top: 6px; color: #f0d070; }
 #lootGrid { grid-template-columns: repeat(5, 70px); }
 #statsBox { font-family: Verdana, sans-serif; font-size: 12px; line-height: 1.5; }
 #statsBox b { color: #f3c85a; }
@@ -590,6 +592,15 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     <div id="merchList"></div>
     <div class="sub">Sell from the list below, or right-click items in your bags (I).</div>
   </div>
+  <div id="bankWin" class="win panelwin hidden">
+    <div class="wtitle" id="bankTitle">First Bank of Bizarre <span class="x" data-close="bankWin">✕</span></div>
+    <div class="sub">Click an item in your bags to deposit it; click a vault slot to withdraw. Your vault follows your character everywhere (and to the server).</div>
+    <div class="sub bankHdr">Vault</div>
+    <div id="bankGrid"></div>
+    <div class="sub bankHdr">Your bags</div>
+    <div id="bankBag"></div>
+    <div class="btnRow"><button id="btnBankCoin">Deposit all coin</button><button id="btnBankCoinOut">Withdraw coin</button><button data-close="bankWin">Done</button></div>
+  </div>
   <div id="trainerWin" class="win panelwin hidden">
     <div class="wtitle">Guild Coach <span class="x" data-close="trainerWin">✕</span></div>
     <div id="trainList"></div>
@@ -746,7 +757,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
   // tiles: [top, side, bottom] indices into the procedural atlas
   const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, WATER: 5, LOG: 6, LEAVES: 7, COBBLE: 8,
     PLANKS: 9, BRICK: 10, MOSSY: 11, LANTERN: 12, BEDROCK: 13, ROOF: 14, GRAVEL: 15, CRYPT: 16, WOOL: 17, SNOW: 18, ICE: 19, PINE: 20, BLACKSTONE: 21, BANNER: 22,
-    SANDSTONE: 23, CARVED: 24, GOLD: 25, CACTUS: 26, PALM: 27, DUNE: 28, BRAZIER: 29 };
+    SANDSTONE: 23, CARVED: 24, GOLD: 25, CACTUS: 26, PALM: 27, DUNE: 28, BRAZIER: 29,
+    MUD: 30, MANGROVE: 31, MOSS: 32, GLOWCAP: 33, BASALT: 34, ASH: 35, MAGMA: 36, OBSIDIAN: 37, PORTAL: 38, MARBLE: 39, AWNING: 40 };
   const BLOCKS = [];
   function def(id, name, tiles, opts) { BLOCKS[id] = Object.assign({ id, name, tiles, solid: true, opaque: true, water: false, emissive: false }, opts || {}); }
   def(B.AIR, 'Air', [0, 0, 0], { solid: false, opaque: false });
@@ -780,6 +792,18 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
   def(B.PALM, 'Palm Fronds', [31, 31, 31]);
   def(B.DUNE, 'Dune Sand', [32, 32, 32]);
   def(B.BRAZIER, 'Spirit Brazier', [33, 33, 33], { emissive: true });
+  // v7: The Soggybottom Mire, The Cinderpeak Caldera and The Bizarre Bazaar
+  def(B.MUD, 'Bog Mud', [34, 34, 34]);
+  def(B.MANGROVE, 'Mangrove Wood', [36, 35, 36]);
+  def(B.MOSS, 'Hanging Moss', [37, 37, 37]);
+  def(B.GLOWCAP, 'Glowcap Mushroom', [38, 38, 38], { emissive: true });
+  def(B.BASALT, 'Basalt', [39, 39, 39]);
+  def(B.ASH, 'Volcanic Ash', [40, 40, 40]);
+  def(B.MAGMA, 'Crusty Magma', [41, 41, 41], { emissive: true });
+  def(B.OBSIDIAN, 'Obsidian', [42, 42, 42]);
+  def(B.PORTAL, 'Portal Stone', [43, 43, 43], { emissive: true });
+  def(B.MARBLE, 'Bazaar Marble', [44, 44, 44]);
+  def(B.AWNING, 'Striped Awning', [45, 45, 45]);
   const BUILDABLE = [B.COBBLE, B.PLANKS, B.BRICK, B.STONE, B.DIRT, B.LOG, B.LEAVES, B.LANTERN, B.ICE];
 
   // ---------- Races ----------
@@ -913,6 +937,70 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     healing_potion:    { name: 'Minor Healing Potion', value: 30, stack: true, use: { heal: 45 }, icon: '🧪' },
     greater_potion:    { name: 'Healing Potion', value: 120, stack: true, use: { heal: 150 }, icon: '🧪' },
     bread:             { name: 'Suspiciously Crusty Bread', value: 3, stack: true, use: { heal: 10 }, icon: '🍞' },
+    // ---- v7: Bizarre Bazaar vendor goods ----
+    grand_potion:      { name: 'Grande Healing Latte', value: 1200, stack: true, use: { heal: 900 }, icon: '🧪' },
+    traveler_rations:  { name: 'Trail Mix (Mostly Raisins)', value: 25, stack: true, use: { heal: 60 }, icon: '🥜' },
+    journeyman_blade:  { name: 'Journeyman Slicer', slot: 'primary', dmg: 19, delay: 2.6, verb: 'slash', stats: { STR: 3 }, value: 4500, icon: '⚔' },
+    journeyman_dagger: { name: 'Journeyman Pokestick', slot: 'primary', dmg: 15, delay: 1.9, verb: 'pierce', stats: { DEX: 4 }, value: 4200, icon: '🗡' },
+    journeyman_mace:   { name: 'Journeyman Bonker', slot: 'primary', dmg: 20, delay: 2.8, verb: 'crush', stats: { STR: 3 }, value: 4500, icon: '🔨' },
+    journeyman_staff:  { name: 'Journeyman Thinking Stick', slot: 'primary', dmg: 13, delay: 3.0, verb: 'crush', stats: { INT: 7, WIS: 7 }, mana: 60, value: 4800, icon: '🦯' },
+    expert_blade:      { name: 'Expert Slicer (Still Under Warranty)', slot: 'primary', dmg: 24, delay: 2.6, verb: 'slash', stats: { STR: 5, STA: 3 }, value: 14000, icon: '⚔' },
+    expert_dagger:     { name: 'Expert Pokestick', slot: 'primary', dmg: 19, delay: 1.9, verb: 'pierce', stats: { DEX: 6, AGI: 4 }, value: 14000, icon: '🗡' },
+    expert_staff:      { name: 'Expert Thinking Stick', slot: 'primary', dmg: 16, delay: 3.0, verb: 'crush', stats: { INT: 10, WIS: 10 }, mana: 110, value: 15000, icon: '🦯' },
+    bazaar_helm:       { name: 'Haggler\'s Helm', slot: 'head', ac: 12, stats: { STA: 3 }, value: 3500, icon: '⛑' },
+    bazaar_breastplate:{ name: 'Off-the-Rack Breastplate', slot: 'chest', ac: 20, stats: { STA: 4 }, value: 7000, icon: '🦺' },
+    bazaar_robe:       { name: 'Discount Archmage Robe', slot: 'chest', ac: 10, stats: { INT: 6, WIS: 6 }, mana: 70, value: 6500, icon: '👘' },
+    bazaar_gauntlets:  { name: 'Bargain-Bin Gauntlets', slot: 'hands', ac: 10, stats: { STR: 3 }, value: 3000, icon: '🧤' },
+    bazaar_greaves:    { name: 'Slightly Squeaky Greaves', slot: 'legs', ac: 14, stats: { STA: 3 }, value: 4000, icon: '👖' },
+    bazaar_boots:      { name: 'Marketplace Loafers', slot: 'feet', ac: 10, stats: { AGI: 3 }, value: 3000, icon: '🥾' },
+    bazaar_cloak:      { name: 'Window-Shopper Cloak', slot: 'back', ac: 8, stats: { STA: 3, AGI: 3 }, value: 3500, icon: '🧥' },
+    bazaar_shield:     { name: 'Kite Shield (Kite Not Included)', slot: 'secondary', ac: 16, stats: { STA: 3 }, value: 4500, icon: '🛡' },
+    // ---- v7: The Soggybottom Mire (levels 25-32) ----
+    croc_tooth:        { name: 'Crocodile Chomper', value: 140, stack: true, icon: '🦷' },
+    frog_leg:          { name: 'Froglodyte Drumstick', value: 110, stack: true, icon: '🍗' },
+    wisp_essence:      { name: 'Bottled Whisper', value: 220, stack: true, icon: '✨' },
+    troll_hide:        { name: 'Bog Troll Hide (Damp)', value: 180, stack: true, icon: '🟫' },
+    soggy_scroll:      { name: 'Soggy Sermon Scroll', value: 160, stack: true, icon: '📜' },
+    gatorhide_boots:   { name: 'Crocskin Wellies', slot: 'feet', ac: 13, stats: { AGI: 5, STA: 3 }, value: 6000, icon: '🥾' },
+    froglodyte_spear:  { name: 'Froglodyte Frog-Gig', slot: 'primary', dmg: 22, delay: 2.7, verb: 'pierce', stats: { STR: 5, DEX: 4 }, value: 6500, icon: '🗡' },
+    lilypad_shield:    { name: 'Laminated Lilypad Shield', slot: 'secondary', ac: 18, stats: { STA: 5 }, value: 6000, icon: '🛡' },
+    bog_robe:          { name: 'Robe of the Damp Clergy', slot: 'chest', ac: 12, stats: { INT: 8, WIS: 8 }, mana: 90, value: 7000, icon: '👘' },
+    wisp_ring:         { name: 'Ring of Quiet Whispers', slot: 'ring', stats: { INT: 7, WIS: 7 }, mana: 70, value: 8000, icon: '💍' },
+    troll_vest:        { name: 'Troll-Hide Vest', slot: 'chest', ac: 24, stats: { STA: 6, STR: 4 }, hp: 60, value: 8000, icon: '🦺' },
+    drowned_wraps:     { name: 'Waterlogged Hand Wraps', slot: 'hands', ac: 12, stats: { STA: 4, WIS: 4 }, value: 7000, icon: '🧤' },
+    mire_waders:       { name: 'Mirewatch Waders', slot: 'legs', ac: 16, stats: { STA: 5, AGI: 5 }, hp: 50, value: 9000, icon: '👖' },
+    gnashjaw_necklace: { name: "Gnashjaw's Tooth Necklace", slot: 'neck', ac: 8, stats: { STR: 7, STA: 7 }, hp: 80, value: 12000, icon: '📿', rare: true },
+    ribbitus_crown:    { name: "Chief Ribbitus's Lily Crown", slot: 'head', ac: 16, stats: { STA: 6, WIS: 6 }, hp: 60, value: 12000, icon: '👑', rare: true },
+    soggs_censer:      { name: "Deacon Soggs's Leaky Censer", slot: 'secondary', stats: { INT: 8, WIS: 8 }, mana: 100, value: 12000, icon: '🪬', rare: true },
+    glubb_scepter:     { name: 'Scepter of the Bloated One', slot: 'primary', dmg: 22, delay: 3.0, verb: 'crush', stats: { INT: 14, WIS: 14, STA: 6 }, hp: 80, mana: 180, value: 30000, icon: '🦯', rare: true },
+    mire_greatsword:   { name: 'Mirewalker Greatsword', slot: 'primary', dmg: 33, delay: 3.4, verb: 'slash', stats: { STR: 10, STA: 8 }, hp: 90, value: 30000, icon: '⚔', rare: true },
+    bloated_girdle:    { name: 'Surprisingly Stretchy Cloak', slot: 'back', ac: 12, stats: { STA: 8, AGI: 6 }, hp: 80, value: 20000, icon: '🧥', rare: true },
+    swamp_signet:      { name: 'Signet of the Bog Baron', slot: 'ring', ac: 8, stats: { STR: 8, STA: 8, AGI: 8, DEX: 8, WIS: 8, INT: 8, CHA: 8 }, hp: 100, mana: 100, value: 30000, icon: '💍', rare: true },
+    idol_of_glubb:     { name: 'Idol of Glubb', value: 0, quest: true, icon: '🗿' },
+    // ---- v7: The Cinderpeak Caldera (levels 32-40) ----
+    cinder_pelt:       { name: 'Smoldering Hound Pelt', value: 240, stack: true, icon: '🐺' },
+    ember_core:        { name: 'Ember Sprite Core', value: 300, stack: true, icon: '🔥' },
+    salamander_scale:  { name: 'Salamander Scale (Hot)', value: 260, stack: true, icon: '🦎' },
+    obsidian_shard:    { name: 'Obsidian Shard', value: 350, stack: true, icon: '🔷' },
+    giant_knuckle:     { name: 'Magma Giant Knuckle', value: 400, stack: true, icon: '✊' },
+    ash_badge:         { name: 'Ashen Cult Pin', value: 280, stack: true, icon: '🔺' },
+    emberstep_boots:   { name: 'Emberstep Boots', slot: 'feet', ac: 16, stats: { AGI: 7, STA: 4 }, hp: 40, value: 14000, icon: '🥾' },
+    spark_ring:        { name: 'Ring of Constant Sparks', slot: 'ring', stats: { INT: 9, WIS: 9 }, hp: 40, mana: 100, value: 16000, icon: '💍' },
+    scaled_leggings:   { name: 'Salamander-Scale Leggings', slot: 'legs', ac: 20, stats: { STA: 6, AGI: 4 }, value: 14000, icon: '👖' },
+    obsidian_shield:   { name: 'Obsidian Door-Shield', slot: 'secondary', ac: 26, stats: { STA: 7 }, hp: 60, value: 18000, icon: '🛡' },
+    magma_maul:        { name: 'Magma Giant Maul', slot: 'primary', dmg: 36, delay: 3.6, verb: 'crush', stats: { STR: 10, STA: 8 }, value: 20000, icon: '🔨' },
+    giant_forged_helm: { name: 'Giant-Forged Pot Helm', slot: 'head', ac: 20, stats: { STA: 6, STR: 4 }, value: 16000, icon: '⛑' },
+    cultist_robe:      { name: 'Robe of the Ashen Cult', slot: 'chest', ac: 14, stats: { INT: 10, WIS: 10 }, mana: 130, value: 17000, icon: '👘' },
+    zealot_blade:      { name: 'Zealot\'s Hot Take Blade', slot: 'primary', dmg: 27, delay: 2.5, verb: 'slash', stats: { STR: 7, DEX: 6 }, value: 18000, icon: '⚔' },
+    ashguard_bracer:   { name: 'Ashguard Bracer', slot: 'hands', ac: 18, stats: { STR: 6, STA: 6 }, hp: 70, value: 20000, icon: '🧤' },
+    scorchmaw_collar:  { name: "Scorchmaw's Studded Collar", slot: 'neck', ac: 10, stats: { AGI: 8, STA: 8 }, hp: 100, value: 24000, icon: '📿', rare: true },
+    kindleton_mantle:  { name: "Brother Kindleton's Mantle", slot: 'back', ac: 14, stats: { INT: 10, WIS: 10 }, mana: 120, value: 24000, icon: '🧣', rare: true },
+    brasskull_hammer:  { name: "Brasskull's Anvil Hammer", slot: 'primary', dmg: 38, delay: 3.4, verb: 'crush', stats: { STR: 12, STA: 10 }, hp: 120, value: 40000, icon: '🔨', rare: true },
+    unquenched_blade:  { name: 'The Unquenched Blade', slot: 'primary', dmg: 34, delay: 2.5, verb: 'slash', stats: { STR: 14, DEX: 10, AGI: 8 }, hp: 150, value: 60000, icon: '⚔', rare: true },
+    caldera_crown:     { name: 'Crown of the Caldera', slot: 'head', ac: 26, stats: { INT: 14, WIS: 14, STA: 10 }, hp: 120, mana: 200, value: 60000, icon: '👑', rare: true },
+    molten_plate:      { name: 'Molten Heartplate', slot: 'chest', ac: 40, stats: { STR: 10, STA: 12 }, hp: 160, value: 60000, icon: '🦺', rare: true },
+    caldera_signet:    { name: 'Signet of the Flamebreaker', slot: 'ring', ac: 10, stats: { STR: 10, STA: 10, AGI: 10, DEX: 10, WIS: 10, INT: 10, CHA: 10 }, hp: 150, mana: 150, value: 60000, icon: '💍', rare: true },
+    pyrrhax_heart:     { name: 'Still-Warm Heart of Pyrrhax', value: 0, quest: true, icon: '❤' },
   };
   const EQUIP_SLOTS = ['head', 'neck', 'back', 'chest', 'hands', 'legs', 'feet', 'ring', 'primary', 'secondary'];
 
@@ -1008,6 +1096,51 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     chaotic_feedback:{ name: 'Mic Feedback', classes: { enchanter: 18 }, mana: 70, cast: 2.5, recast: 6, kind: 'nuke', dmg: [75, 95], perLvl: 3, school: 'magic', desc: 'Mind-shattering feedback.' },
     clarity_ii:   { name: 'Big Brain Juice II', classes: { enchanter: 20 }, mana: 90, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 9 }, dur: 1800, friendly: true, ic: 'drop', desc: '+9 mana per tick.' },
     scourge:      { name: 'Plague Rat Energy', classes: { shaman: 23 }, mana: 80, cast: 2.5, recast: 6, kind: 'dot', tick: [28, 34], perLvl: 1.2, dur: 30, school: 'disease', desc: 'A virulent plague rots the target over 30 seconds.' },
+    // ---- v7: levels 26-40 for every class ----
+    belly_flop:   { name: 'Belly Flop', classes: { warrior: 26 }, ic: 'shieldbash', mana: 0, cast: 0, recast: 14, kind: 'skill', dmg: [80, 110], perLvl: 3, verb: 'belly flop', desc: 'Hurl your entire body at the target. Instant. Dignity sold separately.' },
+    unshakeable:  { name: 'Unshakeable Vibes', classes: { warrior: 30 }, ic: 'shield', mana: 0, cast: 0, recast: 180, kind: 'buff', buff: { ac: 40, hp: 120 }, dur: 60, self: true, skill: true, desc: 'Nothing can ruin your mood: +40 AC, +120 HP for 60s.' },
+    leg_sweep:    { name: 'Ankle Biter Sweep', classes: { warrior: 34 }, ic: 'boot', mana: 0, cast: 0, recast: 18, kind: 'stun', dur: 2.5, dmg: [30, 50], skill: true, desc: 'Sweep the target off its feet, stunning it. Instant.' },
+    chaos_tornado:{ name: 'Whirling Dervish Tantrum', classes: { warrior: 38 }, ic: 'sword', mana: 0, cast: 0, recast: 24, kind: 'skill', dmg: [150, 210], perLvl: 5, verb: 'tantrum', desc: 'Spin like a toddler denied candy. Huge damage. Instant.' },
+    complete_overhaul:{ name: 'Complete Overhaul', classes: { cleric: 27 }, mana: 220, cast: 4, recast: 2, kind: 'heal', amt: [500, 600], perLvl: 6, friendly: true, desc: 'Takes it to the shop and gives it the full service. A huge heal.' },
+    holy_clapback:{ name: 'Holy Clap Back', classes: { cleric: 30 }, mana: 110, cast: 2.5, recast: 7, kind: 'nuke', dmg: [170, 220], perLvl: 4, school: 'magic', desc: 'A divine and devastating comeback.' },
+    aegis_concern:{ name: 'Aegis of Mild Concern', classes: { cleric: 33, paladin: 35 }, mana: 180, cast: 4, recast: 3, kind: 'buff', buff: { ac: 40, hp: 150 }, dur: 2400, friendly: true, desc: '+40 AC, +150 HP. Someone up there is mildly worried about you.' },
+    group_hug_xl: { name: 'Group Hug of Healing XL', classes: { cleric: 36 }, mana: 260, cast: 4.5, recast: 10, kind: 'groupheal', amt: [260, 320], perLvl: 5, desc: 'Heals your whole group a huge amount. Everyone squeeze in.' },
+    restraining_order:{ name: 'Divine Restraining Order', classes: { cleric: 39 }, mana: 180, cast: 3, recast: 8, kind: 'nuke', dmg: [260, 320], perLvl: 5, school: 'magic', undead: 2, desc: 'Legally binding holy fire. Double damage against the undead.' },
+    sizzle_reel:  { name: 'Sizzle Reel', classes: { wizard: 27 }, mana: 200, cast: 3.5, recast: 9, kind: 'nuke', dmg: [300, 360], perLvl: 5, school: 'fire', desc: 'A highlight montage of everything on fire.' },
+    glacial_paperwork:{ name: 'Glacial Paperwork', classes: { wizard: 30 }, mana: 60, cast: 1.5, recast: 10, kind: 'root', dur: 32, desc: 'Buries the target in forms. It cannot move until they are filed.' },
+    shielding_bulk:{ name: 'Shielding (Bulk Warehouse)', classes: { wizard: 32, enchanter: 33, necromancer: 34 }, mana: 110, cast: 3.5, recast: 3, kind: 'buff', buff: { ac: 18, hp: 110 }, dur: 2400, self: true, desc: '+18 AC, +110 HP. Membership required.' },
+    thunder_bolt: { name: 'Thunder Thighs Bolt', classes: { wizard: 34 }, mana: 230, cast: 3.5, recast: 8, kind: 'nuke', dmg: [380, 450], perLvl: 6, school: 'magic', desc: 'Lightning with leg day energy.' },
+    meteor_thoughts:{ name: 'Meteor Shower Thoughts', classes: { wizard: 38 }, mana: 290, cast: 4.5, recast: 11, kind: 'nuke', dmg: [480, 560], perLvl: 7, school: 'fire', desc: 'What if rocks, but on fire, but on them?' },
+    pocket_sand:  { name: 'Pocket Sand', classes: { rogue: 27 }, ic: 'star', mana: 0, cast: 0, recast: 22, kind: 'stun', dur: 3, dmg: [20, 30], skill: true, desc: 'Sha-sha-sha! Stuns the target. Instant.' },
+    extra_sauce:  { name: 'Extra Spicy Dagger Sauce', classes: { rogue: 30 }, ic: 'dagger', mana: 0, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 35 }, dur: 60, self: true, skill: true, desc: '+35% melee damage for 60s. Ghost pepper edition.' },
+    backpoke_deluxe:{ name: 'Backpoke Deluxe', classes: { rogue: 33 }, ic: 'dagger', mana: 0, cast: 0, recast: 18, kind: 'skill', dmg: [180, 240], perLvl: 5, verb: 'poke', desc: 'The premium poke. Instant.' },
+    retirement_package:{ name: 'Early Retirement Package', classes: { rogue: 38 }, ic: 'dagger', mana: 0, cast: 0, recast: 30, kind: 'skill', dmg: [280, 360], perLvl: 7, verb: 'retire', desc: 'A very generous, very final offer. Instant.' },
+    triple_pew:   { name: 'Pew Pew Pew', classes: { ranger: 27 }, mana: 0, cast: 0, recast: 10, kind: 'skill', archery: true, range: 36, dmg: [100, 140], perLvl: 3.5, verb: 'shoot', ic: 'arrow', desc: 'Three arrows, one target (LOS required).' },
+    bark_pro:     { name: 'Skin like Hardwood (Pro)', classes: { ranger: 30 }, mana: 90, cast: 3, recast: 3, kind: 'buff', buff: { ac: 20, hp: 90 }, dur: 2000, friendly: true, ic: 'bark', desc: '+20 AC, +90 HP.' },
+    wildfire:     { name: 'Wildfire Hashtag', classes: { ranger: 33 }, mana: 110, cast: 2, recast: 8, kind: 'dot', tick: [40, 50], perLvl: 1.5, dur: 24, school: 'fire', desc: 'Trending: the target, on fire, for 24 seconds.' },
+    arbor_heal:   { name: 'Arbor Day Ointment', classes: { ranger: 36 }, mana: 110, cast: 2.5, recast: 3, kind: 'heal', amt: [240, 300], perLvl: 5, friendly: true, ic: 'leaf', desc: 'A potent heal. Plant a tree afterwards.' },
+    hawkeye:      { name: 'Hawkeye Hat Trick', classes: { ranger: 39 }, mana: 0, cast: 0, recast: 16, kind: 'skill', archery: true, range: 44, dmg: [190, 250], perLvl: 5, verb: 'shoot', ic: 'arrow', desc: 'A ridiculous trick shot from very far away.' },
+    elbow_drop:   { name: 'Holy Elbow Drop', classes: { paladin: 27 }, mana: 80, cast: 1, recast: 12, kind: 'stun', dur: 3.5, dmg: [70, 95], desc: 'Off the top rope, with divine sanction. Stuns the target.' },
+    spa_deluxe:   { name: 'Spa Day Deluxe', classes: { paladin: 30 }, mana: 130, cast: 2.5, recast: 3, kind: 'heal', amt: [260, 320], perLvl: 5, friendly: true, desc: 'Cucumber slices included. A strong paladin heal.' },
+    rage_yodel:   { name: 'Righteous Rage Yodel', classes: { paladin: 33 }, mana: 40, cast: 0, recast: 90, kind: 'buff', buff: { dmgPct: 25 }, dur: 90, self: true, ic: 'fury', desc: '+25% melee damage for 90s. Instant. The neighbours have complained.' },
+    repellent_xl: { name: 'Undead Repellent XL', classes: { paladin: 36 }, mana: 120, cast: 2.5, recast: 6, kind: 'nuke', dmg: [180, 230], perLvl: 4, school: 'magic', undead: 2, desc: 'Industrial strength. Double damage against the undead.' },
+    hug_of_valor: { name: 'Group Hug of Valor', classes: { paladin: 39 }, mana: 220, cast: 4, recast: 10, kind: 'groupheal', amt: [180, 230], perLvl: 4, desc: 'Heals your whole group. Firm handshakes all round.' },
+    polar_vortex: { name: 'Polar Vortex Grumble', classes: { shaman: 27 }, mana: 120, cast: 2.5, recast: 6, kind: 'nuke', dmg: [180, 230], perLvl: 4, school: 'cold', desc: 'A grumpy blast of arctic spirit air.' },
+    dialup:       { name: 'Dial-Up Slowdown', classes: { shaman: 29 }, mana: 90, cast: 2.5, recast: 8, kind: 'slow', dur: 90, desc: 'Connects the target to 56k. Its attacks are much slower for 90s.' },
+    ox_energy_ii: { name: 'Big Ox Energy II', classes: { shaman: 32 }, mana: 150, cast: 3, recast: 3, kind: 'buff', buff: { hp: 150, ac: 12 }, dur: 2400, friendly: true, ic: 'bark', desc: '+150 HP, +12 AC.' },
+    plague_supreme:{ name: 'Plague Rat Supreme', classes: { shaman: 35 }, mana: 140, cast: 2.5, recast: 6, kind: 'dot', tick: [45, 55], perLvl: 1.5, dur: 30, school: 'disease', desc: 'Extra cheese, extra plague. Rots the target over 30 seconds.' },
+    mega_mend:    { name: 'Ancestral Mega-Mend', classes: { shaman: 38 }, mana: 230, cast: 4, recast: 2, kind: 'heal', amt: [480, 560], perLvl: 6, friendly: true, desc: 'Your ancestors chip in for a huge heal.' },
+    bear_hug:     { name: 'Vampiric Bear Hug', classes: { necromancer: 26 }, mana: 110, cast: 2.5, recast: 4, kind: 'nuke', lifetap: true, dmg: [170, 210], perLvl: 4, school: 'life', ic: 'heart', desc: 'Squeezes the life out of the target and into you.' },
+    middle_manager:{ name: 'Skeletal Middle Manager', classes: { necromancer: 28 }, mana: 220, cast: 9, recast: 10, kind: 'pet', petLvl: 28, desc: 'Raise a skeletal middle manager (level 28). It schedules meetings with your enemies.' },
+    pyro_pimple:  { name: 'Pyroclastic Pimple', classes: { necromancer: 31 }, mana: 120, cast: 2.5, recast: 6, kind: 'dot', tick: [40, 50], perLvl: 1.5, dur: 30, school: 'fire', desc: 'Do not pop it. Burns the target over 30 seconds.' },
+    lich_lackey:  { name: 'Lich-Adjacent Lackey', classes: { necromancer: 33 }, mana: 260, cast: 9, recast: 10, kind: 'pet', petLvl: 33, desc: 'Raise a lackey who has met a lich once (level 33).' },
+    soul_smoothie_xl:{ name: 'Soul Smoothie XL', classes: { necromancer: 35 }, mana: 200, cast: 3, recast: 8, kind: 'nuke', lifetap: true, dmg: [260, 320], perLvl: 5, school: 'life', ic: 'heart', desc: 'Large size, extra soul. Heals you for the damage dealt.' },
+    doom_butler:  { name: 'Doom Butler Deluxe', classes: { necromancer: 38 }, mana: 320, cast: 10, recast: 10, kind: 'pet', petLvl: 38, desc: 'Raise an armored doom butler (level 38). It also does windows.' },
+    lullaby:      { name: 'Hypno-Lullaby', classes: { enchanter: 27 }, mana: 90, cast: 2, recast: 5, kind: 'mez', dur: 36, maxLvl: 35, ic: 'eye', desc: 'Sings the target to sleep (mesmerize, up to level 35). Any damage wakes it.' },
+    clarity_iii:  { name: 'Big Brain Juice III', classes: { enchanter: 30 }, mana: 140, cast: 4, recast: 3, kind: 'buff', buff: { manaRegen: 14 }, dur: 2100, friendly: true, ic: 'drop', desc: '+14 mana per tick. Now with extra electrolytes.' },
+    disco_flash:  { name: 'Disco Inferno Flash', classes: { enchanter: 32 }, mana: 90, cast: 1.5, recast: 12, kind: 'stun', dur: 5, dmg: [30, 45], desc: 'A blinding mirror-ball flash that stuns the target.' },
+    mind_melt:    { name: 'Mind Melt Feedback', classes: { enchanter: 35 }, mana: 170, cast: 2.5, recast: 6, kind: 'nuke', dmg: [220, 270], perLvl: 5, school: 'magic', desc: 'Psychic feedback so loud it melts thoughts.' },
+    mega_mesmer:  { name: 'Mega Mesmer', classes: { enchanter: 37 }, mana: 120, cast: 2, recast: 5, kind: 'mez', dur: 45, maxLvl: 42, ic: 'eye', desc: 'A mesmerize so powerful it works on bosses\' cousins (up to level 42). Any damage wakes it.' },
     dazzle:       { name: 'Razzle Dazzle', classes: { enchanter: 24 }, mana: 70, cast: 2, recast: 5, kind: 'mez', dur: 40, maxLvl: 27, ic: 'eye', desc: 'A powerful, sparkly mesmerize (up to level 27). Any damage wakes it.' },
   };
 
@@ -1088,6 +1221,57 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     ankhetra: { name: 'Pharaoh Ankhet-Ra the Eternal', lvl: [25, 25], model: 'biped', color: 0xd8c898, scale: 1.75, weapon: true, glow: 0xffd040, aggro: 18, aggressive: true, faction: 'undead', social: true, verb: 'crush', delay: 2.6, speed: 3.5, named: true, hpMult: 3.6, dmgMult: 1.35,
       caster: { name: 'Sunfire Curse', dmg: [70, 110], cast: 3, cd: 14, range: 26 }, heals: { name: 'Eternal Renewal', amt: [500, 700], cast: 3, cd: 30, range: 0, self: true },
       factionHits: [['sunward', 40]], loot: [['pharaoh_heart', 1.0], ['sunforged_khopesh', 0.5], ['pharaoh_crook', 0.5], ['ankh_amulet', 0.5], ['golden_scarab', 1.0]] },
+    // ---- v7: The Soggybottom Mire (zone 4, levels 25-32) ----
+    bog_croc: { name: 'a mire crocodile', lvl: [25, 27], model: 'quad', color: 0x4a5a2a, scale: 1.5, aggro: 11, aggressive: true, faction: 'croc', social: false, verb: 'chomp', delay: 2.4, speed: 3.6,
+      loot: [['croc_tooth', 0.7], ['gatorhide_boots', 0.05]] },
+    gnashjaw: { name: 'Old Gnashjaw', lvl: [29, 29], model: 'quad', color: 0x2e3a1a, scale: 2.1, aggro: 15, aggressive: true, faction: 'croc', social: false, verb: 'chomp', delay: 2.2, speed: 3.8, named: true, hpMult: 2.0, dmgMult: 1.25, glow: 0xd0e040,
+      loot: [['gnashjaw_necklace', 0.65], ['gatorhide_boots', 0.4], ['croc_tooth', 1.0]] },
+    froglodyte: { name: 'a froglodyte warrior', lvl: [26, 28], model: 'biped', color: 0x5a8a3a, scale: 0.95, weapon: true, aggro: 13, aggressive: true, faction: 'frog', social: true, verb: 'stab', delay: 2.3, speed: 4.0, flee: true,
+      loot: [['frog_leg', 0.7], ['froglodyte_spear', 0.05], ['lilypad_shield', 0.04]] },
+    frog_priest: { name: 'a froglodyte bog-priest', lvl: [27, 29], model: 'biped', color: 0x4a6a8a, scale: 0.95, glow: 0x80ff90, aggro: 13, aggressive: true, faction: 'frog', social: true, verb: 'hit', delay: 2.6, speed: 3.6, flee: true,
+      caster: { name: 'Swamp Gas Burp', dmg: [70, 100], cast: 2.5, cd: 12, range: 24 },
+      heals: { name: 'Mudpack Mending', amt: [220, 300], cast: 2, cd: 9, range: 22 }, buffs: { name: 'Slime Coat', ward: 0.25, dur: 45, cast: 2, cd: 18, range: 18, color: 0x80ff90 },
+      loot: [['frog_leg', 0.6], ['bog_robe', 0.05]] },
+    ribbitus: { name: 'Chief Ribbitus the Unhoppable', lvl: [30, 30], model: 'biped', color: 0x3a7a2a, scale: 1.25, weapon: true, glow: 0xffe040, aggro: 16, aggressive: true, faction: 'frog', social: true, verb: 'stab', delay: 2.1, speed: 4.2, named: true, hpMult: 2.1, dmgMult: 1.25,
+      loot: [['ribbitus_crown', 0.65], ['froglodyte_spear', 0.5], ['frog_leg', 1.0]] },
+    swamp_wisp: { name: 'a will-o-the-whisper', lvl: [28, 30], model: 'biped', color: 0x6ad8a8, scale: 0.9, glow: 0xa0ffd0, aggro: 14, aggressive: true, faction: 'wisp', social: true, verb: 'zap', delay: 2.2, speed: 4.4,
+      caster: { name: 'Spooky Whisper', dmg: [80, 115], cast: 2.2, cd: 10, range: 26 }, loot: [['wisp_essence', 0.6], ['wisp_ring', 0.04]] },
+    bog_troll: { name: 'a bog troll', lvl: [29, 31], model: 'biped', color: 0x5a6a4a, scale: 1.6, aggro: 13, aggressive: true, faction: 'troll', social: true, verb: 'smash', delay: 2.8, speed: 3.6, hpMult: 1.4,
+      heals: { name: 'Gross Regeneration', amt: [260, 340], cast: 1.5, cd: 20, range: 0, self: true }, loot: [['troll_hide', 0.75], ['troll_vest', 0.05], ['superior_potion', 0.15]] },
+    drowned_zealot: { name: 'a waterlogged zealot', lvl: [29, 31], model: 'biped', color: 0x6a8a7a, scale: 1.05, aggro: 12, aggressive: true, faction: 'drowned', social: true, verb: 'hit', delay: 2.5, speed: 3.0, hpMult: 1.2,
+      loot: [['soggy_scroll', 0.7], ['drowned_wraps', 0.06]] },
+    soggs: { name: 'Deacon Soggs', lvl: [31, 31], model: 'biped', color: 0x3a4a6a, scale: 1.15, glow: 0x60ffb0, aggro: 15, aggressive: true, faction: 'drowned', social: true, verb: 'hit', delay: 2.4, speed: 3.4, named: true, hpMult: 2.2, dmgMult: 1.2,
+      caster: { name: 'Damp Sermon', dmg: [100, 140], cast: 2.6, cd: 11, range: 26 }, heals: { name: 'Baptism by Bog', amt: [400, 520], cast: 2.5, cd: 12, range: 24 },
+      loot: [['soggs_censer', 0.6], ['bog_robe', 0.5], ['soggy_scroll', 1.0]] },
+    glubb: { name: 'Hierophant Glubb the Bloated', lvl: [32, 32], model: 'biped', color: 0x4a7a3a, scale: 2.2, weapon: true, glow: 0x80ff60, aggro: 18, aggressive: true, faction: 'drowned', social: true, verb: 'belly-bump', delay: 2.6, speed: 3.2, named: true, hpMult: 3.8, dmgMult: 1.35,
+      caster: { name: 'Tidal Belch', dmg: [140, 200], cast: 3, cd: 14, range: 26 }, heals: { name: 'Bloating Renewal', amt: [900, 1200], cast: 3, cd: 30, range: 0, self: true },
+      factionHits: [['mirewatch', 40]], loot: [['idol_of_glubb', 1.0], ['glubb_scepter', 0.5], ['mire_greatsword', 0.5], ['bloated_girdle', 0.5], ['soggy_scroll', 1.0]] },
+    // ---- v7: The Cinderpeak Caldera (zone 5, levels 32-40) ----
+    cinder_hound: { name: 'a cinder hound', lvl: [32, 34], model: 'quad', color: 0x4a2a22, scale: 0.95, glow: 0xff6020, aggro: 15, aggressive: true, faction: 'hound', social: true, verb: 'bite', delay: 2.0, speed: 4.8, flee: true,
+      loot: [['cinder_pelt', 0.7], ['emberstep_boots', 0.04]] },
+    scorchmaw: { name: 'Scorchmaw the Overcooked', lvl: [36, 36], model: 'quad', color: 0x2a1410, scale: 1.3, glow: 0xff8020, aggro: 17, aggressive: true, faction: 'hound', social: true, verb: 'bite', delay: 1.9, speed: 5.0, named: true, hpMult: 1.9, dmgMult: 1.25,
+      loot: [['scorchmaw_collar', 0.65], ['emberstep_boots', 0.4], ['cinder_pelt', 1.0]] },
+    ember_sprite: { name: 'an ember sprite', lvl: [33, 35], model: 'biped', color: 0xff9040, scale: 0.75, glow: 0xffc060, aggro: 14, aggressive: true, faction: 'sprite', social: true, verb: 'singe', delay: 2.1, speed: 4.6,
+      caster: { name: 'Spicy Spark', dmg: [110, 150], cast: 2.2, cd: 10, range: 26 }, loot: [['ember_core', 0.6], ['spark_ring', 0.04]] },
+    salamander: { name: 'a lava salamander', lvl: [33, 35], model: 'snake', color: 0xc04018, scale: 1.4, aggro: 10, aggressive: true, faction: 'salamander', social: false, verb: 'bite', delay: 2.3, speed: 3.4,
+      loot: [['salamander_scale', 0.7], ['scaled_leggings', 0.05]] },
+    obsidian_golem: { name: 'an obsidian golem', lvl: [35, 37], model: 'biped', color: 0x26222e, scale: 1.9, glow: 0xff5010, aggro: 12, aggressive: true, faction: 'golem', social: true, verb: 'pummel', delay: 3.0, speed: 3.2, hpMult: 1.5,
+      loot: [['obsidian_shard', 0.75], ['obsidian_shield', 0.05]] },
+    magma_giant: { name: 'a magma giant', lvl: [36, 38], model: 'biped', color: 0x8a3a22, scale: 2.2, glow: 0xff6020, aggro: 14, aggressive: true, faction: 'firegiant', social: true, verb: 'crush', delay: 3.0, speed: 3.5, hpMult: 1.5,
+      loot: [['giant_knuckle', 0.8], ['magma_maul', 0.05], ['giant_forged_helm', 0.05], ['grand_potion', 0.1]] },
+    ash_zealot: { name: 'an Ashen Cult zealot', lvl: [34, 36], model: 'biped', color: 0x3a2224, scale: 1.0, weapon: true, aggro: 13, aggressive: true, faction: 'ashcult', social: true, verb: 'slash', delay: 2.3, speed: 4.0, flee: true,
+      loot: [['ash_badge', 0.7], ['zealot_blade', 0.04], ['traveler_rations', 0.2]] },
+    ash_pyro: { name: 'an Ashen Cult pyromancer', lvl: [35, 37], model: 'biped', color: 0x7a2a1a, scale: 1.0, glow: 0xff7030, aggro: 13, aggressive: true, faction: 'ashcult', social: true, verb: 'hit', delay: 2.6, speed: 3.6, flee: true,
+      caster: { name: 'Bonfire of the Vanities', dmg: [130, 175], cast: 2.5, cd: 12, range: 24 },
+      heals: { name: 'Cauterize (Ouch)', amt: [380, 480], cast: 2, cd: 9, range: 22 }, buffs: { name: 'Fire Hype', haste: 0.3, dur: 45, cast: 2, cd: 20, range: 18, color: 0xff7030 },
+      loot: [['ash_badge', 0.7], ['cultist_robe', 0.05]] },
+    kindleton: { name: 'Brother Kindleton, Hype Man of the Flame', lvl: [37, 37], model: 'biped', color: 0x1e1012, scale: 1.1, weapon: true, glow: 0xff4020, aggro: 16, aggressive: true, faction: 'ashcult', social: true, verb: 'slash', delay: 2.0, speed: 4.2, named: true, hpMult: 2.0, dmgMult: 1.25,
+      caster: { name: 'Hot Take', dmg: [150, 200], cast: 2.4, cd: 12, range: 24 }, loot: [['kindleton_mantle', 0.65], ['zealot_blade', 0.5], ['ash_badge', 1.0]] },
+    brasskull: { name: 'Forgemaster Brasskull', lvl: [38, 38], model: 'biped', color: 0x6a2a1a, scale: 2.4, weapon: true, glow: 0xffa040, aggro: 16, aggressive: true, faction: 'firegiant', social: true, verb: 'hammer', delay: 3.0, speed: 3.5, named: true, hpMult: 2.6, dmgMult: 1.3,
+      loot: [['brasskull_hammer', 0.6], ['giant_forged_helm', 0.5], ['giant_knuckle', 1.0]] },
+    pyrrhax: { name: 'Pyrrhax the Unquenched', lvl: [40, 40], model: 'biped', color: 0x5a1a10, scale: 2.8, weapon: true, glow: 0xff5010, aggro: 20, aggressive: true, faction: 'firegiant', social: true, verb: 'incinerate', delay: 2.8, speed: 3.6, named: true, hpMult: 4.6, dmgMult: 1.4,
+      caster: { name: 'Caldera Eruption', dmg: [200, 280], cast: 3, cd: 13, range: 28 }, heals: { name: 'Stoke the Furnace', amt: [1400, 1800], cast: 3, cd: 32, range: 0, self: true },
+      factionHits: [['ashguard', 40]], loot: [['pyrrhax_heart', 1.0], ['unquenched_blade', 0.5], ['caldera_crown', 0.5], ['molten_plate', 0.5], ['grand_potion', 1.0]] },
   };
   // v5: faction standing. Kills adjust standing; standing drives con messages, aggression and merchant prices.
   const FACTIONS = {
@@ -1097,6 +1281,12 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     gnoll:   { name: 'Darkpaws Gnoll Homeowners Assn.', start: -800 },
     orc:     { name: 'Frostfang Orcs', start: -800 },
     bandit:  { name: 'Sandreaver Bandits', start: -800 },
+    // v7
+    mirewatch: { name: 'The Mirewatch', start: 0 },
+    frog:    { name: 'Froglodyte Croak Collective', start: -800 },
+    ashguard: { name: 'Ashguard Expedition', start: 0 },
+    ashcult: { name: 'The Ashen Cult (Very Hot Right Now)', start: -800 },
+    bazaar:  { name: 'Bizarre Bazaar Merchants Guild', start: 100 },
   };
   // faction hits applied when a mob of the given (social) faction dies; per-mob factionHits add to these
   const KILL_FACTION = {
@@ -1105,6 +1295,11 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     giant: [['hollis', 4]],
     undead: [['guards', 1]],
     bandit: [['bandit', -14], ['sunward', 10]],
+    frog: [['frog', -14], ['mirewatch', 10]],
+    drowned: [['mirewatch', 2]],
+    troll: [['mirewatch', 3]],
+    ashcult: [['ashcult', -14], ['ashguard', 10]],
+    firegiant: [['ashguard', 3]],
   };
   // standing tiers (min value -> label, con phrase)
   const STANDINGS = [
@@ -1128,6 +1323,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     13: { name: 'Shadow Steve', desc: 'A brooding shadow knight.', color: 0x3a3a4a },
     18: { name: 'Bonaparte', desc: 'A bone knight with big ambitions.', color: 0xd8d0b8 },
     23: { name: 'Mummy Dearest', desc: 'A sand-wrapped revenant.', color: 0xc8b890 },
+    28: { name: 'Gary From Accounting', desc: 'A skeletal middle manager. Loves a spreadsheet, hates your enemies.', color: 0xd8e0c8 },
+    33: { name: 'Lord Lichtenstein', desc: 'A lich-adjacent lackey in a very nice robe.', color: 0x6a3a8a },
+    38: { name: 'Jeeves the Dreadful', desc: 'An armored doom butler. Impeccable manners, terrible intentions.', color: 0x2a2a34 },
   };
   function mercCost(role, L) { return (role === 'healer' ? 25 : 20) + L * L * 10; }
 
@@ -1187,6 +1385,22 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       done: 'The heart of Ankhet-Ra... at last, it can be burned. The whole caravan is in your debt, Tombbreaker. Take this signet.' },
   });
 
+  // v7: Soggybottom Mire + Cinderpeak Caldera quests
+  Object.assign(QUESTS, {
+    frog_legs: { name: 'Drumsticks for the Mirewatch', giver: 'Warden Marisol', item: 'frog_leg', count: 4, coins: 12000, reward: 'mire_waders', rewardCount: 1, xp: 90000, faction: [['mirewatch', 80], ['frog', -60]],
+      offer: 'The froglodytes of the Croaking Shallows raid our boardwalks every night. Bring me 4 Froglodyte Drumsticks and the Mirewatch will kit you out with proper waders.',
+      done: 'Four drumsticks! Cook is going to be thrilled. Here, these waders will keep the leeches out. Mostly.' },
+    bloated_idol: { name: 'The Bloated Hierophant', giver: 'Hedge-Witch Grizelda', item: 'idol_of_glubb', count: 1, coins: 40000, reward: 'swamp_signet', rewardCount: 1, xp: 160000, title: 'Bog Baron', faction: [['mirewatch', 200]],
+      offer: 'Deep in the Sunken Temple of Glubb, a bloated frog-priest preaches to the drowned. As long as his idol stands, the dead keep rising out of the muck. Slay Hierophant Glubb and bring me his idol.',
+      done: 'Ugh, it is still damp. Good! Into the cauldron it goes. Take this signet, Bog Baron, the swamp owes you.' },
+    cult_pins: { name: 'Pins of the Ashen Cult', giver: 'Captain Emberly', item: 'ash_badge', count: 4, coins: 30000, reward: 'ashguard_bracer', rewardCount: 1, xp: 200000, faction: [['ashguard', 80], ['ashcult', -60]],
+      offer: 'The Ashen Cult camps on the slopes west of here, chanting about how fire is "very in right now". Bring me 4 of their pins and wear the bracer of the Ashguard.',
+      done: 'Four pins! That will cool them down. Wear this bracer, you have earned it.' },
+    unquenched: { name: 'Quench the Unquenched', giver: 'Sage Cindral', item: 'pyrrhax_heart', count: 1, coins: 100000, reward: 'caldera_signet', rewardCount: 1, xp: 400000, title: 'Flamebreaker', faction: [['ashguard', 200]],
+      offer: 'Inside the Molten Forge in the heart of the caldera, Pyrrhax the Unquenched stokes the mountain toward eruption. Bring me his still-warm heart and I will put it on ice. Literally. I have a bucket.',
+      done: 'Into the bucket it goes. Hissss. The mountain sleeps again, Flamebreaker. This signet is yours.' },
+  });
+
   // Con colors: grey green lightblue blue white yellow red
   function conColor(plLvl, mobLvl) {
     const d = mobLvl - plLvl;
@@ -1207,13 +1421,21 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     blue: 'looks like you would win, probably', white: 'looks like a coin flip with teeth', yellow: 'looks like a bad decision', red: 'looks like it would use you as a mop!',
   };
 
-  function xpToNext(L) { return Math.floor(80 * L * L + 20 * L); }
-  const MAX_LEVEL = 25;
+  // v7: the curve is unchanged up to 25; past that each level costs progressively more (about 16 even-con kills per level at 39)
+  function xpToNext(L) { return Math.floor((80 * L * L + 20 * L) * (L > 25 ? 1 + (L - 25) * 0.06 : 1)); }
+  const MAX_LEVEL = 40;
   // merchant inventories (stock key on the NPC)
   const STOCKS = {
     general: ['healing_potion', 'greater_potion', 'bread', 'cloth_cap', 'cloth_pants', 'rawhide_gloves', 'leather_boots', 'leather_tunic', 'wooden_shield', 'bronze_long_sword', 'fine_steel_dagger', 'oak_staff'],
     desert: ['superior_potion', 'greater_potion', 'waterskin', 'bread', 'steel_scimitar', 'dune_staff', 'desert_cloak', 'scorpion_shield'],
     fence: ['superior_potion', 'waterskin', 'sand_scimitar', 'venom_stinger', 'bandit_leathers', 'dune_robe'],
+    // v7
+    mire: ['superior_potion', 'greater_potion', 'traveler_rations', 'bread', 'gatorhide_boots', 'lilypad_shield', 'journeyman_staff'],
+    caldera: ['grand_potion', 'superior_potion', 'traveler_rations', 'waterskin', 'emberstep_boots', 'scaled_leggings', 'expert_blade'],
+    bz_weapons: ['bronze_long_sword', 'fine_steel_dagger', 'oak_staff', 'steel_scimitar', 'journeyman_blade', 'journeyman_dagger', 'journeyman_mace', 'journeyman_staff', 'expert_blade', 'expert_dagger', 'expert_staff'],
+    bz_armor: ['leather_tunic', 'leather_boots', 'wooden_shield', 'bazaar_helm', 'bazaar_breastplate', 'bazaar_robe', 'bazaar_gauntlets', 'bazaar_greaves', 'bazaar_boots', 'bazaar_cloak', 'bazaar_shield'],
+    bz_supplies: ['bread', 'traveler_rations', 'waterskin', 'healing_potion', 'greater_potion', 'superior_potion', 'grand_potion'],
+    bz_buyer: [],
   };
 
   // ---------- formulas (shared by the browser game and the multiplayer server) ----------
@@ -2129,6 +2351,24 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
   function petOpts(lvl) {
     const P = Object.assign({}, HUMAN, { skeleton: true, skull: true, skin: 0xe8e2c8, torsoW: 0.44, armW: 0.14, eyeGlow: 0x60ff90 }), gear = {};
     if (lvl >= 8) { gear.weapon = { kind: 'sword', o: { metal: METAL.rusty } }; gear.shield = { kind: 'shield_bone', o: {} }; P.rags = 0x4a3a2a; }
+    // v7 pets
+    if (lvl >= 38) {
+      Object.assign(P, { skin: 0x1a1a22, eyeGlow: 0xff3040, cloak: 0x2a0a12, pauldron: 0x3a3a46, spikes: true, rags: null, crown: null });
+      gear.weapon = { kind: 'greatsword', o: { metal: METAL.dark, glow: 0xff3040 } }; gear.shield = null;
+      gear.helm = { kind: 'helm_horned', o: { S: P.headS, color: 0x2a2a34 } };
+      return { rig: 'human', P, gear, scale: 1.3 };
+    }
+    if (lvl >= 33) {
+      Object.assign(P, { skin: 0xd8d0e8, eyeGlow: 0xc070ff, cloak: 0x4a2a6a, mantle: 0x6a3a8a, necklace: 0xd8b050, crown: 0xc070ff, rags: null });
+      gear.weapon = { kind: 'staff', o: { orb: 0xc070ff, wood: 0x2a1a3a } }; gear.shield = null;
+      return { rig: 'human', P, gear, scale: 1.2 };
+    }
+    if (lvl >= 28) {
+      Object.assign(P, { skin: 0xd8e0c8, eyeGlow: 0x60ff60, pauldron: 0x5a6a5a, tabard: 0x2a4a3a, emblem: 0xd8e0c8, rags: null });
+      gear.weapon = { kind: 'mace', o: { metal: METAL.steel, glow: 0x60ff60 } }; gear.shield = { kind: 'shield_crest', o: { color: 0x2a4a3a } };
+      gear.helm = { kind: 'helm_metal', o: { S: P.headS, color: 0x5a6a5a } };
+      return { rig: 'human', P, gear, scale: 1.2 };
+    }
     if (lvl >= 23) {
       Object.assign(P, { skin: 0x2a2a34, eyeGlow: 0x60ffd0, cloak: 0x1e3a5a, pauldron: 0xd8b050, rags: null, crown: 0xd8b050 });
       gear.weapon = { kind: 'scimitar', o: { metal: METAL.gold, glow: 0x60ffd0 } }; gear.offhand = { kind: 'scimitar', o: { metal: METAL.gold } }; gear.shield = null;
@@ -2163,6 +2403,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       case 'merchant': outfit(P, 'cloth', col); P.apron = 0xd8c8a0; P.fezHat = r() < 0.4 ? 0xa03030 : null; P.torsoW = 0.56; break;
       case 'trainer': outfit(P, 'robe', col); P.trim = 0xd8b050; P.hair = 0xd8d8d8; P.beard = 'long'; P.beardColor = 0xe0e0e0; gear.weapon = { kind: 'staff', o: {} }; break;
       case 'binder': outfit(P, 'robe', col); P.hood = shade(col, 0.8); P.trim = 0x80c0ff; P.necklace = 0x80c0ff; break;
+      case 'banker': outfit(P, 'cloth', col); P.apron = 0xe8c040; P.fezHat = 0x2a6a3a; P.necklace = 0xe8c040; P.torsoW = 0.58; break;
       case 'liaison': outfit(P, 'leather'); P.mantle = shade(col, 0.9); P.gloves = 0x5a3a22; gear.weapon = { kind: 'sword', o: {} }; break;
       default: outfit(P, r() < 0.5 ? 'cloth' : 'leather', col); if (r() < 0.4) P.headband = shade(col, 0.8);
     }
@@ -2256,6 +2497,69 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         const gear = boss ? { weapon: { kind: 'greatsword', o: { metal: METAL.ice, glow: 0x80ffff } }, helm: { kind: 'helm_giant', o: { S: 0.42 } } } : { weapon: { kind: 'club', o: { wood: 0x5a4a3a } } };
         if (boss) { P.crown = null; P.mantle = 0xa8c8e8; P.pauldron = 0xa8e0ff; P.spikes = true; P.necklace = 0xa8e0ff; }
         return { rig: 'human', P, gear, style: 'brute', glow: boss ? 0x80ffff : null };
+      }
+      // ---- v7: The Soggybottom Mire ----
+      case 'bog_croc': case 'gnashjaw': {
+        const boss = type === 'gnashjaw';
+        return { rig: 'quad', P: { color: c, belly: 0xb8b878, bodyLen: 1.7, bodyW: 0.62, bodyH: 0.34, legLen: 0.2, headS: 0.32, snoutLen: 0.62, fangs: true, teeth: true, tailLen: 1.0, tailW: 0.22, tailColor: shade(c, 0.85), ridge: shade(c, 0.6), claws: true, paw: shade(c, 0.8), eye: boss ? 0xe0f040 : 0xd8b020, eyeGlow: boss, ears: null }, style: 'rat', glow: boss ? 0xd0e040 : null };
+      }
+      case 'froglodyte': case 'frog_priest': case 'ribbitus': case 'glubb': case 'soggs': {
+        const priest = type === 'frog_priest' || type === 'soggs', chief = type === 'ribbitus', boss = type === 'glubb';
+        const P = H({ skin: c, hair: null, ears: null, wideMouth: true, mouth: 0x2a1a10, eyes: boss ? 0xff6040 : 0xf0e040, eyeGlow: boss || chief, eyeWhite: 0xe8e8a0, spots: shade(c, 0.7), hunch: 0.15, headS: 0.46,
+          bareChest: true, shirt: shade(c, 1.25), shirtLow: shade(c, 1.1), sleeve: c, pants: 0x4a5a2a, feet: c, bigFeet: true, loincloth: 0x6a4a2a, belt: 0x3a2a14, legLen: 0.6, torsoW: boss ? 0.68 : 0.5, torsoD: boss ? 0.5 : 0.32 });
+        const gear = {};
+        if (priest || boss) { outfit(P, 'robe', priest ? 0x3a4a6a : 0x4a2a5a); P.trim = 0x80ff90; P.necklace = 0xd8c060; P.hood = null; gear.weapon = { kind: 'staff', o: { orb: 0x80ff90, wood: 0x3a2a14 } }; }
+        else gear.weapon = { kind: 'spear', o: { metal: chief ? METAL.gold : METAL.rusty, glow: chief ? 0xffe040 : null } };
+        if (!priest && !boss) gear.shield = { kind: 'shield_wood', o: {} };
+        if (chief || boss) { P.crown = boss ? 0x80ff60 : 0xffe040; P.mantle = boss ? 0x2a4a2a : 0x6a8a3a; }
+        return { rig: 'human', P, gear, style: boss ? 'brute' : 'humanoid', glow: boss ? 0x80ff60 : priest ? 0x80ff90 : null };
+      }
+      case 'swamp_wisp': {
+        const P = H({ djinn: true, skin: c, vortex: 0x8ad8b8, glowC: 0xd0ffe8, hair: 0xe0fff0, hairStyle: 'long', ears: 'pointy', eyes: 0xd0ffe8, eyeGlow: true, eyeWhite: 0xa0ffd0, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: c, torsoW: 0.42, shoulderW: 0.3 });
+        return { rig: 'human', P, gear: {}, style: 'beast', glow: 0xa0ffd0 };
+      }
+      case 'bog_troll': {
+        const P = H({ skin: c, hair: 0x2a3a1a, hairStyle: 'wild', ears: 'big', bigNose: true, tusks: true, jaw: true, heavyBrow: true, eyes: 0xe0a020, torsoW: 0.6, torsoD: 0.4, shoulderW: 0.4, armW: 0.2, armLen: 0.9, legW: 0.24, hunch: 0.28,
+          bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: 0x3a3a2a, feet: shade(c, 0.8), bigFeet: true, loincloth: 0x4a3a1a, spots: 0x3a4a2a, claws: 0x2a2a1a, belt: 0x2a1a10 });
+        return { rig: 'human', P, gear: { weapon: { kind: 'club', o: { wood: 0x4a3a1a } } }, style: 'brute' };
+      }
+      case 'drowned_zealot': {
+        const P = H({ skin: c, wraps: 0x7a9a7a, faceWraps: 0x6a8a6a, eyes: 0x60ffb0, eyeGlow: true, eyeWhite: 0x101010, bareChest: true, shirt: 0x5a7a6a, shirtLow: 0x4a6a5a, sleeve: c, longSleeve: true, pants: 0x3a4a3a, belt: 0x2a3a2a, feet: shade(c, 0.85), hunch: 0.2, hair: null, ears: null, rags: true });
+        return { rig: 'human', P, gear: {}, style: 'ghoul' };
+      }
+      // ---- v7: The Cinderpeak Caldera ----
+      case 'cinder_hound': case 'scorchmaw': {
+        const boss = type === 'scorchmaw';
+        return { rig: 'quad', P: { color: c, belly: 0x2a1410, bodyLen: boss ? 1.3 : 1.15, bodyW: 0.5, bodyH: 0.5, legLen: 0.56, headS: 0.38, snoutLen: 0.3, fangs: true, bushy: true, tailLen: 0.4, tailW: 0.12, tailTip: 0xffa030, ruff: 0xff6020, ridge: 0xff9040, claws: true, eye: 0xffd040, eyeGlow: true }, style: 'wolf', glow: boss ? 0xff8020 : 0xff6020 };
+      }
+      case 'ember_sprite': {
+        const P = H({ djinn: true, skin: c, vortex: 0xff8030, glowC: 0xffe0a0, hair: 0xffe080, hairStyle: 'topknot', ears: 'pointy', eyes: 0xfff0c0, eyeGlow: true, eyeWhite: 0xffd080, angryBrow: true, bareChest: true, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: c, torsoW: 0.44, shoulderW: 0.3 });
+        return { rig: 'human', P, gear: {}, style: 'beast', glow: 0xffc060 };
+      }
+      case 'salamander': return { rig: 'snake', P: { color: c, band: 0x3a1008, pattern: 0xffa030 }, style: 'snake', glow: 0xff7020 };
+      case 'obsidian_golem': {
+        const P = H({ skin: c, hair: null, ears: null, heavyBrow: true, jaw: true, eyes: 0xff6020, eyeGlow: true, torsoW: 0.72, torsoD: 0.48, shoulderW: 0.46, armW: 0.25, armLen: 0.88, legW: 0.28, headS: 0.4,
+          bareChest: true, shirt: c, shirtLow: shade(c, 0.8), sleeve: c, pants: shade(c, 0.9), feet: shade(c, 0.8), bigFeet: true, spots: 0xff5010, warpaint: 0xff5010, belt: shade(c, 0.7), buckle: 0xff5010 });
+        return { rig: 'human', P, gear: {}, style: 'brute', glow: 0xff5010 };
+      }
+      case 'magma_giant': case 'brasskull': case 'pyrrhax': {
+        const fm = type === 'brasskull', boss = type === 'pyrrhax';
+        const P = H({ skin: c, hair: 0xff6020, hairStyle: boss ? 'mohawk' : 'wild', beard: 'long', beardColor: 0xff8030, ears: 'big', heavyBrow: true, jaw: true, bigNose: true, eyes: 0xffd040, eyeGlow: true, torsoW: 0.64, torsoD: 0.4, shoulderW: 0.42, armW: 0.21, legW: 0.25,
+          bareChest: !fm, shirt: c, shirtLow: shade(c, 0.9), sleeve: c, pants: 0x2a1a14, belt: 0x1a1010, buckle: 0xffa040, feet: shade(c, 0.7), warpaint: 0xffa040, loincloth: boss ? null : 0x3a2014 });
+        const gear = {};
+        if (fm) { P.apron = 0x3a2a1a; P.gloves = 0x2a1a10; P.bracer = 0xc08a4a; gear.weapon = { kind: 'mace', o: { metal: METAL.bronze, glow: 0xffa040 } }; gear.helm = { kind: 'helm_metal', o: { S: 0.42, color: 0x8a6a3a } }; }
+        else if (boss) { P.crown = 0xffa020; P.mantle = 0x2a0a08; P.pauldron = 0x2a1a1a; P.spikes = true; P.necklace = 0xffa020; P.bracer = 0xffa020; gear.weapon = { kind: 'greatsword', o: { metal: METAL.dark, glow: 0xff5010 } }; gear.cloak = { color: 0x3a0a08, collar: 0xff5010 }; }
+        else gear.weapon = { kind: 'club', o: { wood: 0x2a1a14 } };
+        return { rig: 'human', P, gear, style: 'brute', glow: boss ? 0xff5010 : 0xff6020 };
+      }
+      case 'ash_zealot': case 'ash_pyro': case 'kindleton': {
+        const pyro = type === 'ash_pyro', boss = type === 'kindleton';
+        const P = H({ skin: 0xc89070, hair: 0x1a1410, ears: 'round', eyes: boss ? 0xff4020 : 0x2a1a0a, eyeGlow: boss || pyro, angryBrow: true, pants: 0x2a1a1a, boots: 0x1a1010, belt: 0x3a1a10, buckle: 0xff7030 });
+        const gear = {};
+        if (pyro) { outfit(P, 'robe', c); P.trim = 0xff7030; P.hood = 0x3a1010; P.necklace = 0xff7030; gear.weapon = { kind: 'staff', o: { orb: 0xff7030, wood: 0x1a1010 } }; }
+        else { outfit(P, 'leather'); P.shirt = c; P.shirtLow = shade(c, 0.85); P.sleeve = shade(c, 0.9); P.trim = 0xc03020; P.hood = boss ? 0x1a0a0a : 0x4a1a14; P.veil = 0x2a1010; P.gloves = 0x2a1a10; gear.weapon = { kind: 'sword', o: { metal: boss ? METAL.dark : METAL.steel, glow: boss ? 0xff4020 : null } }; }
+        if (boss) { P.mantle = 0x5a1a10; P.pauldron = 0x3a2a2a; gear.offhand = { kind: 'sword', o: { metal: METAL.dark, glow: 0xff4020 } }; gear.cloak = { color: 0x5a1a10, collar: 0xff4020 }; }
+        return { rig: 'human', P, gear, style: 'humanoid', glow: boss ? 0xff4020 : pyro ? 0xff7030 : null };
       }
       default: return null;
     }
@@ -2789,10 +3093,15 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     everblock: { name: 'Everblock', area: 'The Everblock Wilds', sky: { day: 0x87b5e8, night: 0x0a0f24 } },
     frostfang: { name: 'The Frostfang Highlands', area: 'The Frostfang Highlands', sky: { day: 0xb8cce0, night: 0x0c1428 } },
     desert: { name: 'The Sunscorched Expanse', area: 'The Sunscorched Expanse', sky: { day: 0xf2cf98, night: 0x160e24 } },
+    // v7
+    swamp: { name: 'The Soggybottom Mire', area: 'The Soggybottom Mire', sky: { day: 0x9fb090, night: 0x08120c } },
+    caldera: { name: 'The Cinderpeak Caldera', area: 'The Cinderpeak Caldera', sky: { day: 0xc89a7a, night: 0x1a0806 } },
+    bazaar: { name: 'The Bizarre Bazaar', area: 'The Bizarre Bazaar', sky: { day: 0xa8c4f0, night: 0x1a1236 }, safe: true },
   };
+  const ZONE_SEED = { everblock: 0, frostfang: 7777, desert: 31337, swamp: 4242, caldera: 5151, bazaar: 6060 };
   // v5: zone 3 layout
   const DS = { outpost: { x: 128, z: 222 }, oasis: { x: 62, z: 190, r: 14 }, hideout: { x: 196, z: 164 }, flats1: { x: 80, z: 132 }, flats2: { x: 188, z: 106 }, colossi: { x: 56, z: 62 }, djinn: { x: 206, z: 44 }, pyramid: { x: 128, z: 70 } };
-  const DUNGEON_ZONES = new Set(['The Sunken Crypt', 'Tomb of Ankhet-Ra']);
+  const DUNGEON_ZONES = new Set(['The Sunken Crypt', 'Tomb of Ankhet-Ra', 'Sunken Temple of Glubb', 'The Molten Forge']);
   const FF = { outpost: { x: 128, z: 236 }, warcamp: { x: 78, z: 118 }, keep: { x: 158, z: 52 }, lake: { x: 200, z: 196, r: 26 }, yetis: { x: 196, z: 112 } };
   const LAYOUT = {
     town: { x: 128, z: 128, half: 22, g: 24 },
@@ -2803,6 +3112,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     forest: { x: 120, z: 46, r: 46 },
   };
 
+  const LIGHT_BLOCKS = new Set([B.LANTERN, B.BRAZIER, B.GLOWCAP, B.PORTAL]);
   // ---------------- Texture atlas ----------------
   function makeAtlas() {
     const TS = 16, N = 16;
@@ -2900,6 +3210,30 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     noiseTile(32, [226, 178, 112], 16, (x, y, c) => ((y + Math.round(Math.sin(x * 0.7) * 1.5)) % 5 === 0 ? [c[0] + 18, c[1] + 16, c[2] + 12] : c));
     // 33 spirit brazier (emissive teal flame in a bronze bowl)
     noiseTile(33, [120, 250, 220], 40, (x, y, c) => ((x < 2 || x > 13 || y > 12) ? [110, 80, 40] : y < 3 ? [60, 140, 130] : (Math.abs(x - 7.5) < 2 && y > 5) ? [230, 255, 250] : c));
+    // ---- v7 tiles ----
+    // 34 bog mud
+    noiseTile(34, [78, 66, 44], 22, (x, y, c) => (rnd() < 0.08 ? [c[0] + 18, c[1] + 22, c[2] + 6] : (x + y * 3) % 11 === 0 ? [52, 44, 30] : c));
+    // 35 mangrove bark (dark, twisted), 36 mangrove top
+    noiseTile(35, [74, 58, 46], 18, (x, y, c) => ((x + Math.round(Math.sin(y * 0.8) * 1.5)) % 4 === 0 ? [44, 34, 28] : rnd() < 0.05 ? [70, 96, 50] : c));
+    noiseTile(36, [120, 96, 70], 14, (x, y, c) => { const d = Math.hypot(x - 7.5, y - 7.5); return (Math.floor(d) % 3 === 0 || d > 7) ? [70, 54, 40] : c; });
+    // 37 hanging moss
+    noiseTile(37, [86, 110, 58], 44, (x, y, c) => (x % 3 === 0 && rnd() < 0.6 ? [58, 78, 40] : rnd() < 0.08 ? [140, 156, 90] : c));
+    // 38 glowcap mushroom (emissive cyan cap with spots)
+    noiseTile(38, [80, 230, 220], 30, (x, y, c) => (y > 9 ? ((x > 5 && x < 10) ? [210, 220, 200] : [30, 60, 40]) : (Math.hypot(x - 5, y - 4) < 1.6 || Math.hypot(x - 11, y - 6) < 1.3) ? [230, 255, 250] : c));
+    // 39 basalt (hex-ish columns)
+    noiseTile(39, [58, 54, 58], 16, (x, y, c) => ((x % 5 === 0) || (y % 6 === (x / 5 | 0) % 2 * 3)) ? [34, 32, 36] : c);
+    // 40 volcanic ash
+    noiseTile(40, [96, 90, 90], 30, (x, y, c) => (rnd() < 0.05 ? [160, 70, 40] : rnd() < 0.1 ? [60, 56, 58] : c));
+    // 41 crusty magma (emissive: dark crust over glowing cracks)
+    noiseTile(41, [255, 120, 30], 50, (x, y, c) => { const k = Math.sin(x * 0.9 + Math.sin(y * 0.7) * 2) + Math.cos(y * 0.8 - x * 0.3); return k > 0.7 ? [60, 30, 24] : k > 0.3 ? [180, 60, 20] : [255, 180 + rnd() * 60, 60]; });
+    // 42 obsidian
+    noiseTile(42, [28, 20, 40], 12, (x, y, c) => ((x - y + 16) % 9 === 0 ? [90, 70, 130] : (x + y) % 13 === 0 ? [60, 46, 90] : c));
+    // 43 portal stone (emissive violet runes)
+    noiseTile(43, [120, 70, 200], 20, (x, y, c) => ((x < 1 || x > 14 || y < 1 || y > 14) ? [50, 30, 80] : ((x + y) % 5 === 0 || (x - y + 16) % 7 === 0) ? [230, 200, 255] : c));
+    // 44 bazaar marble
+    noiseTile(44, [226, 220, 210], 10, (x, y, c) => ((x === 0 || y === 0) ? [180, 170, 160] : (x * 3 + y * 7) % 23 === 0 ? [190, 160, 200] : c));
+    // 45 striped awning
+    noiseTile(45, [210, 60, 60], 14, (x, y, c) => (Math.floor(x / 4) % 2 ? [240, 226, 196] : c));
     const tex = new THREE.CanvasTexture(cv);
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
     if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace; else tex.encoding = THREE.sRGBEncoding;
@@ -2922,7 +3256,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const ZI = ZONES[this.zoneId];
       this.zoneName = ZI.name; this.defaultArea = ZI.area; this.sky = ZI.sky;
       this.zoneLines = [];
-      this.seed = ((seed >>> 0) + (this.zoneId === 'everblock' ? 0 : this.zoneId === 'desert' ? 31337 : 7777)) >>> 0;
+      this.seed = ((seed >>> 0) + (ZONE_SEED[this.zoneId] || 0)) >>> 0;
       this.scene = scene;
       this.data = new Uint8Array(W * D * H);
       this.height = new Int16Array(W * D);
@@ -3002,6 +3336,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     generate() {
       if (this.zoneId === 'frostfang') { this.genFrostfang(); this.finish(); return; }
       if (this.zoneId === 'desert') { this.genDesert(); this.finish(); return; }
+      if (this.zoneId === 'swamp') { this.genMire(); this.finish(); return; }
+      if (this.zoneId === 'caldera') { this.genCaldera(); this.finish(); return; }
+      if (this.zoneId === 'bazaar') { this.genBazaar(); this.finish(); return; }
       const s = this.seed;
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
         const h = this.terrainHeight(x, z);
@@ -3025,13 +3362,14 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.buildDungeon();
       this.buildSpawns();
       this.buildNorthPass();
+      this.buildTownPortal('everblock', LAYOUT.town.g);
       this.finish();
     }
     finish() {
       for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.computeHeightColumn(x, z);
       // lantern positions for dynamic point lights
       this.lanterns = new Map();
-      for (let i = 0; i < this.data.length; i++) if (this.data[i] === B.LANTERN || this.data[i] === B.BRAZIER) this.lanterns.set(i, this.idxPos(i));
+      for (let i = 0; i < this.data.length; i++) if (LIGHT_BLOCKS.has(this.data[i])) this.lanterns.set(i, this.idxPos(i));
       this.buildMapColors();
       this.renderMap();
     }
@@ -3214,6 +3552,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.npcs.push({ kind: 'binder', name: 'Scout Hollis', x: O.x - 2.5, y: g + 1, z: O.z - 2.5, color: 0x3a6a3a, sub: '<Ranger Outpost>' });
       this.npcs.push({ kind: 'quest', name: 'Trapper Gunnar', x: O.x + 4.5, y: g + 1, z: O.z - 3.5, color: 0x7a5a3a, sub: '<Trapper>' });
       this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 3.5 };
+      this.buildTownPortal('frostfang', g);
       this.zones.push({ name: 'Hollis Outpost', x0: O.x - 7, x1: O.x + 7, z0: O.z - 7, z1: O.z + 7 });
     }
     buildWarcamp() {
@@ -3273,6 +3612,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       h += dune;
       let e = Math.min(x, z, W - 1 - x, D - 1 - z);
       if (Math.abs(x - 128) < 9 && z > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(x - 128)) + e);
+      if (Math.abs(z - 128) < 9 && (x < 56 || x > 200)) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(z - 128)) + e); // v7: west + east passes
       if (e < 20) h += Math.pow(20 - e, 1.3) * 1.3;
       const dl = Math.hypot(x - DS.oasis.x, z - DS.oasis.z);
       if (dl < DS.oasis.r) h = Math.min(h, U.lerp(18, Math.max(h, 24), U.smoothstep(DS.oasis.r * 0.45, DS.oasis.r, dl)));
@@ -3280,6 +3620,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       flat(DS.outpost, 14, 24, 27, true); flat(DS.hideout, 13, 22, 27); flat(DS.pyramid, 27, 38, 27, true);
       flat(DS.colossi, 14, 24, 27); flat(DS.djinn, 11, 19, 28); flat(DS.flats1, 10, 20, 26); flat(DS.flats2, 10, 20, 26);
       if (Math.abs(x - 128) < 6 && z > 206) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(x - 128)));
+      if (Math.abs(z - 128) < 6 && (x < 50 || x > 206)) h = U.lerp(h, 27, U.smoothstep(6, 3, Math.abs(z - 128)));
       this._dune = dune;
       return Math.max(3, Math.min(H - 6, Math.round(h)));
     }
@@ -3287,6 +3628,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       for (const k of ['outpost', 'hideout', 'colossi', 'djinn']) if (Math.hypot(x - DS[k].x, z - DS[k].z) < 20) return true;
       if (Math.max(Math.abs(x - DS.pyramid.x), Math.abs(z - DS.pyramid.z)) < 30) return true;
       if (Math.abs(x - 128) < 6 && z > 200) return true;
+      if (Math.abs(z - 128) < 6 && (x < 52 || x > 204)) return true;
       return false;
     }
     dsRoad(x0, z0, x1, z1) {
@@ -3342,7 +3684,15 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.dsRoad(DS.outpost.x, DS.outpost.z - 10, P.x, P.z + 34);
       this.dsRoad(DS.outpost.x + 12, DS.outpost.z - 4, DS.hideout.x - 12, DS.hideout.z + 6);
       this.dsRoad(DS.outpost.x - 12, DS.outpost.z - 2, DS.oasis.x + 16, DS.oasis.z + 4);
+      this.dsRoad(DS.outpost.x - 16, DS.outpost.z - 4, 40, 128); this.dsRoad(40, 128, 2, 128);
+      this.dsRoad(DS.outpost.x + 16, DS.outpost.z - 4, 225, 196); this.dsRoad(225, 196, 225, 128); this.dsRoad(225, 128, 253, 128);
       this.buildSunwardOutpost(); this.buildHideout(); this.buildColossi(); this.buildDjinnRest(); this.buildPyramid();
+      // v7: west pass -> The Soggybottom Mire, east pass -> The Cinderpeak Caldera
+      for (const x of [4, 18, 34, 221, 237, 251]) for (const z of [122, 134]) this.sandPost(x, this.topY(x, z) + 1, z);
+      this.zoneLines.push({ x0: 0, x1: 2.2, z0: 123, z1: 134, to: 'swamp', arrive: { x: 249.5, z: 128.5, yaw: -Math.PI / 2 }, label: 'The Soggybottom Mire', axis: 'x', at: 0.6 });
+      this.zoneLines.push({ x0: W - 2.2, x1: W, z0: 123, z1: 134, to: 'caldera', arrive: { x: 6.5, z: 128.5, yaw: Math.PI / 2 }, label: 'The Cinderpeak Caldera', axis: 'x', at: W - 0.6 });
+      this.zones.push({ name: 'Mirebound Pass', x0: 0, x1: 40, z0: 118, z1: 138 });
+      this.zones.push({ name: 'Cinder Road', x0: 214, x1: 255, z0: 118, z1: 138 });
       this.zoneLines.push({ x0: 123, x1: 134, z0: D - 2.2, z1: D, to: 'frostfang', arrive: { x: 128.5, z: 6.5, yaw: 0 }, label: 'The Frostfang Highlands', axis: 'z', at: D - 0.6 });
       this.zones.push({ name: 'Frostfang Road', x0: 120, x1: 136, z0: 236, z1: 255 });
       this.zones.push({ name: 'Oasis of Sahra', x0: DS.oasis.x - 20, x1: DS.oasis.x + 20, z0: DS.oasis.z - 20, z1: DS.oasis.z + 20 });
@@ -3397,6 +3747,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.npcs.push({ kind: 'guard', name: 'Sunward Guard Omari', x: O.x - 3.5, y, z: O.z - hz + 2.5, color: 0xc89a30, sub: '<Sunward Guard>', tabard: 0xc89a30, turban: 0xf0e8d8 });
       void T;
       this.bind = { x: O.x + 0.5, y: g + 1, z: O.z + 5.5 };
+      this.buildTownPortal('desert', g);
       this.zones.push({ name: 'Sunward Outpost', x0: O.x - hx, x1: O.x + hx, z0: O.z - hz, z1: O.z + hz });
     }
     buildHideout() {
@@ -3829,7 +4180,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     setBlock(x, y, z, b, record = true) {
       if (!this.inBounds(x, y, z)) return false;
       this.data[this.idx(x, y, z)] = b;
-      if (this.lanterns) { const i = this.idx(x, y, z); if (b === B.LANTERN || b === B.BRAZIER) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
+      if (this.lanterns) { const i = this.idx(x, y, z); if (LIGHT_BLOCKS.has(b)) this.lanterns.set(i, { x, y, z }); else this.lanterns.delete(i); }
       if (record) this.edits[this.idx(x, y, z)] = b;
       const oldH = this.height[x + z * W];
       this.computeHeightColumn(x, z);
@@ -3898,8 +4249,394 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
   }
 
+  // ======================= v7: portals, The Soggybottom Mire, The Cinderpeak Caldera, The Bizarre Bazaar =======================
+  const MR = { outpost: { x: 206, z: 128 }, shallows: { x: 124, z: 84 }, temple: { x: 74, z: 178 }, wisps: { x: 150, z: 206 }, trolls: { x: 60, z: 66 }, crocs1: { x: 158, z: 146 }, crocs2: { x: 104, z: 216 }, crocs3: { x: 182, z: 58 } };
+  const CD = { outpost: { x: 44, z: 128 }, cult: { x: 96, z: 58 }, golems: { x: 100, z: 202 }, hounds: { x: 96, z: 140 }, sprites: { x: 204, z: 216 }, salamanders: { x: 204, z: 42 }, crater: { x: 172, z: 128, r: 30 } };
+  const BZ = { x: 128, z: 128, g: 24, half: 36 };
+  // town <-> Bazaar portals. x0 = west pillar, z = frame row; the walk-in opening is x0+1..x0+3; dz = which side you step out on
+  const PORTALS = {
+    everblock: { x0: 142, z: 134, dz: -3, label: 'Everblock Keep' },
+    frostfang: { x0: 116, z: 238, dz: -3, label: 'Hollis Outpost' },
+    desert: { x0: 129, z: 215, dz: 3, label: 'Sunward Outpost' },
+    swamp: { x0: 196, z: 119, dz: 3, label: 'Mirewatch Landing' },
+    caldera: { x0: 38, z: 119, dz: 3, label: 'Ashguard Camp' },
+  };
+  const BZ_ORDER = ['everblock', 'frostfang', 'desert', 'swamp', 'caldera'];
+  const BZ_PZ = 98;
+  const bzPortal = (zone) => ({ x0: 106 + BZ_ORDER.indexOf(zone) * 9, z: BZ_PZ, dz: 3 });
+  const portalArrive = (P) => ({ x: P.x0 + 2.5, z: P.z + 0.5 + P.dz, yaw: P.dz > 0 ? 0 : Math.PI });
+  const BAZAAR_TRAINERS = [
+    ['warrior', 'Coach Brawnhilda'], ['cleric', 'Brother Fixwell'], ['wizard', 'Magus Kablooey'], ['rogue', 'Shady Pete'], ['ranger', 'Robin Hoodie'],
+    ['paladin', 'Sir Polishington'], ['shaman', 'Grandmother Howl'], ['necromancer', 'Mortimer Gloom'], ['enchanter', 'Madame Swirl'],
+  ];
+  Object.assign(World.prototype, {
+    // a glowing two-pillar portal frame; walking through the opening (or pressing E next to it) zones you
+    portalFrame(x0, g, z, to, arrive, label, dz) {
+      this.fill(x0 - 1, g + 1, z - 1, x0 + 5, g + 8, z + 1, B.AIR);
+      this.fill(x0 - 1, g - 2, z - 2, x0 + 5, g, z + 2, B.STONE);
+      this.fill(x0 - 1, g, z - 2, x0 + 5, g, z + 2, B.MARBLE);
+      for (const x of [x0, x0 + 4]) this.fill(x, g + 1, z, x, g + 5, z, B.PORTAL);
+      this.fill(x0, g + 6, z, x0 + 4, g + 6, z, B.PORTAL);
+      this.rawSet(x0 + 2, g + 7, z, B.GOLD);
+      this.zoneLines.push({ portal: true, x0: x0 + 1, x1: x0 + 4, z0: z + 0.15, z1: z + 0.85, y: g + 1, to, arrive, label, axis: 'z', at: z + 0.5, out: dz });
+    },
+    buildTownPortal(zone, g) {
+      const P = PORTALS[zone];
+      this.portalFrame(P.x0, g, P.z, 'bazaar', portalArrive(bzPortal(zone)), 'The Bizarre Bazaar', P.dz);
+    },
+    // a fortified hall dungeon: entry -> (west | nave | east) -> sanctum
+    buildHall(C, g, M, name) {
+      const cx = C.x, cz = C.z, hx = 14, hz = 20, top = g + 8;
+      this.fill(cx - hx - 2, g + 1, cz - hz - 2, cx + hx + 2, H - 1, cz + hz + 5, B.AIR);
+      this.fill(cx - hx - 2, g - 3, cz - hz - 2, cx + hx + 2, g, cz + hz + 5, M.floor);
+      for (let y = g + 1; y <= top; y++) for (let z = cz - hz; z <= cz + hz; z++) for (let x = cx - hx; x <= cx + hx; x++) {
+        if (x !== cx - hx && x !== cx + hx && z !== cz - hz && z !== cz + hz) continue;
+        this.rawSet(x, y, z, (y === g + 1 || y === top || (x + z) % 6 === 0) ? M.accent : M.wall);
+      }
+      this.fill(cx - hx, top + 1, cz - hz, cx + hx, top + 1, cz + hz, M.roof);
+      for (let i = -hx; i <= hx; i += 2) for (const z of [cz - hz, cz + hz]) this.rawSet(cx + i, top + 2, z, M.accent);
+      for (let i = -hz; i <= hz; i += 2) for (const x of [cx - hx, cx + hx]) this.rawSet(x, top + 2, cz + i, M.accent);
+      for (const wz of [cz + 7, cz - 7]) { this.fill(cx - hx, g + 1, wz, cx + hx, top, wz, M.wall); this.fill(cx - 1, g + 1, wz, cx + 1, g + 4, wz, B.AIR); }
+      for (const wx of [cx - 5, cx + 5]) { this.fill(wx, g + 1, cz - 6, wx, top, cz + 6, M.wall); this.fill(wx, g + 1, cz - 1, wx, g + 4, cz + 1, B.AIR); }
+      this.fill(cx - 1, g + 1, cz + hz, cx + 1, g + 5, cz + hz, B.AIR);
+      for (const dx of [-2, 2]) { this.fill(cx + dx, g + 1, cz + hz + 1, cx + dx, g + 6, cz + hz + 1, M.accent); this.rawSet(cx + dx, g + 7, cz + hz + 1, M.light); }
+      // pillars, lights and the boss dais
+      for (const [x, z] of [[cx - 9, cz + 11], [cx + 9, cz + 11], [cx - 9, cz + 17], [cx + 9, cz + 17], [cx - 9, cz - 11], [cx + 9, cz - 11], [cx - 9, cz - 17], [cx + 9, cz - 17]]) this.fill(x, g + 1, z, x, top, z, M.accent);
+      for (const [x, z] of [[cx - hx + 1, cz + 14], [cx + hx - 1, cz + 14], [cx - hx + 1, cz], [cx + hx - 1, cz], [cx - 4, cz - 3], [cx + 4, cz + 3], [cx - hx + 1, cz - 14], [cx + hx - 1, cz - 14], [cx, cz - hz + 1]]) this.rawSet(x, g + 4, z, M.light);
+      this.fill(cx - 4, g + 1, cz - hz + 3, cx + 4, g + 1, cz - hz + 8, M.accent);
+      if (M.pool) { this.fill(cx - 3, g, cz - 3, cx - 2, g, cz + 3, M.pool); this.fill(cx + 2, g, cz - 3, cx + 3, g, cz + 3, M.pool); }
+      this.zones.push({ name, x0: cx - hx, x1: cx + hx, z0: cz - hz, z1: cz + hz, yMax: top });
+      return { floor: g + 1, entrance: { x: cx + 0.5, z: cz + hz + 3.5 },
+        rooms: { entry: { x: cx + 0.5, z: cz + 14.5 }, west: { x: cx - 9.5, z: cz + 0.5 }, nave: { x: cx + 0.5, z: cz + 0.5 }, east: { x: cx + 10.5, z: cz + 0.5 }, sanctum: { x: cx + 0.5, z: cz - 14.5 } } };
+    },
+    // a small fortified camp shared by both new outposts: platform, two huts, posts, NPCs, bind point and the Bazaar portal
+    buildCamp(zone, O, g, M, npcs, name) {
+      const hf = 12;
+      this.fill(O.x - hf - 1, g + 1, O.z - hf - 1, O.x + hf + 1, H - 1, O.z + hf + 1, B.AIR);
+      this.fill(O.x - hf - 1, g - 4, O.z - hf - 1, O.x + hf + 1, g - 1, O.z + hf + 1, M.base);
+      for (let z = O.z - hf; z <= O.z + hf; z++) for (let x = O.x - hf; x <= O.x + hf; x++) this.rawSet(x, g, z, (x + z) % 5 === 0 ? M.floor2 : M.floor);
+      for (let i = -hf; i <= hf; i += 4) for (const [x, z] of [[O.x + i, O.z - hf], [O.x + i, O.z + hf], [O.x - hf, O.z + i], [O.x + hf, O.z + i]]) {
+        if (Math.abs(z - O.z) <= 2 && x === O.x + hf) continue; // east gate
+        this.fill(x, g + 1, z, x, g + 2, z, M.post); this.rawSet(x, g + 3, z, M.light);
+      }
+      const shop = this.building(O.x - 10, O.z + 4, O.x - 4, O.z + 10, 4, M.wall, M.roof, 'n', g);
+      const temple = this.building(O.x + 2, O.z + 4, O.x + 8, O.z + 10, 5, M.wall2, M.roof, 'n', g);
+      this.rawSet(O.x - 2, g + 1, O.z - 2, M.post); this.rawSet(O.x - 2, g + 2, O.z - 2, M.light);
+      this.fill(O.x + 8, g + 1, O.z - 5, O.x + 8, g + 4, O.z - 5, M.post); this.fill(O.x + 8, g + 2, O.z - 4, O.x + 8, g + 4, O.z - 4, B.BANNER);
+      const y = g + 1;
+      for (const n of npcs) {
+        const at = n.at === 'shop' ? shop : n.at === 'temple' ? temple : { x: O.x + n.dx, z: O.z + n.dz };
+        this.npcs.push(Object.assign({ x: at.x, y, z: at.z }, n.d));
+      }
+      this.bind = { x: O.x - 2.5, y: g + 1, z: O.z + 0.5 };
+      this.buildTownPortal(zone, g);
+      this.zones.push({ name, x0: O.x - hf, x1: O.x + hf, z0: O.z - hf, z1: O.z + hf });
+    },
+    edgeRoad(x0, z0, x1, z1, ok, set) {
+      const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, cx = Math.round(x0 + (x1 - x0) * t), cz = Math.round(z0 + (z1 - z0) * t);
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+          const x = cx + dx, z = cz + dz; if (!this.inBounds(x, 1, z)) continue;
+          const y = this.topY(x, z), b = this.get(x, y, z);
+          if (ok(b)) set(x, y, z, b);
+        }
+      }
+    },
+
+    // ---------- Zone 4: The Soggybottom Mire (levels 25-32) ----------
+    mrHeight(x, z) {
+      const s = this.seed;
+      let h = 21 + U.fbm(x / 46, z / 46, s, 4) * 8 + (U.fbm(x / 13, z / 13, s + 5, 2) - 0.5) * 3;
+      let e = Math.min(x, z, W - 1 - x, D - 1 - z);
+      if (Math.abs(z - 128) < 9 && x > 200) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(z - 128)) + e);
+      if (e < 20) h += Math.pow(20 - e, 1.3) * 1.3;
+      const flat = (c, r0, r1, target) => { const d = Math.hypot(x - c.x, z - c.z); if (d < r1) h = U.lerp(target, h, U.smoothstep(r0, r1, d)); };
+      flat(MR.outpost, 15, 24, 24); flat(MR.temple, 25, 34, 24); flat(MR.shallows, 8, 28, 21.8); flat(MR.trolls, 10, 20, 24); flat(MR.wisps, 8, 18, 23);
+      if (Math.abs(z - 128) < 6 && x > 212) h = U.lerp(h, 24, U.smoothstep(6, 3, Math.abs(z - 128)));
+      return Math.max(3, Math.min(H - 6, Math.round(h)));
+    },
+    mrProtected(x, z) {
+      if (Math.hypot(x - MR.outpost.x, z - MR.outpost.z) < 18) return true;
+      if (Math.max(Math.abs(x - MR.temple.x), Math.abs(z - MR.temple.z)) < 26) return true;
+      if (Math.abs(z - 128) < 6 && x > 210) return true;
+      return false;
+    },
+    mangrove(x, y, z, r) {
+      const th = 5 + Math.floor(r * 3);
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { this.rawSet(x + dx, y, z + dz, B.MANGROVE); if (r > 0.4) this.rawSet(x + dx * 2, y - 1, z + dz * 2, B.MANGROVE); }
+      for (let i = 0; i < th; i++) this.rawSet(x, y + i, z, B.MANGROVE);
+      const top = y + th;
+      for (let dy = -1; dy <= 1; dy++) {
+        const rad = dy === 1 ? 1 : 3;
+        for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
+          if (dx * dx + dz * dz > rad * rad + 1) continue;
+          if (this.get(x + dx, top + dy, z + dz) === B.AIR) this.rawSet(x + dx, top + dy, z + dz, dy === 1 ? B.MOSS : B.LEAVES);
+        }
+      }
+      for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3], [2, 2], [-2, -2]]) if (U.hash2(x + dx, z + dz, this.seed + 3) < 0.6) {
+        const len = 1 + Math.floor(U.hash2(x + dz, z + dx, 5) * 3);
+        for (let k = 1; k <= len; k++) if (this.get(x + dx, top - 1 - k, z + dz) === B.AIR) this.rawSet(x + dx, top - 1 - k, z + dz, B.MOSS);
+      }
+    },
+    genMire() {
+      const s = this.seed, SEA2 = 22;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const h = this.mrHeight(x, z);
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 4 ? B.STONE : y < h ? (U.hash2(x, y * 7 + z, s) < 0.5 ? B.MUD : B.DIRT) : B.GRASS;
+          if (y === h && (h <= SEA2 || U.fbm(x / 9, z / 9, s + 21, 2) > 0.62)) b = B.MUD;
+          if (y === h && h > 38) b = B.MOSSY;
+          this.rawSet(x, y, z, b);
+        }
+        for (let y = h + 1; y <= SEA2; y++) this.rawSet(x, y, z, B.WATER);
+      }
+      // mangroves and glowcaps
+      let caps = 0;
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        if (this.mrProtected(x, z)) continue;
+        const y = this.topY(x, z), b = this.get(x, y, z), r = U.hash2(x, z, s + 3);
+        const dens = U.fbm(x / 34, z / 34, s + 44, 2) > 0.5 ? 0.03 : 0.008;
+        if ((b === B.GRASS || b === B.MUD || b === B.WATER) && U.hash2(x, z, s + 99) < dens) this.mangrove(x, (b === B.WATER ? this.floorBelow(x, y, z) : y + 1), z, r);
+        else if ((b === B.GRASS || b === B.MUD) && caps < 90 && U.hash2(x, z, s + 98) < 0.0022) { this.rawSet(x, y + 1, z, B.GLOWCAP); caps++; }
+      }
+      // boardwalks over the muck
+      const plank = (x, y, z, b) => { if (b === B.WATER) { let yy = y; while (yy > 1 && this.get(x, yy, z) === B.WATER) yy--; this.rawSet(x, SEA2, z, B.PLANKS); } else this.rawSet(x, y, z, B.PLANKS); };
+      const ok = (b) => b === B.GRASS || b === B.MUD || b === B.WATER;
+      const O = MR.outpost;
+      this.edgeRoad(254, 128, O.x + 12, 128, ok, plank);
+      this.edgeRoad(O.x - 12, O.z, MR.shallows.x + 26, MR.shallows.z + 10, ok, plank);
+      this.edgeRoad(O.x - 12, O.z + 4, MR.temple.x + 18, MR.temple.z - 6, ok, plank);
+      this.edgeRoad(O.x - 4, O.z + 12, MR.wisps.x + 10, MR.wisps.z - 8, ok, plank);
+      this.buildCamp('swamp', O, 24, { base: B.MUD, floor: B.PLANKS, floor2: B.MANGROVE, post: B.MANGROVE, light: B.LANTERN, wall: B.PLANKS, wall2: B.MANGROVE, roof: B.MOSS }, [
+        { at: 'temple', d: { kind: 'binder', name: 'Bog-Notary Pip', color: 0x5a7a4a, sub: '<Soul Notary>' } },
+        { at: 'shop', d: { kind: 'merchant', name: 'Swampmonger Odette', color: 0x6a5a3a, stock: 'mire', faction: 'mirewatch', sub: '<Swamp Supplies>' } },
+        { dx: 8.5, dz: -1.5, d: { kind: 'guard', name: 'Warden Marisol', color: 0x3a5a3a, sub: '<Mirewatch Warden>', tabard: 0x3a6a3a } },
+        { dx: 4.5, dz: -7.5, d: { kind: 'quest', name: 'Hedge-Witch Grizelda', color: 0x4a3a5a, sub: '<Hedge-Witch>' } },
+        { dx: 11.5, dz: -3.5, d: { kind: 'guard', name: 'Mirewatch Sentry Doyle', color: 0x3a5a3a, sub: '<Mirewatch>', tabard: 0x3a6a3a } },
+        { dx: 11.5, dz: 4.5, d: { kind: 'guard', name: 'Mirewatch Sentry Fen', color: 0x3a5a3a, sub: '<Mirewatch>', tabard: 0x3a6a3a } },
+      ], 'Mirewatch Landing');
+      this.buildFrogVillage();
+      const T = this.buildHall(MR.temple, 24, { floor: B.MUD, wall: B.MOSSY, accent: B.CRYPT, roof: B.MOSS, light: B.GLOWCAP, pool: B.WATER }, 'Sunken Temple of Glubb');
+      this.mireTemple = T;
+      this.zoneLines.push({ x0: W - 2.2, x1: W, z0: 123, z1: 134, to: 'desert', arrive: { x: 6.5, z: 128.5, yaw: Math.PI / 2 }, label: 'The Sunscorched Expanse', axis: 'x', at: W - 0.6 });
+      this.zones.push({ name: 'Mirebound Pass', x0: 220, x1: 255, z0: 118, z1: 138 });
+      this.zones.push({ name: 'The Croaking Shallows', x0: MR.shallows.x - 26, x1: MR.shallows.x + 26, z0: MR.shallows.z - 26, z1: MR.shallows.z + 26 });
+      this.zones.push({ name: 'The Drowned Grounds', x0: MR.temple.x - 26, x1: MR.temple.x + 26, z0: MR.temple.z - 26, z1: MR.temple.z + 26 });
+      this.zones.push({ name: 'Whisperfen', x0: MR.wisps.x - 18, x1: MR.wisps.x + 18, z0: MR.wisps.z - 18, z1: MR.wisps.z + 18 });
+      this.zones.push({ name: 'Troll Bottoms', x0: MR.trolls.x - 18, x1: MR.trolls.x + 18, z0: MR.trolls.z - 18, z1: MR.trolls.z + 18 });
+      const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
+      sp('bog_croc', MR.crocs1.x, MR.crocs1.z, 3, 12, 110, { alt: 'gnashjaw', altChance: 0.15 }); sp('bog_croc', MR.crocs2.x, MR.crocs2.z, 3, 12, 110); sp('bog_croc', MR.crocs3.x, MR.crocs3.z, 2, 10, 110);
+      sp('froglodyte', MR.shallows.x, MR.shallows.z, 4, 10, 110, { alt: 'ribbitus', altChance: 0.2 }); sp('froglodyte', MR.shallows.x + 10, MR.shallows.z - 10, 2, 4, 110);
+      sp('frog_priest', MR.shallows.x - 6, MR.shallows.z + 4, 2, 4, 120);
+      sp('swamp_wisp', MR.wisps.x, MR.wisps.z, 3, 10, 130); sp('swamp_wisp', 40, 128, 1, 6, 130);
+      sp('bog_troll', MR.trolls.x, MR.trolls.z, 3, 12, 150); sp('bog_troll', 150, 36, 1, 8, 150);
+      const R = T.rooms, fy = T.floor;
+      sp('drowned_zealot', R.entry.x, R.entry.z, 2, 3, 150, { y: fy });
+      sp('frog_priest', R.west.x, R.west.z, 1, 2, 150, { y: fy, lvl: [30, 31] }); sp('drowned_zealot', R.west.x, R.west.z + 2, 1, 2, 150, { y: fy });
+      sp('swamp_wisp', R.east.x, R.east.z, 2, 2, 150, { y: fy, lvl: [30, 31] });
+      sp('drowned_zealot', R.nave.x, R.nave.z + 3, 2, 2, 150, { y: fy, lvl: [30, 31] }); sp('soggs', R.nave.x, R.nave.z - 2, 1, 1, 480, { y: fy });
+      sp('glubb', R.sanctum.x, R.sanctum.z - 1, 1, 1, 900, { y: fy + 1 }); sp('drowned_zealot', R.sanctum.x - 5, R.sanctum.z + 3, 1, 1, 160, { y: fy, lvl: [31, 32] }); sp('drowned_zealot', R.sanctum.x + 5, R.sanctum.z + 3, 1, 1, 160, { y: fy, lvl: [31, 32] });
+    },
+    buildFrogVillage() {
+      const C = MR.shallows;
+      // mud-dome huts on little islands, lily-pad (moss) platforms
+      for (let i = 0; i < 6; i++) {
+        const a = i * 1.05 + 0.3, x = Math.round(C.x + Math.cos(a) * 13), z = Math.round(C.z + Math.sin(a) * 13);
+        this.fill(x - 3, 18, z - 3, x + 3, 22, z + 3, B.MUD);
+        this.fill(x - 3, 23, z - 3, x + 3, H - 1, z + 3, B.AIR);
+        for (let dy = 0; dy < 3; dy++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+          const rr = dx * dx + dz * dz + dy * dy * 1.6;
+          if (rr <= 6.5 && rr > 2.5) this.rawSet(x + dx, 23 + dy, z + dz, dy === 2 ? B.MOSS : B.MUD);
+        }
+        this.fill(x, 23, z + 2, x, 24, z + 2, B.AIR);
+        this.rawSet(x, 23, z, B.GLOWCAP);
+      }
+      for (let k = 0; k < 14; k++) { const x = C.x - 8 + Math.floor(U.hash2(k, 1, 7) * 16), z = C.z - 8 + Math.floor(U.hash2(k, 2, 7) * 16); if (this.get(x, 22, z) === B.WATER) this.rawSet(x, 22, z, B.MOSS); }
+      this.fill(C.x - 1, 21, C.z - 1, C.x + 1, 22, C.z + 1, B.MUD); this.fill(C.x, 23, C.z, C.x, 25, C.z, B.MANGROVE); this.fill(C.x - 1, 25, C.z, C.x + 1, 26, C.z, B.BANNER);
+    },
+
+    // ---------- Zone 5: The Cinderpeak Caldera (levels 32-40) ----------
+    cdHeight(x, z) {
+      const s = this.seed, K = CD.crater;
+      let h = 28 + U.fbm(x / 55, z / 55, s, 4) * 13 + (U.fbm(x / 15, z / 15, s + 5, 2) - 0.5) * 5;
+      let e = Math.min(x, z, W - 1 - x, D - 1 - z);
+      if (Math.abs(z - 128) < 9 && x < 56) e = Math.max(e, 22 * U.smoothstep(9, 4, Math.abs(z - 128)) + e);
+      if (e < 20) h += Math.pow(20 - e, 1.3) * 1.4;
+      const flat = (c, r0, r1, target) => { const d = Math.hypot(x - c.x, z - c.z); if (d < r1) h = U.lerp(target, h, U.smoothstep(r0, r1, d)); };
+      flat(CD.outpost, 15, 24, 28); flat(CD.cult, 13, 22, 30); flat(CD.golems, 12, 22, 30); flat(CD.hounds, 10, 22, 29);
+      // the caldera: a tall rim around a flat crater floor, with a pass cut through the west side
+      const dc = Math.hypot(x - K.x, z - K.z);
+      if (dc < 50) {
+        const rim = 50 - Math.abs(dc - 38) * 1.25;
+        if (dc > K.r) h = Math.max(h, U.lerp(h, rim, U.smoothstep(50, 40, dc)));
+        else h = 30;
+        if (dc >= K.r && x < K.x && Math.abs(z - 128) < 5) h = Math.min(h, 30 + Math.max(0, (dc - K.r - 14) * 0.25));
+      }
+      if (Math.abs(z - 128) < 6 && x < 50) h = U.lerp(h, 28, U.smoothstep(6, 3, Math.abs(z - 128)));
+      return Math.max(3, Math.min(H - 6, Math.round(h)));
+    },
+    cdProtected(x, z) {
+      if (Math.hypot(x - CD.outpost.x, z - CD.outpost.z) < 18) return true;
+      if (Math.hypot(x - CD.crater.x, z - CD.crater.z) < CD.crater.r + 2) return true;
+      if (Math.abs(z - 128) < 6 && (x < 52 || (x > 100 && x < CD.crater.x))) return true;
+      if (Math.hypot(x - CD.cult.x, z - CD.cult.z) < 16) return true;
+      return false;
+    },
+    genCaldera() {
+      const s = this.seed, K = CD.crater;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const h = this.cdHeight(x, z), dc = Math.hypot(x - K.x, z - K.z);
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 2 ? B.BASALT : B.ASH;
+          if (y === h) {
+            if (h > 41) b = U.hash2(x, z, s + 2) < 0.4 ? B.OBSIDIAN : B.BASALT;
+            const n = U.fbm(x / 30, z / 30, s + 61, 3);
+            if (!this.cdProtected(x, z) && Math.abs(n - 0.5) < 0.018 && h < 38) b = B.MAGMA;
+            if (dc < K.r && dc > 18 && U.fbm(x / 8, z / 8, s + 62, 2) > 0.6) b = B.MAGMA;
+            if (dc < K.r && b === B.ASH && U.hash2(x, z, s + 63) < 0.3) b = B.BASALT;
+          }
+          this.rawSet(x, y, z, b);
+        }
+      }
+      // basalt spires, charred trees and obsidian shards
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        if (this.cdProtected(x, z)) continue;
+        const y = this.topY(x, z), b = this.get(x, y, z), r = U.hash2(x, z, s + 3);
+        if (b !== B.ASH && b !== B.BASALT) continue;
+        if (U.hash2(x, z, s + 99) < 0.003) { const hh = 3 + Math.floor(r * 6); for (let i = 1; i <= hh; i++) this.rawSet(x, y + i, z, B.BASALT); if (r > 0.7) this.rawSet(x, y + hh + 1, z, B.OBSIDIAN); }
+        else if (U.hash2(x, z, s + 98) < 0.004) { const hh = 3 + Math.floor(r * 3); for (let i = 1; i <= hh; i++) this.rawSet(x, y + i, z, B.LOG); if (r > 0.5) this.rawSet(x + 1, y + hh - 1, z, B.LOG); }
+        else if (U.hash2(x, z, s + 97) < 0.002) { this.rawSet(x, y + 1, z, B.OBSIDIAN); if (r > 0.5) this.rawSet(x, y + 2, z, B.OBSIDIAN); }
+      }
+      const ok = (b) => b === B.ASH || b === B.BASALT || b === B.MAGMA || b === B.OBSIDIAN;
+      const road = (x, y, z) => this.rawSet(x, y, z, U.hash2(x, z, 5) < 0.6 ? B.GRAVEL : B.BASALT);
+      const O = CD.outpost;
+      this.edgeRoad(1, 128, O.x - 12, 128, ok, road);
+      this.edgeRoad(O.x + 12, 128, K.x - 4, 128, ok, road);
+      this.edgeRoad(O.x, O.z - 12, CD.cult.x - 4, CD.cult.z + 14, ok, road);
+      this.edgeRoad(O.x, O.z + 12, CD.golems.x - 6, CD.golems.z - 12, ok, road);
+      this.buildCamp('caldera', O, 28, { base: B.BASALT, floor: B.BASALT, floor2: B.OBSIDIAN, post: B.OBSIDIAN, light: B.BRAZIER, wall: B.BASALT, wall2: B.OBSIDIAN, roof: B.ROOF }, [
+        { at: 'temple', d: { kind: 'binder', name: 'Flamewarden Ignatia', color: 0xc85a2a, sub: '<Soul Notary>' } },
+        { at: 'shop', d: { kind: 'merchant', name: 'Quartermaster Brann', color: 0x5a3a2a, stock: 'caldera', faction: 'ashguard', sub: '<Expedition Supplies>' } },
+        { dx: 8.5, dz: -1.5, d: { kind: 'guard', name: 'Captain Emberly', color: 0x8a2a1a, sub: '<Ashguard Captain>', tabard: 0x8a2a1a } },
+        { dx: 4.5, dz: -7.5, d: { kind: 'quest', name: 'Sage Cindral', color: 0x3a2a4a, sub: '<Volcanologist>' } },
+        { dx: 11.5, dz: -3.5, d: { kind: 'guard', name: 'Ashguard Sentry Vulk', color: 0x8a2a1a, sub: '<Ashguard>', tabard: 0x8a2a1a } },
+        { dx: 11.5, dz: 4.5, d: { kind: 'guard', name: 'Ashguard Sentry Pyra', color: 0x8a2a1a, sub: '<Ashguard>', tabard: 0x8a2a1a } },
+      ], 'Ashguard Camp');
+      this.buildCultCamp(); this.buildGolemField();
+      const F = this.buildHall(K, 30, { floor: B.BASALT, wall: B.OBSIDIAN, accent: B.BASALT, roof: B.BASALT, light: B.BRAZIER, pool: B.MAGMA }, 'The Molten Forge');
+      this.forge = F;
+      this.zoneLines.push({ x0: 0, x1: 2.2, z0: 123, z1: 134, to: 'desert', arrive: { x: 249.5, z: 128.5, yaw: -Math.PI / 2 }, label: 'The Sunscorched Expanse', axis: 'x', at: 0.6 });
+      this.zones.push({ name: 'Cinder Road', x0: 0, x1: 30, z0: 118, z1: 138 });
+      this.zones.push({ name: 'The Caldera Floor', x0: K.x - K.r, x1: K.x + K.r, z0: K.z - K.r, z1: K.z + K.r });
+      this.zones.push({ name: 'The Ashen Cult Encampment', x0: CD.cult.x - 18, x1: CD.cult.x + 18, z0: CD.cult.z - 18, z1: CD.cult.z + 18 });
+      this.zones.push({ name: 'The Glass Garden', x0: CD.golems.x - 18, x1: CD.golems.x + 18, z0: CD.golems.z - 18, z1: CD.golems.z + 18 });
+      this.zones.push({ name: 'The Cinderpeak Rim', x0: K.x - 50, x1: K.x + 50, z0: K.z - 50, z1: K.z + 50 });
+      const sp = (type, x, z, count, radius, respawn, opt) => this.spawns.push(Object.assign({ type, x, z, count, radius, respawn }, opt || {}));
+      sp('cinder_hound', CD.hounds.x, CD.hounds.z, 4, 14, 110, { alt: 'scorchmaw', altChance: 0.15 }); sp('cinder_hound', 150, 214, 2, 10, 110);
+      sp('ember_sprite', CD.sprites.x, CD.sprites.z, 3, 10, 120); sp('ember_sprite', 60, 210, 2, 8, 120);
+      sp('salamander', CD.salamanders.x, CD.salamanders.z, 3, 10, 120); sp('salamander', K.x + 20, K.z + 10, 2, 4, 130);
+      sp('obsidian_golem', CD.golems.x, CD.golems.z, 3, 12, 150);
+      sp('ash_zealot', CD.cult.x, CD.cult.z, 4, 9, 120, { alt: 'kindleton', altChance: 0.2 }); sp('ash_pyro', CD.cult.x - 5, CD.cult.z - 3, 2, 4, 130);
+      sp('magma_giant', 226, 186, 2, 10, 160); sp('magma_giant', K.x - 20, K.z - 12, 1, 3, 160);
+      const R = F.rooms, fy = F.floor;
+      sp('obsidian_golem', R.entry.x, R.entry.z, 2, 3, 160, { y: fy, lvl: [36, 37] });
+      sp('magma_giant', R.west.x, R.west.z, 1, 1, 170, { y: fy }); sp('obsidian_golem', R.west.x, R.west.z + 3, 1, 1, 170, { y: fy });
+      sp('ash_pyro', R.east.x, R.east.z, 2, 2, 160, { y: fy, lvl: [37, 38] });
+      sp('magma_giant', R.nave.x, R.nave.z + 3, 2, 2, 170, { y: fy, lvl: [37, 38] }); sp('brasskull', R.nave.x, R.nave.z - 2, 1, 1, 600, { y: fy });
+      sp('pyrrhax', R.sanctum.x, R.sanctum.z - 1, 1, 1, 1200, { y: fy + 1 }); sp('obsidian_golem', R.sanctum.x - 6, R.sanctum.z + 3, 1, 1, 170, { y: fy, lvl: [38, 39] }); sp('obsidian_golem', R.sanctum.x + 6, R.sanctum.z + 3, 1, 1, 170, { y: fy, lvl: [38, 39] });
+    },
+    buildCultCamp() {
+      const C = CD.cult, g = this.topY(C.x, C.z);
+      this.fill(C.x - 15, g + 1, C.z - 15, C.x + 15, H - 1, C.z + 15, B.AIR);
+      const tent = (tx, tz, c) => { const ty = this.topY(tx, tz) + 1; for (let l = 0; l < 3; l++) for (let dz = -2; dz <= 2; dz++) { this.rawSet(tx - 2 + l, ty + l, tz + dz, c); this.rawSet(tx + 2 - l, ty + l, tz + dz, c); } for (let dz = -2; dz <= 2; dz++) this.rawSet(tx, ty + 3, tz + dz, B.OBSIDIAN); };
+      tent(C.x - 8, C.z - 6, B.BANNER); tent(C.x + 7, C.z - 7, B.WOOL); tent(C.x - 7, C.z + 7, B.BANNER); tent(C.x + 8, C.z + 6, B.BANNER);
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2, x = Math.round(C.x + Math.cos(a) * 12), z = Math.round(C.z + Math.sin(a) * 12), t = this.topY(x, z); this.fill(x, t + 1, z, x, t + 3, z, B.OBSIDIAN); this.rawSet(x, t + 4, z, B.BRAZIER); }
+      this.fill(C.x - 1, g, C.z - 1, C.x + 1, g, C.z + 1, B.MAGMA);
+    },
+    buildGolemField() {
+      const C = CD.golems;
+      for (let i = 0; i < 26; i++) {
+        const x = C.x - 16 + Math.floor(U.hash2(i, 3, 11) * 32), z = C.z - 16 + Math.floor(U.hash2(i, 4, 11) * 32), t = this.topY(x, z), hh = 2 + Math.floor(U.hash2(i, 5, 11) * 6);
+        for (let k = 1; k <= hh; k++) this.rawSet(x, t + k, z, B.OBSIDIAN);
+        if (hh > 5) this.rawSet(x + 1, t + hh - 1, z, B.OBSIDIAN);
+      }
+    },
+
+    // ---------- The Bizarre Bazaar (safe hub) ----------
+    genBazaar() {
+      const s = this.seed, C = BZ, g = C.g;
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        const d = Math.max(Math.abs(x - C.x), Math.abs(z - C.z));
+        const h = d <= 44 ? g : Math.min(H - 8, Math.round(g + (d - 44) * 0.55 + U.fbm(x / 20, z / 20, s, 3) * 10));
+        for (let y = 0; y <= h; y++) {
+          let b = y === 0 ? B.BEDROCK : y < h - 3 ? B.STONE : y < h ? B.DIRT : B.GRASS;
+          if (y === h && d <= C.half) b = ((x + z) & 1) && d % 6 === 0 ? B.SANDSTONE : B.MARBLE;
+          this.rawSet(x, y, z, b);
+        }
+      }
+      for (let z = 4; z < D - 4; z++) for (let x = 4; x < W - 4; x++) {
+        const d = Math.max(Math.abs(x - C.x), Math.abs(z - C.z)); if (d < 42) continue;
+        const y = this.topY(x, z); if (this.get(x, y, z) === B.GRASS && U.hash2(x, z, s + 99) < 0.03) this.tree(x, y + 1, z, U.hash2(x, z, s + 3));
+      }
+      // ornamental wall with lantern posts and banners
+      const wd = C.half + 2;
+      for (let i = -wd; i <= wd; i++) for (const [x, z] of [[C.x + i, C.z - wd], [C.x + i, C.z + wd], [C.x - wd, C.z + i], [C.x + wd, C.z + i]]) {
+        this.fill(x, g + 1, z, x, g + 3, z, B.BRICK); if ((i & 1) === 0) this.rawSet(x, g + 4, z, B.BRICK);
+        if (((i + wd) % 8) === 0) { this.rawSet(x, g + 4, z, B.LANTERN); this.fill(x, g + 2, z, x, g + 3, z, B.BANNER); }
+      }
+      // central fountain under a striped canopy
+      this.fill(C.x - 3, g + 1, C.z - 3, C.x + 3, g + 1, C.z + 3, B.MARBLE); this.fill(C.x - 2, g + 1, C.z - 2, C.x + 2, g + 1, C.z + 2, B.WATER);
+      this.fill(C.x - 2, g, C.z - 2, C.x + 2, g, C.z + 2, B.MARBLE); this.fill(C.x, g + 1, C.z, C.x, g + 3, C.z, B.GOLD); this.rawSet(C.x, g + 4, C.z, B.LANTERN);
+      // market stalls: posts, a striped awning, a counter and a hanging lantern
+      const stall = (x, z, face, c) => {
+        for (const [dx, dz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) this.fill(x + dx, g + 1, z + dz, x + dx, g + 3, z + dz, B.LOG);
+        for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) this.rawSet(x + dx, g + 4, z + dz, ((face === 'x' ? dz : dx) + 9) % 2 ? B.AWNING : c);
+        if (face === 'x') this.fill(x + 2, g + 1, z - 1, x + 2, g + 1, z + 1, B.PLANKS); else this.fill(x - 1, g + 1, z + 2, x + 1, g + 1, z + 2, B.PLANKS);
+        this.rawSet(x, g + 3, z, B.LANTERN);
+      };
+      const y = g + 1;
+      // trainers' row (west side), facing east
+      BAZAAR_TRAINERS.forEach(([cls, name], i) => {
+        const z = 104 + i * 6, x = 99;
+        stall(x, z, 'x', i % 2 ? B.BANNER : B.WOOL);
+        const cn = EB.data.CLASSES[cls].name;
+        this.npcs.push({ kind: 'trainer', cls, name, x: x + 0.5, y, z: z + 0.5, color: EB.data.CLASSES[cls].color, sub: `<${cn} Trainer>` });
+      });
+      // vendor lane (east side), facing west
+      const vendors = [
+        ['Blade Barker Bo', 'bz_weapons', '<Weapons>', 0x8a3a2a], ['Clanky Sue', 'bz_armor', '<Armor>', 0x5a5a6a],
+        ['Snackmonger Pim', 'bz_supplies', '<Potions & Provisions>', 0x3a7a4a], ['Honest Abe', 'bz_buyer', '<Buys Absolutely Anything>', 0x7a6a2a],
+      ];
+      vendors.forEach(([name, stock, sub, color], i) => {
+        const z = 108 + i * 10, x = 157;
+        stall(x, z, 'x', i % 2 ? B.BANNER : B.WOOL);
+        this.npcs.push({ kind: 'merchant', name, stock, sub, color, faction: 'bazaar', x: x + 0.5, y, z: z + 0.5 });
+      });
+      // the bank: a little gilded building on the south side
+      const bank = this.building(C.x - 7, C.z + 18, C.x + 7, C.z + 27, 5, B.MARBLE, B.GOLD, 'n', g);
+      this.npcs.push({ kind: 'banker', name: 'Vaultkeeper Coinsworth', x: bank.x, y, z: bank.z, color: 0x2a6a3a, sub: '<First Bank of Bizarre>', faction: 'bazaar' });
+      this.npcs.push({ kind: 'binder', name: 'Soul-Notary Bartleby', x: C.x - 6.5, y, z: C.z - 6.5, color: 0xdadaf0, sub: '<Soul Notary>' });
+      this.npcs.push({ kind: 'liaison', name: 'Sellsword Agent Rook', x: C.x + 8.5, y, z: C.z + 10.5, color: 0x2a7a4a, sub: '<Mercenaries for Hire>' });
+      this.npcs.push({ kind: 'quest', name: 'Bazaar Crier Mumbles', x: C.x + 4.5, y, z: C.z - 6.5, color: 0xa04080, sub: '<Town Crier>' });
+      for (const [x, z] of [[C.x - 12, C.z - 12], [C.x + 12, C.z - 12], [C.x - 12, C.z + 12], [C.x + 12, C.z + 12], [C.x - 22, C.z], [C.x + 22, C.z], [C.x, C.z + 14]]) this.lanternPost(x, g + 1, z);
+      // the portal promenade: one return portal per town
+      for (const zone of BZ_ORDER) {
+        const P = bzPortal(zone), T = PORTALS[zone];
+        this.portalFrame(P.x0, g, P.z, zone, portalArrive(T), T.label, P.dz);
+        this.lanternPost(P.x0 + 6, g + 1, P.z + 2);
+      }
+      this.bind = { x: C.x + 0.5, y: g + 1, z: C.z - 8.5 };
+      this.zones.push({ name: 'The Portal Promenade', x0: 98, x1: 158, z0: 94, z1: 103 });
+      this.zones.push({ name: "Trainers' Row", x0: 94, x1: 104, z0: 100, z1: 156 });
+      this.zones.push({ name: 'Vendor Lane', x0: 152, x1: 162, z0: 100, z1: 146 });
+      this.zones.push({ name: 'First Bank of Bizarre', x0: C.x - 7, x1: C.x + 7, z0: C.z + 18, z1: C.z + 27 });
+    },
+  });
+  EB.WORLD_V7 = { MR, CD, BZ, PORTALS, BZ_ORDER, bzPortal, portalArrive, BAZAAR_TRAINERS };
+
   EB.World = World;
-  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES, DS, DUNGEON_ZONES };
+  EB.WORLD = { W, D, H, CS, SEA, LAYOUT, FF, ZONES, DS, DUNGEON_ZONES, MR, CD, BZ, PORTALS };
 })();
 
 </script>
@@ -4706,6 +5443,12 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     // v5: Phrygian dominant (hijaz) over a low drone for the Sunscorched Expanse; a slow, hollow tomb theme
     desert: { bpm: 92, root: 164.8, scale: [0, 1, 4, 5, 7, 8, 10], prog: [0, 1, 0, 6], lead: [0, 1, 2, -1, 1, 0, -1, 1, 4, -1, 3, 2, 1, -1, 0, -1], wave: 'triangle', drone: true },
     tomb: { bpm: 50, root: 98.0, scale: [0, 1, 4, 5, 7, 8, 10], prog: [0, 1, 5, 1], lead: [0, -1, -1, 1, -1, -1, 0, -1, -1, -1, 4, -1, 5, -1, 1, -1], wave: 'sine', drone: true, quiet: true },
+    // v7: a sticky, swaying bayou waltz-ish loop; a heavy volcanic march; a bouncy market tune; two dungeon themes
+    swamp: { bpm: 70, root: 155.6, scale: [0, 2, 3, 5, 7, 8, 11], prog: [0, 3, 4, 0], lead: [0, -1, 3, 2, -1, 0, -1, -1, 4, 3, -1, 2, 0, -1, -1, -1], wave: 'triangle', drone: true },
+    bog: { bpm: 52, root: 103.8, scale: [0, 1, 3, 5, 7, 8, 11], prog: [0, 1, 4, 0], lead: [0, -1, -1, 1, -1, -1, -1, -1, 4, -1, -1, 3, -1, -1, 1, -1], wave: 'sine', drone: true, quiet: true },
+    volcano: { bpm: 100, root: 130.8, scale: [0, 1, 3, 5, 7, 8, 10], prog: [0, 5, 6, 0], lead: [0, 0, -1, 3, -1, 2, 1, -1, 0, 0, -1, 4, -1, 3, 1, -1], wave: 'triangle', drone: true },
+    forge: { bpm: 60, root: 87.3, scale: [0, 1, 3, 5, 6, 8, 10], prog: [0, 1, 0, 6], lead: [0, -1, -1, -1, 1, -1, 0, -1, -1, -1, 4, -1, 3, -1, 1, -1], wave: 'sine', drone: true, quiet: true },
+    bazaar: { bpm: 108, root: 220.0, scale: [0, 2, 4, 5, 7, 9, 10], prog: [0, 3, 4, 3], lead: [4, 5, 4, 2, 0, -1, 2, 4, 5, -1, 4, 2, 1, -1, 0, -1], wave: 'triangle' },
   };
   let musicOn = true, mood = null, musicGain = null, nextT = 0, step = 0, timer = null;
   const hz = (m, deg, oct) => { const n = m.scale.length, o = Math.floor(deg / n); const d = ((deg % n) + n) % n; return m.root * Math.pow(2, (m.scale[d] + 12 * (o + (oct || 0))) / 12); };
@@ -4730,7 +5473,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (m.drone && !m.quiet && (pos === 0 || pos === 3 || pos === 6 || pos === 10)) note(pos === 0 ? 90 : 180, nextT, 0.09, 'sine', pos === 0 ? 0.06 : 0.03, musicGain); // frame-drum pulse
       const l = m.lead[pos];
       if (l >= 0 && (bar % 2 === 0 || pos % 4 === 0)) note(hz(m, ch + l, 0), nextT, beat * 1.8, m.wave, 0.035, musicGain);
-      if (mood !== 'crypt' && mood !== 'tomb' && pos % 4 === 2) note(hz(m, ch + 4, 1), nextT, beat * 0.6, 'sine', 0.012, musicGain);
+      if (!MOODS[mood].quiet && mood !== 'crypt' && pos % 4 === 2) note(hz(m, ch + 4, 1), nextT, beat * 0.6, 'sine', 0.012, musicGain);
       nextT += beat; step++;
     }
   }
@@ -4934,6 +5677,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
   const isSpell = (id) => !!SPELLS[id] && !SPELLS[id].skill && SPELLS[id].kind !== 'skill';
 
   const SAVE_KEY = 'everblock_save_v1';
+  const BANK_SLOTS = 48;
+  const D_ZONES = EB.WORLD.ZONES;
   EB.SAVE_KEY = SAVE_KEY;
   EB.loadSave = () => { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } };
 
@@ -4970,6 +5715,10 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.buffs = (c.buffs || []).filter((b) => b.left > 0);
       this.bind = c.bind || null;
       this.played = c.played || 0;
+      // v7: First Bank of Bizarre vault (48 slots + coin)
+      this.bank = Array.isArray(c.bank) ? c.bank.slice(0, BANK_SLOTS).map((x) => (x && ITEMS[x.id] ? x : null)) : [];
+      while (this.bank.length < BANK_SLOTS) this.bank.push(null);
+      this.bankCoins = c.bankCoins > 0 ? Math.floor(c.bankCoins) : 0;
       this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3();
       if (c.pos) this.pos.set(c.pos[0], c.pos[1], c.pos[2]);
       this.yaw = c.yaw != null ? c.yaw : Math.PI; this.pitch = -0.12;
@@ -5000,7 +5749,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
       return { name: this.name, race: this.race, cls: this.cls, level: this.level, xp: this.xp, stats: this.base, coins: this.coins, inv: this.inv, equip: this.equip,
-        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
+        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, bank: this.bank, bankCoins: this.bankCoins, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
     }
   }
 
@@ -5115,7 +5864,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`Town Crier: Greetings, ${pl.name}. New in v6: multiplayer! Choose Play Online on the start screen to join an Everblock server (anyone can host one; see SERVER.md) and hunt, chat and group with other players. From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      ui.log(`Town Crier: Greetings, ${pl.name}. New in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
       if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soul-Notary Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guild Coach Aldric says: "Welcome, young ${RACES[pl.race].name.toLowerCase()}. Go bully the rats and snakes outside the walls. Come back when you have grown, and stretch first."`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
@@ -5133,7 +5882,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         for (const m of this.mobs) m.removeFrom(this.scene);
         for (const n of this.npcs) n.removeFrom(this.scene);
         for (const c of this.pcorpses) { this.otherCorpses.push(c.toSave()); c.removeFrom(this.scene); }
-        for (const zm of this.zoneMeshes) { this.scene.remove(zm); zm.geometry.dispose(); zm.material.dispose(); }
+        for (const zm of this.zoneMeshes) { this.scene.remove(zm); zm.geometry.dispose(); if (zm.material.map && zm.userData.portal === 1) zm.material.map.dispose(); zm.material.dispose(); }
+        for (const p of this.zonePlates || []) { this.scene.remove(p); if (p.material.map) p.material.map.dispose(); p.material.dispose(); }
+        this.zonePlates = [];
         this.world.dispose();
       }
       if (this.target) this.setTarget(null);
@@ -5153,11 +5904,15 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       }
       this.otherCorpses = keep;
       for (const zl of world.zoneLines) {
-        const wdt = zl.x1 - zl.x0, cx = (zl.x0 + zl.x1) / 2, gy = world.surfaceY(cx, zl.at);
+        if (zl.portal) { this.addPortalMesh(zl); continue; }
+        const alongX = zl.axis === 'x', wdt = alongX ? zl.z1 - zl.z0 : zl.x1 - zl.x0, c = alongX ? (zl.z0 + zl.z1) / 2 : (zl.x0 + zl.x1) / 2;
+        const gy = alongX ? world.surfaceY(zl.at, c) : world.surfaceY(c, zl.at);
         const m = new THREE.Mesh(new THREE.PlaneGeometry(wdt, 7), new THREE.MeshBasicMaterial({ color: 0x9fe0ff, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false, fog: false }));
-        m.position.set(cx, gy + 3.5, zl.at); m.renderOrder = 3;
+        if (alongX) { m.position.set(zl.at, gy + 3.5, c); m.rotation.y = Math.PI / 2; } else m.position.set(c, gy + 3.5, zl.at);
+        m.renderOrder = 3;
         this.scene.add(m); this.zoneMeshes.push(m);
       }
+      if (D_ZONES[zoneId] && D_ZONES[zoneId].safe) setTimeout(() => this.log('You feel safe here. Weapons are peace-bonded in the Bazaar: no fighting, no digging, just shopping.', 'help'), 600);
       if (arrive) { pl.pos.set(arrive.x, world.surfaceY(arrive.x, arrive.z), arrive.z); pl.yaw = arrive.yaw; pl.vel.set(0, 0, 0); }
       for (const m of this.mercs) { m.pos.set(pl.pos.x + 1.2, pl.pos.y + 0.3, pl.pos.z + 1.2); m.nav.reset(); m.casting = null; }
       this.updateSpawns(true);
@@ -5165,18 +5920,49 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (this.net) this.net.zoneLoaded(zoneId, this._zoneVia || 'bind');
       this._zoneVia = null;
     }
+    // v7: an animated, glowing swirl inside a portal frame
+    addPortalMesh(zl) {
+      const cx = (zl.x0 + zl.x1) / 2, y = zl.y + 2.5, z = zl.at;
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+      const g = cv.getContext('2d'), grd = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+      grd.addColorStop(0, 'rgba(255,240,255,1)'); grd.addColorStop(0.35, 'rgba(190,120,255,0.9)'); grd.addColorStop(0.75, 'rgba(90,40,200,0.65)'); grd.addColorStop(1, 'rgba(40,10,120,0)');
+      g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+      g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 2;
+      for (let a = 0; a < 3; a++) { g.beginPath(); for (let t = 0; t < 60; t++) { const r = t * 0.5, ang = t * 0.22 + a * 2.09; g.lineTo(32 + Math.cos(ang) * r, 32 + Math.sin(ang) * r); } g.stroke(); }
+      const tex = new THREE.CanvasTexture(cv);
+      const mk = (w, h, op) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: op, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+      const a = mk(3, 5, 0.85), b = mk(4.2, 4.2, 0.55);
+      a.position.set(cx, y, z); b.position.set(cx, y, z + 0.02);
+      a.userData.portal = 1; b.userData.portal = 2; a.renderOrder = b.renderOrder = 3;
+      this.scene.add(a); this.scene.add(b); this.zoneMeshes.push(a, b);
+      if (EB.ent && EB.ent.makeNameplate) {
+        const pl = EB.ent.makeNameplate(zl.label, '#e0b0ff', '<Portal - walk in or press E>');
+        pl.position.set(cx, zl.y + 6.9, z); pl.scale.set(4.4, 0.82, 1); this.scene.add(pl);
+        (this.zonePlates = this.zonePlates || []).push(pl);
+      }
+    }
+    nearPortal(r) {
+      const pl = this.player; let best = null, bd = r || 3.2;
+      for (const zl of this.world.zoneLines) {
+        if (!zl.portal) continue;
+        const d = Math.hypot((zl.x0 + zl.x1) / 2 - pl.pos.x, zl.at - pl.pos.z);
+        if (d < bd && Math.abs(pl.pos.y - zl.y) < 4) { bd = d; best = zl; }
+      }
+      return best;
+    }
     changeZone(zl) {
       if (this.zoning) return;
       this.zoning = true;
       const pl = this.player;
       pl.autoAttack = false; pl.casting = null; $('castBar').classList.add('hidden');
       const fade = $('zoneFade');
-      fade.querySelector('div').textContent = 'LOADING, PLEASE GO MAKE A SANDWICH...';
+      fade.querySelector('div').textContent = zl.portal ? 'WHOOSH! TELEPORTING YOUR MOLECULES (MOSTLY IN ORDER)...' : 'LOADING, PLEASE GO MAKE A SANDWICH...';
+      if (zl.portal) EB.audio.heal();
       fade.classList.add('on');
       setTimeout(() => {
         try {
           this._zoneVia = 'line'; this.loadZone(zl.to, zl.arrive);
-          this.log(`You wander into ${this.world.zoneName}.`, 'ding');
+          this.log(zl.portal ? `You step through the portal and pop out in ${this.world.zoneName}.` : `You wander into ${this.world.zoneName}.`, 'ding');
           ui.center(this.world.zoneName, 'Zone', 2.5);
           this.save();
         } catch (e) { console.error(e); }
@@ -5258,6 +6044,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       document.querySelectorAll('#gfxBtns button').forEach((b) => { b.onclick = () => this.applyGfx(b.dataset.gfx); });
       this.applyGfx(this.gfxPref, true);
       $('btnLootAll').onclick = () => this.lootAll();
+      $('btnBankCoin').onclick = () => this.bankCoin(true);
+      $('btnBankCoinOut').onclick = () => this.bankCoin(false);
       $('chatInput').addEventListener('keydown', (e) => {
         e.stopPropagation();
         if (e.key === 'Enter') { const v = e.target.value.trim(); e.target.value = ''; e.target.classList.add('hidden'); e.target.blur(); if (v) this.command(v); this.updateClickPrompt(); }
@@ -5352,6 +6140,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.windows.delete(id); $(id).classList.add('hidden'); ui.hideTip();
       if (id === 'lootWin' && was) this.onLootClosed();
       if (id === 'merchantWin') this.merchant = null;
+      if (id === 'bankWin') this.banker = null;
       this.updateClickPrompt();
     }
     toggleWin(id) { if (this.windows.has(id)) this.closeWin(id); else this.openWin(id); }
@@ -5365,6 +6154,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       else if (id === 'bookWin') this.renderBook();
       else if (id === 'mercCfgWin') this.renderMercCfg();
       else if (id === 'petWin') this.renderPetWin();
+      else if (id === 'bankWin') this.renderBank();
     }
 
     // ---------- targeting ----------
@@ -5382,7 +6172,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.setTarget(list[i]);
     }
     // ---------- v5 factions ----------
-    npcFaction(n) { return n.faction || { everblock: 'guards', frostfang: 'hollis', desert: 'sunward' }[this.world.zoneId] || 'guards'; }
+    npcFaction(n) { return n.faction || { everblock: 'guards', frostfang: 'hollis', desert: 'sunward', swamp: 'mirewatch', caldera: 'ashguard', bazaar: 'bazaar' }[this.world.zoneId] || 'guards'; }
     entFaction(e) { if (!e) return null; if (e.kind === 'npc') return this.npcFaction(e); if (e.kind === 'mob' && D.FACTIONS[e.def.faction]) return e.def.faction; return null; }
     standing(f) { const v = this.player.faction[f]; return v == null ? 0 : v; }
     // tracked-faction mobs only attack on sight when you are Hostile (KOS) or worse
@@ -5436,8 +6226,21 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         'Fence Jabari': `Psst. The Sandreavers pay well for what they need... if they trust you. (Press E to trade)`,
         'Sunward Guard Tamit': `The Sandreavers hide in the rocks to the east. Their mystics mend their wounds - kill those first.`,
         'Sunward Guard Omari': `The Great Pyramid lies to the north. The dead there do not rest, and Pharaoh Ankhet-Ra still sits upon his throne.`,
+        // v7
+        'Bazaar Crier Mumbles': `Welcome to the Bizarre Bazaar, ${pl.name}! Trainers for every class on the west row, vendors to the east, the bank to the south, and portals home along the north promenade. No fighting! We just had the floors done.`,
+        'Vaultkeeper Coinsworth': `Your valuables are safe with us, ${pl.name}. Mostly. Press E to open your vault.`,
+        'Mirewatch Sentry Doyle': `The froglodytes of the Croaking Shallows are west of here. They croak before they stab, at least.`,
+        'Mirewatch Sentry Fen': `Mind the crocodiles, and whatever you do, do not go into the Sunken Temple to the southwest. Something big and damp lives there.`,
+        'Ashguard Sentry Vulk': `The Ashen Cult camps on the northern slopes. The forge in the crater is worse.`,
+        'Ashguard Sentry Pyra': `Stay off the glowing rocks. Actually, they are fine. Just... warm.`,
+        'Bog-Notary Pip': `Even in a swamp, a soul needs a mailing address, ${pl.name}. Press E and I will bind you here.`,
+        'Flamewarden Ignatia': `The mountain may erupt, but your soul will be fine, ${pl.name}. Press E to bind here.`,
+        'Soul-Notary Bartleby': `I would prefer not to... just kidding. Press E and I will bind your soul to the Bazaar.`,
+        'Sellsword Agent Rook': `Mercenaries for every budget, ${pl.name}. Press E to browse.`,
       };
       if (this.world.zoneId === 'desert' && t.npcKind === 'guard' && !special[t.name]) special[t.name] = 'Keep your waterskin full and your blade sharp.';
+      if (t.npcKind === 'trainer' && t.data && t.data.cls) special[t.name] = t.data.cls === pl.cls ? `Ah, a fellow ${CLASSES[pl.cls].name}! I teach every ${CLASSES[pl.cls].name} trick from level 1 to ${D.MAX_LEVEL}. (Press E to train)` : `I only coach ${CLASSES[t.data.cls].name}s, ${pl.name}. Your coach is somewhere on this row; look for the ${CLASSES[pl.cls].name} Trainer sign.`;
+      if (t.npcKind === 'banker' && !special[t.name]) special[t.name] = `Press E to open your vault, ${pl.name}.`;
       setTimeout(() => this.log(`${t.name} says: "${special[t.name] || lines[t.npcKind]}"`, 'say'), 400);
     }
     updateTargetWin() {
@@ -5448,7 +6251,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (t.kind === 'mob') {
         if (t.alive) { const f = this.entFaction(t); color = CON_HEX[t.con(this)]; info = `Level ${t.level}${t.def.named ? ' - Named' : ''} - ${t.state === 'chase' ? 'Hostile' : t.state === 'flee' ? 'Fleeing' : f ? D.standingOf(this.standing(f)).label : t.def.aggressive ? 'Hostile' : 'Meh'}`; }
         else { name = t.corpseName(); color = '#b0a080'; info = 'Press E to loot'; }
-      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guild Coach - press E to train', binder: 'Soul Notary - press E to bind', guard: 'Guard', quest: 'Quest giver - press E' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
+      } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guild Coach - press E to train', binder: 'Soul Notary - press E to bind', guard: 'Guard', quest: 'Quest giver - press E', banker: 'Banker - press E for your vault' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
       else if (t.kind === 'pcorpse') { color = '#ffcc66'; info = 'Your corpse - press E to loot'; }
       else if (t.kind === 'merc') { color = '#70ff70'; info = `Group member - Level ${t.level} ${t.role === 'healer' ? 'Cleric' : 'Warrior'} Mercenary`; }
       else if (t.kind === 'pc') { color = t.grouped ? '#70ff70' : '#9fd8ff'; info = `${t.grouped ? 'Group member - ' : 'Player - '}Level ${t.level} ${RACES[t.race].name} ${CLASSES[t.cls].name}`; }
@@ -5925,6 +6728,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const pl = this.player;
       let t = this.target;
       const near = (e) => e && e.pos.distanceTo(pl.pos) < 5;
+      const portal = this.nearPortal(3.2);
+      if (portal && !(t && near(t) && t.kind === 'npc' && t.pos.distanceTo(pl.pos) < Math.hypot((portal.x0 + portal.x1) / 2 - pl.pos.x, portal.at - pl.pos.z))) { this.changeZone(portal); return; }
       if (!(t && near(t) && (t.kind === 'npc' || t.kind === 'pcorpse' || (t.kind === 'mob' && !t.alive)))) {
         t = null; let bd = 5;
         for (const e of [...this.pcorpses, ...this.mobs.filter((m) => !m.alive), ...this.npcs.filter((n) => n.npcKind !== 'guard')]) {
@@ -5947,7 +6752,11 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         return;
       }
       if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says: "Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}"`, 'say'); this.openWin('merchantWin'); }
-      else if (t.npcKind === 'trainer') this.openWin('trainerWin');
+      else if (t.npcKind === 'trainer') {
+        if (t.data && t.data.cls && t.data.cls !== pl.cls) { this.hail(); return; }
+        this.trainerNpc = t; this.openWin('trainerWin');
+      }
+      else if (t.npcKind === 'banker') { this.banker = t; this.log(`${t.name} says: "Your vault, ${pl.name}. Please do not put frogs in it."`, 'say'); this.openWin('bankWin'); }
       else if (t.npcKind === 'liaison') this.openWin('mercWin');
       else if ((t.npcKind === 'guard' || t.npcKind === 'quest') && this.questFor(t)) this.openDialog(t);
       else if (t.npcKind === 'quest') this.hail();
@@ -6123,7 +6932,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     trainCost(L) { return L <= 1 ? 0 : L * L * 12; }
     renderTrainer() {
       const pl = this.player, list = $('trainList');
-      list.innerHTML = `<div class="sub">Guild Coach Aldric teaches ${CLASSES[pl.cls].name}s. Your coin: ${U.coinStr(pl.coins)}</div>`;
+      list.innerHTML = `<div class="sub">${this.trainerNpc ? this.trainerNpc.name : 'Guild Coach Aldric'} teaches ${CLASSES[pl.cls].name}s (levels 1-${D.MAX_LEVEL}). Your coin: ${U.coinStr(pl.coins)}</div>`;
       const ids = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[pl.cls]).sort((a, b) => SPELLS[a].classes[pl.cls] - SPELLS[b].classes[pl.cls]);
       for (const id of ids) {
         const sp = SPELLS[id], L = sp.classes[pl.cls];
@@ -6144,6 +6953,48 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const hs = pl.hotbar.indexOf(null);
       if (hs >= 0) pl.hotbar[hs] = id; else this.log('Your hotbar is full. Use the spellbook (K) to rearrange it.', 'sys');
       EB.audio.ding(); this.rebuildHotbar(); this.renderGems(); this.renderTrainer(); this.save();
+    }
+
+    // ---------- v7: bank ----------
+    renderBank() {
+      const pl = this.player, mk = (grid, arr, fn) => {
+        const g = $(grid); g.innerHTML = '';
+        arr.forEach((item, i) => {
+          const el = document.createElement('div'); el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+          el.innerHTML = ui.slotHTML(item);
+          if (item) { el.onclick = () => fn(i); ui.tooltipFor(el, () => ui.itemTip(item.id)); }
+          g.appendChild(el);
+        });
+      };
+      $('bankTitle').firstChild.textContent = `${this.banker ? this.banker.name : 'Bank'} - vault coin: ${U.coinStr(pl.bankCoins)} `;
+      mk('bankGrid', pl.bank, (i) => this.bankWithdraw(i));
+      mk('bankBag', pl.inv, (i) => this.bankDeposit(i));
+    }
+    bankDeposit(i) {
+      const pl = this.player, it = pl.inv[i]; if (!it) return false;
+      const I = ITEMS[it.id];
+      if (I.quest) { this.log('The Vaultkeeper refuses to store quest items. "Too much paperwork."', 'sys'); return false; }
+      let slot = I.stack ? pl.bank.findIndex((s) => s && s.id === it.id) : -1;
+      if (slot >= 0) pl.bank[slot].count += it.count;
+      else { slot = pl.bank.indexOf(null); if (slot < 0) { this.log('Your vault is full!', 'sys'); return false; } pl.bank[slot] = { id: it.id, count: it.count }; }
+      pl.inv[i] = null;
+      this.log(`You deposit ${it.count > 1 ? it.count + ' ' : 'a '}${I.name} in your vault.`, 'loot');
+      EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
+      return true;
+    }
+    bankWithdraw(i) {
+      const pl = this.player, it = pl.bank[i]; if (!it) return false;
+      if (!this.addItem(it.id, it.count)) return false;
+      pl.bank[i] = null;
+      this.log(`You withdraw ${it.count > 1 ? it.count + ' ' : 'a '}${ITEMS[it.id].name} from your vault.`, 'loot');
+      EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
+      return true;
+    }
+    bankCoin(dep) {
+      const pl = this.player;
+      if (dep) { if (!pl.coins) return; pl.bankCoins += pl.coins; this.log(`You deposit ${U.coinStr(pl.coins)}.`, 'loot'); pl.coins = 0; }
+      else { if (!pl.bankCoins) return; pl.coins += pl.bankCoins; this.log(`You withdraw ${U.coinStr(pl.bankCoins)}.`, 'loot'); pl.bankCoins = 0; }
+      EB.audio.loot(); this.renderBank(); this.save();
     }
 
     // ---------- group / mercenaries / pets ----------
@@ -6576,7 +7427,11 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       for (const c of this.pcorpses) dot(c, '#ffcc33', 2);
       for (const m of this.mercs) dot(m, '#50ff50', 1.8);
       ctx.strokeStyle = '#9fe0ff'; ctx.lineWidth = 2;
-      for (const zl of this.world.zoneLines) { ctx.beginPath(); ctx.moveTo(zl.x0, zl.at); ctx.lineTo(zl.x1, zl.at); ctx.stroke(); }
+      for (const zl of this.world.zoneLines) {
+        ctx.strokeStyle = zl.portal ? '#d080ff' : '#9fe0ff'; ctx.beginPath();
+        if (zl.axis === 'x') { ctx.moveTo(zl.at, zl.z0); ctx.lineTo(zl.at, zl.z1); } else { ctx.moveTo(zl.x0, zl.at); ctx.lineTo(zl.x1, zl.at); }
+        ctx.stroke();
+      }
       ctx.restore();
       const f = pl.forward();
       ctx.save(); ctx.translate(S / 2, S / 2); ctx.rotate(Math.atan2(-f.x, f.z) + Math.PI);
@@ -6609,7 +7464,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
 
     // ---------- building ----------
+    noBuildHere() { const zi = D_ZONES[this.world.zoneId]; if (zi && zi.safe) { this.throttled('nobuild', 2, 'The Merchants Guild forbids renovations in the Bazaar.', 'sys'); return true; } return false; }
     breakBlock() {
+      if (this.noBuildHere()) return;
       const e = this.eyePos(), d = this.camDir();
       const h = this.world.raycast(e.x, e.y, e.z, d.x, d.y, d.z, 6);
       if (!h) return;
@@ -6618,6 +7475,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.world.setBlock(h.x, h.y, h.z, B.AIR); EB.audio.block();
     }
     placeBlock() {
+      if (this.noBuildHere()) return;
       const e = this.eyePos(), d = this.camDir();
       const h = this.world.raycast(e.x, e.y, e.z, d.x, d.y, d.z, 6);
       if (!h) return;
@@ -6826,7 +7684,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     updateLights() {
       const pl = this.player, w = this.world, lights = this.lampLights; if (!lights || !w.lanterns || !this.lightsOn) { this.litCount = 0; return; }
       const night = this.nightF != null ? this.nightF : 0.5;
-      const underground = this.lastZone === 'The Sunken Crypt' || this.lastZone === 'Tomb of Ankhet-Ra' || this.lastZone === 'The Great Pyramid' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
+      const underground = EB.WORLD.DUNGEON_ZONES.has(this.lastZone) || this.lastZone === 'The Great Pyramid' || pl.pos.y < w.surfaceY(pl.pos.x, pl.pos.z) - 3;
       const near = [];
       for (const p of w.lanterns.values()) {
         const dx = p.x + 0.5 - pl.pos.x, dz = p.z + 0.5 - pl.pos.z, dy = p.y - pl.pos.y;
@@ -6973,7 +7831,10 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       for (const e of this.mobs) { const dc = fit(e); e.plate.visible = dc > 2.2 && e.pos.distanceTo(pl.pos) < (e === this.target ? 80 : 38); }
       for (const e of this.npcs) { const dc = fit(e); e.plate.visible = dc > 2.2 && e.pos.distanceTo(pl.pos) < 30; }
       for (const e of this.mercs) e.plate.visible = fit(e) > 2.2;
-      for (const zm of this.zoneMeshes) zm.material.opacity = 0.2 + 0.12 * Math.sin(this.time * 3);
+      for (const zm of this.zoneMeshes) {
+        if (zm.userData.portal) { zm.rotation.z += dt * (zm.userData.portal === 1 ? 1.4 : -0.9); zm.material.opacity = (zm.userData.portal === 1 ? 0.75 : 0.45) + 0.15 * Math.sin(this.time * 4); }
+        else zm.material.opacity = 0.2 + 0.12 * Math.sin(this.time * 3);
+      }
       if (this.target) { const t = this.target; this.ring.visible = true; this.ring.position.set(t.pos.x, t.pos.y + 0.06, t.pos.z); const pu = 1 + Math.sin(this.time * 5) * 0.06; this.ring.scale.setScalar(Math.max(0.8, t.hw * 2.2) * pu * (t.model && t.model.width ? Math.max(0.6, t.model.width / 0.6) * 0.5 + 0.5 : 1)); this.ring.rotation.z += dt * 0.8; this.ring.material.opacity = 0.75 + Math.sin(this.time * 5) * 0.2; }
       this.world.updateChunks(this.camera.position.x, this.camera.position.z, 7, 2);
       this.hudT -= dt;
@@ -6984,7 +7845,10 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         this.drawMinimap();
         if (this.questDirty || (this.questT = (this.questT || 0) + 1) % 10 === 0) { this.questDirty = false; this.renderQuests(); }
         this.updateLights();
-        EB.audio.setMood(this.world.zoneId === 'frostfang' ? 'frost' : this.world.zoneId === 'desert' ? (this.lastZone === 'Tomb of Ankhet-Ra' ? 'tomb' : 'desert') : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
+        const zid = this.world.zoneId;
+        EB.audio.setMood(zid === 'frostfang' ? 'frost' : zid === 'desert' ? (this.lastZone === 'Tomb of Ankhet-Ra' ? 'tomb' : 'desert')
+          : zid === 'swamp' ? (this.lastZone === 'Sunken Temple of Glubb' ? 'bog' : 'swamp') : zid === 'caldera' ? (this.lastZone === 'The Molten Forge' ? 'forge' : 'volcano') : zid === 'bazaar' ? 'bazaar'
+          : this.lastZone === 'The Sunken Crypt' ? 'crypt' : this.lastZone === 'Everblock Keep' ? 'town' : 'wild');
         const z = this.world.zoneAt(pl.pos.x, pl.pos.y, pl.pos.z);
         if (z !== this.lastZone) { if (this.lastZone) { this.log(`You wander into ${z}.`, 'sys'); ui.center(z, null, 2.2); } this.lastZone = z; }
       }
