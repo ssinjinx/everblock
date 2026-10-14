@@ -8,6 +8,19 @@ A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999
 
 Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Solo progress saves to localStorage. Multiplayer needs an Everblock server ([SERVER.md](SERVER.md)).
 
+## New in v7: the Mire, the Caldera and the Bizarre Bazaar
+- **Level cap 40** with a steeper XP curve past 25, plus 4-7 new abilities per class from level 26 to 40 (Belly Flop, Meteor Shower Thoughts, Early Retirement Package, Doom Butler, Mega Mesmer...) and three new necro pets (Gary From Accounting, Lord Lichtenstein, Jeeves the Dreadful).
+- **The Soggybottom Mire (25-32)** west of the desert: Mirewatch Landing camp, a froglodyte village, bog trolls, wisps, named Gnashjaw/Ribbitus/Soggs, and the **Sunken Temple of Glubb** with boss Hierophant Glubb the Bloated.
+- **The Cinderpeak Caldera (32-40)** east of the desert: Ashguard Camp, a lava crater, golem field, cult camp, named Scorchmaw/Kindleton/Brasskull, and **The Molten Forge** with boss Pyrrhax the Unquenched.
+- New blocks (mud, mangrove, moss, glowcaps, basalt, ash, magma, obsidian, portal, marble, awnings), new music moods, two new loot tiers and four quests (Frog Legs, The Bloated Idol, Cult Pins, The Unquenched).
+- **The Bizarre Bazaar:** every town (Everblock Keep, Hollis Outpost, Sunward Outpost, Mirewatch Landing, Ashguard Camp) has a glowing portal. Walk in or press E to get there. Inside you'll find return portals to every town, a trainer for each class, weapon/armor/supply vendors and a general buyer, Soul-Notary Bartleby (binding), Sellsword Agent Rook (mercenaries) and **Vaultkeeper Coinsworth**, who runs a 48-slot item and coin vault. It is a safe zone: no monsters and no building. Online, the Bazaar is shared and the vault is saved on the server.
+
+| | |
+|---|---|
+| ![the Bizarre Bazaar](screenshots/v7-bazaar.png) | ![a town portal](screenshots/v7-portal.png) |
+| ![the Soggybottom Mire](screenshots/v7-swamp.png) | ![the Cinderpeak Caldera](screenshots/v7-caldera.png) |
+| ![Hierophant Glubb](screenshots/v7-boss-glubb.png) | ![Pyrrhax the Unquenched](screenshots/v7-boss-pyrrhax.png) |
+
 ## New in v6b: the Great Renaming
 Everblock is a love letter to 1999-era MMOs, but it should have its own names. Every spell, item, mob, NPC title, faction tier and chat message that was copied word for word from EverQuest now has an affectionate parody. *Lay on Hands* is now **Aggressive High-Five**, *Gate* is **Panic Button**, *Spirit of Wolf* is **Zoomies of the Wolf**, and *Fippy Darkpaw* is **Flippy Darkpaws, Gate Enthusiast**. Consider tells you a mob "looks like a bad decision", and leveling up says **DING! You are now level X. Your mom would be proud.** Tooltips still explain exactly what each spell does. Internal ids did not change, so every solo and server save loads as before. The full old → new list is in **[RENAMES.md](RENAMES.md)**.
 
@@ -158,4 +171,4 @@ cd source
 python3 build.py     # inlines src/*.js, src/style.css and vendor/three.min.js into ../index.html (and source/dist/everblock.html)
 sh pwa/stage.sh      # copies manifest.webmanifest, icons/ and the build-stamped sw.js next to ../index.html
 ```
-For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`). Multiplayer: `node test_v6.js` (starts a throwaway server and plays it with two desktop browsers and one phone), plus `cd server && npm install && npm test` (protocol test with bot clients) and `node test/load.js` (load test).
+For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`). Multiplayer: `node test_v7.js` (v7 zones, portals, Bazaar, bank), `node test_v6.js` (starts a throwaway server and plays it with two desktop browsers and one phone), plus `cd server && npm install && npm test` (protocol test with bot clients) and `node test/load.js` (load test).

@@ -154,3 +154,14 @@ npm start                 # serves http://<host>:8080/ (PORT in .env)
 - **Clients send intentions** (move, attack damage, taunts, crowd control, loot, block edits, chat). The server checks them: movement speed and position, damage caps, attack range and rate, loot rights, build permission and chat rate limits. Bad input is ignored or corrected, and repeated abuse disconnects the player. Passwords are hashed with scrypt, and logins use random session tokens.
 - **Shared:** monsters, kills, XP (with an old-school group split), loot, corpses, block edits, chat and groups. Heals and buffs can be cast on group members. Each player's mercenaries and pets fight alongside them and are visible to others.
 - **Limits (it's a hobby server, not a hardened MMO):** combat math still runs in the player's browser and is capped and sanity-checked rather than fully simulated server-side. Quests, merchants and inventory are kept per character with validation, but they aren't fully server-simulated. There is no trading between players. Each zone runs on one Node process (one server = one world). Clocks and positions are smoothed, so very high latency (>400 ms) looks jumpy.
+
+## Updating to v7 (zones, Bizarre Bazaar, bank)
+
+Saves are compatible. Old characters simply get an empty vault. On the VPS:
+
+```bash
+cd ~/everblock && git pull
+cd server && npm ci --omit=dev
+sudo systemctl restart everblock      # or: docker compose up -d --build
+```
+The Bazaar is a shared, server-side safe zone with no spawns, and block edits there are refused. Each character's vault (48 slots plus coin) is saved with that character on the server.

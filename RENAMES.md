@@ -250,3 +250,14 @@ Merchants still refuse to trade at Hostile or worse, and faction mobs still atta
 - **Slash commands** keep their classic spelling so muscle memory and macros keep working. Only the text they print changed.
 - **The README** still says the game "plays like EverQuest Classic (1999)". That is credit to the inspiration, not a borrowed name.
 - **Code comments and internal ids** (`fippy`, `lay_hands`, `spirit_of_wolf`, ...) are invisible to players and stay as they are, for save compatibility.
+
+## v7 additions (all original parody names, never EverQuest's)
+
+- **Zones:** The Soggybottom Mire (Mirewatch Landing, Sunken Temple of Glubb), The Cinderpeak Caldera (Ashguard Camp, The Molten Forge), The Bizarre Bazaar. The Bazaar is a hub *inspired by* the community Hero's Journey mod, but none of its names are used.
+- **Bosses and named mobs:** Hierophant Glubb the Bloated, Pyrrhax the Unquenched, Gnashjaw, Ribbitus, Soggs, Scorchmaw, Kindleton, Brasskull.
+- **Bazaar NPCs:**
+  - trainers: Coach Brawnhilda, Brother Fixwell, Magus Kablooey, Shady Pete, Robin Hoodie, Sir Polishington, Grandmother Howl, Mortimer Gloom, Madame Swirl;
+  - vendors: Blade Barker Bo, Clanky Sue, Snackmonger Pim, Honest Abe;
+  - services: Vaultkeeper Coinsworth (bank), Soul-Notary Bartleby (binding), Sellsword Agent Rook (mercenaries), Bazaar Crier Mumbles.
+- **Spells 26-40 (examples):** Belly Flop, Whirling Dervish Tantrum, Complete Overhaul, Holy Clap Back, Aegis of Mild Concern, Sizzle Reel, Glacial Paperwork, Meteor Shower Thoughts, Pocket Sand, Early Retirement Package, Pew Pew Pew, Hawkeye, Holy Elbow Drop, Righteous Rage Yodel, Polar Vortex, Dial-Up, Plague Rat Supreme, Vampiric Bear Hug, Pyroclastic Pimple, Doom Butler, Hypno-Lullaby, Disco Inferno Flash, Mind Melt, Mega Mesmer.
+- **Pets:** Gary From Accounting, Lord Lichtenstein, Jeeves the Dreadful.
