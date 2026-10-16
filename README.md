@@ -8,6 +8,21 @@ A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999
 
 Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Solo progress saves to localStorage. Multiplayer needs an Everblock server ([SERVER.md](SERVER.md)).
 
+## New in v8: the gear pass
+- **Item quality tiers**: Common, Uncommon, Rare, Epic and Legendary. Each tier has its own color in tooltips, loot messages, inventory borders and the merchant sell list. Legendary slots pulse.
+- **Weapon procs** with a chance on every hit, scaled by weapon delay: frost (damage plus slow), fire, poison and disease DoTs, lifetaps, a big fire nuke with a burn, and lightning that arcs to nearby foes already fighting you (Totally Safe Lightning Rod). Each proc has a particle burst, bolt and flash.
+- **Click effects** (heals, haste, mana, buffs, teleport to bind) with per-item cooldowns. Equipping a clicky puts it on your hotbar, and inventory slots get a ⚡ activate button, so they work in phone mode. Example: Gloves of Unreasonable Haste, Pocket Hearthrock (Slightly Used).
+- **Focus effects**: Spell Damage, Healing, Mana Cost Reduction and Spell Haste. The best of each kind counts; they don't stack.
+- **Four armor sets** with 2-piece and 4-piece bonuses, shown in the tooltip with the pieces you're wearing: Frostfang Raider's Kit, Bargain-Bin Battlegear, Soggy Bottom Ensemble and Regalia of the Ashen Hype.
+- **Random suffix affixes** on about 25% of equipment drops, such as *of the Bear Who Skipped Leg Day*, *of the Owl (Who?)* and *of the Falcon Punch*. They scale with item level and are saved with the item. Old saves load unchanged.
+- **Visuals**: enchanted weapons glow in their proc or quality color and leave particle trails while swinging. Legendary armor gives off a golden aura. In phone or low-graphics mode the particle counts drop.
+- 8 new items, including Everflame, Blade of Mild Inconvenience (legendary, drops from Pyrrhax) and Dagger of Borrowed Time. Existing boss drops gained effects.
+
+| | |
+|---|---|
+| ![glowing weapon trail](screenshots/v8-glowing-weapon.png) | ![tooltip with quality and set bonus](screenshots/v8-tooltip.png) |
+| ![a weapon proc](screenshots/v8-proc.png) | ![legendary aura](screenshots/v8-legendary-aura.png) |
+
 ## New in v7: the Mire, the Caldera and the Bizarre Bazaar
 - **Level cap 40** with a steeper XP curve past 25, plus 4-7 new abilities per class from level 26 to 40 (Belly Flop, Meteor Shower Thoughts, Early Retirement Package, Doom Butler, Mega Mesmer...) and three new necro pets (Gary From Accounting, Lord Lichtenstein, Jeeves the Dreadful).
 - **The Soggybottom Mire (25-32)** west of the desert: Mirewatch Landing camp, a froglodyte village, bog trolls, wisps, named Gnashjaw/Ribbitus/Soggs, and the **Sunken Temple of Glubb** with boss Hierophant Glubb the Bloated.
@@ -171,4 +186,4 @@ cd source
 python3 build.py     # inlines src/*.js, src/style.css and vendor/three.min.js into ../index.html (and source/dist/everblock.html)
 sh pwa/stage.sh      # copies manifest.webmanifest, icons/ and the build-stamped sw.js next to ../index.html
 ```
-For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`). Multiplayer: `node test_v7.js` (v7 zones, portals, Bazaar, bank), `node test_v6.js` (starts a throwaway server and plays it with two desktop browsers and one phone), plus `cd server && npm install && npm test` (protocol test with bot clients) and `node test/load.js` (load test).
+For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`). Gear pass: `node test_v8.js` (procs, clickies, focus, sets, affixes, save compatibility) and `cd server && node test/v8.js`. Multiplayer: `node test_v7.js` (v7 zones, portals, Bazaar, bank), `node test_v6.js` (starts a throwaway server and plays it with two desktop browsers and one phone), plus `cd server && npm install && npm test` (protocol test with bot clients) and `node test/load.js` (load test).

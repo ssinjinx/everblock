@@ -437,6 +437,18 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
 #groupWin .gpc .gname { color: #9fd8ff; } #groupWin .gl { color: #f3c85a; } #groupWin .gsep { border-top: 1px solid #5a4a30; margin: 3px 0; }
 .m.ooc { color: #60e0a0; } .m.group { color: #70c8ff; } .m.announce { color: #ffb040; font-weight: bold; }
 
+/* ---- v8: item quality tiers, click effects, set bonuses ---- */
+.islot.q-uncommon { border-color: #3a8a3a; } .islot.q-uncommon .nm { color: #5ee05e; }
+.islot.q-rare { border-color: #2f6fc0; box-shadow: inset 0 0 6px rgba(79,163,255,0.35); } .islot.q-rare .nm { color: #4fa3ff; }
+.islot.q-epic { border-color: #9050d0; box-shadow: inset 0 0 8px rgba(192,112,255,0.45); } .islot.q-epic .nm { color: #c070ff; }
+.islot.q-legendary { border-color: #ff9a1f; box-shadow: inset 0 0 10px rgba(255,154,31,0.55), 0 0 6px rgba(255,154,31,0.5); animation: legPulse 2.4s ease-in-out infinite; } .islot.q-legendary .nm { color: #ff9a1f; }
+@keyframes legPulse { 50% { box-shadow: inset 0 0 14px rgba(255,154,31,0.8), 0 0 10px rgba(255,154,31,0.8); } }
+.clickBtn { position: absolute; left: 2px; bottom: 2px; width: 20px; height: 20px; line-height: 20px; font-size: 13px; background: rgba(40,80,140,0.85); border: 1px solid #8fd0ff; border-radius: 4px; cursor: pointer; z-index: 2; }
+.clickBtn:hover { background: rgba(70,120,200,0.95); }
+#tooltip { max-width: 300px; }
+#tooltip .setb { margin: 4px 0; padding-top: 3px; border-top: 1px solid #4a3e28; }
+.slot.clicky { border-width: 2px; }
+
 </style>
 </head>
 <body>
@@ -1452,6 +1464,208 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
 
 </script>
 <script>
+// Everblock v8 "gear pass": item quality tiers, weapon procs, click effects, focus effects, armor sets and random
+// suffix affixes. Shared by the browser game and the multiplayer server (loaded right after data.js).
+// Item instances stay { id, count } and may carry an optional sfx (affix key); old saves simply have none.
+(function () {
+  const EB = (typeof window !== 'undefined' ? window : globalThis).EB;
+  const D = EB.data, ITEMS = D.ITEMS, MOBS = D.MOBS;
+
+  // ---------- quality tiers ----------
+  const QUALITY = {
+    common:    { n: 0, label: 'Common', color: '#e8e0cc' },
+    uncommon:  { n: 1, label: 'Uncommon', color: '#5ee05e' },
+    rare:      { n: 2, label: 'Rare', color: '#4fa3ff' },
+    epic:      { n: 3, label: 'Epic', color: '#c070ff' },
+    legendary: { n: 4, label: 'Legendary', color: '#ff9a1f' },
+  };
+  const QORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+  const QHEX = { common: 0xe8e0cc, uncommon: 0x5ee05e, rare: 0x4fa3ff, epic: 0xc070ff, legendary: 0xff9a1f };
+
+  // ---------- new items (ids are new, so old saves are untouched) ----------
+  Object.assign(ITEMS, {
+    zap_rod:         { name: 'Totally Safe Lightning Rod', slot: 'primary', dmg: 30, delay: 3.0, verb: 'crush', stats: { STR: 6, DEX: 8, INT: 8 }, hp: 80, value: 26000, icon: '⚡', rare: true },
+    borrowed_dagger: { name: 'Dagger of Borrowed Time', slot: 'primary', dmg: 22, delay: 2.0, verb: 'pierce', stats: { DEX: 8, AGI: 6 }, hp: 60, value: 18000, icon: '🗡', rare: true },
+    everflame:       { name: 'Everflame, Blade of Mild Inconvenience', slot: 'primary', dmg: 40, delay: 2.8, verb: 'slash', stats: { STR: 15, DEX: 12, STA: 10 }, hp: 180, value: 90000, icon: '⚔', rare: true },
+    haste_gloves:    { name: 'Gloves of Unreasonable Haste', slot: 'hands', ac: 10, stats: { DEX: 8, AGI: 8 }, value: 15000, icon: '🧤', rare: true },
+    ashen_handwraps: { name: 'Ashen Cult Handwraps', slot: 'hands', ac: 8, stats: { INT: 8, WIS: 8 }, mana: 60, value: 16000, icon: '🧤' },
+    mana_rock:       { name: 'Rock of Questionable Mana', slot: 'secondary', stats: { INT: 6, WIS: 6 }, mana: 80, value: 14000, icon: '🪨', rare: true },
+    frost_mitts:     { name: 'Frostfang Raider Mitts', slot: 'hands', ac: 6, stats: { STR: 3, STA: 3 }, value: 1100, icon: '🧤' },
+    pocket_hearth:   { name: 'Pocket Hearthrock (Slightly Used)', value: 2500, icon: '🪨' },
+  });
+  const addLoot = (mob, id, ch) => { if (MOBS[mob]) (MOBS[mob].loot = MOBS[mob].loot || []).push([id, ch]); };
+  addLoot('brasskull', 'zap_rod', 0.3); addLoot('magma_giant', 'zap_rod', 0.02); addLoot('obsidian_golem', 'zap_rod', 0.02);
+  addLoot('soggs', 'borrowed_dagger', 0.35); addLoot('drowned_zealot', 'borrowed_dagger', 0.02);
+  addLoot('pyrrhax', 'everflame', 0.3);
+  addLoot('scorchmaw', 'haste_gloves', 0.35); addLoot('cinder_hound', 'haste_gloves', 0.015);
+  addLoot('ash_pyro', 'ashen_handwraps', 0.05); addLoot('ash_zealot', 'ashen_handwraps', 0.04); addLoot('kindleton', 'ashen_handwraps', 0.4);
+  addLoot('frog_priest', 'mana_rock', 0.03); addLoot('swamp_wisp', 'mana_rock', 0.03); addLoot('ribbitus', 'mana_rock', 0.3);
+  addLoot('orc_grunt', 'frost_mitts', 0.04); addLoot('grimtusk', 'frost_mitts', 0.4);
+  if (D.STOCKS.bz_supplies && !D.STOCKS.bz_supplies.includes('pocket_hearth')) D.STOCKS.bz_supplies.push('pocket_hearth');
+
+  // ---------- weapon procs ----------
+  // kind: nuke (direct damage), dot (damage over time), tap (damage + heal you), frost (damage + slow), chain (lightning jumps to nearby foes)
+  const PROCS = {
+    soul_siphon:  { name: 'Soul Siphon', kind: 'tap', school: 'life', dmg: [18, 30], ppm: 4, color: 0x55ff99, desc: 'drains 18-30 HP from the target and gives it to you' },
+    frostbite:    { name: 'Frostbite', kind: 'frost', school: 'cold', dmg: [20, 34], ppm: 4, slow: 8, color: 0x9ef0ff, desc: 'deals 20-34 cold damage and slows the target for 8s' },
+    chilly:       { name: 'Chilly Reception', kind: 'frost', school: 'cold', dmg: [10, 18], ppm: 4, slow: 6, color: 0x9ef0ff, desc: 'deals 10-18 cold damage and slows the target for 6s' },
+    venom_drip:   { name: 'Venom Drip', kind: 'dot', school: 'poison', dmg: [6, 10], dur: 18, ppm: 5, color: 0x90ff40, desc: 'poisons the target for 6-10 damage every 3s (18s)' },
+    solar_flare:  { name: 'Solar Flare', kind: 'dot', school: 'fire', dmg: [14, 20], dur: 18, ppm: 4, color: 0xffc040, desc: 'sets the target ablaze for 14-20 damage every 3s (18s)' },
+    sandblast:    { name: 'Sandblast', kind: 'nuke', school: 'magic', dmg: [45, 70], ppm: 3, color: 0xe8d090, desc: 'blasts the target for 45-70 damage' },
+    bog_rot:      { name: 'Bog Rot', kind: 'dot', school: 'disease', dmg: [20, 28], dur: 18, ppm: 4, color: 0x90d040, desc: 'rots the target for 20-28 damage every 3s (18s)' },
+    hammer_time:  { name: 'Hammer Time', kind: 'nuke', school: 'fire', dmg: [80, 120], ppm: 3, color: 0xff8030, desc: 'can\'t touch this: 80-120 fire damage' },
+    unquenched:   { name: 'Unquenchable Flame', kind: 'dot', school: 'fire', dmg: [30, 42], dur: 18, ppm: 4, color: 0xff6020, desc: 'burns the target for 30-42 damage every 3s (18s)' },
+    chain_zap:    { name: 'Chain Zap (Probably Grounded)', kind: 'chain', school: 'magic', dmg: [60, 90], ppm: 4, jumps: 2, color: 0x80c0ff, desc: 'zaps the target for 60-90 damage and arcs to 2 nearby foes that are already fighting you' },
+    borrowed:     { name: 'Borrowed Vitality', kind: 'tap', school: 'life', dmg: [45, 65], ppm: 5, color: 0xff4070, desc: 'drains 45-65 HP from the target and gives it to you' },
+    everburn:     { name: 'Everburn', kind: 'nuke', school: 'fire', dmg: [140, 200], ppm: 4, dot: [25, 35], dur: 12, color: 0xff7a1a, desc: 'scorches the target for 140-200 damage, then 25-35 every 3s (12s)' },
+  };
+  // ---------- click effects (usable from inventory or hotbar; cooldowns per item) ----------
+  const CLICKS = {
+    warden_recall:  { name: "Warden's Recall", kind: 'port', cd: 600, desc: 'Teleports you to your bind point.' },
+    hearth:         { name: 'Hearth, Sweet Hearth', kind: 'port', cd: 900, desc: 'Teleports you to your bind point. Smells faintly of somebody else\'s pocket.' },
+    tusk_warcry:    { name: 'Warcry of the Tusk', kind: 'buff', cd: 300, dur: 60, buff: { dmgPct: 15, ac: 10 }, color: 0xff8040, desc: '+15% melee damage and +10 AC for 60s.' },
+    zoomies:        { name: 'The Zoomies', kind: 'buff', cd: 300, dur: 60, buff: { hastePct: 25 }, color: 0xfff070, desc: '25% attack haste for 60s.' },
+    unreasonable:   { name: 'Unreasonable Haste', kind: 'buff', cd: 180, dur: 45, buff: { hastePct: 30 }, color: 0xfff070, desc: '30% attack haste for 45s.' },
+    eternal_bandaid:{ name: 'Eternal Band-Aid', kind: 'heal', cd: 120, amt: 300, desc: 'Heals you for 300 HP.' },
+    stretch_break:  { name: 'Stretch Break', kind: 'heal', cd: 180, amt: 200, desc: 'Heals you for 200 HP.' },
+    good_boy:       { name: 'Who\'s a Good Boy', kind: 'buff', cd: 600, dur: 300, buff: { ac: 6, hp: 20 }, color: 0xd8b050, desc: '+6 AC and +20 HP for 5 minutes. Yes you are.' },
+    fervor:         { name: 'Flamebreaker Fervor', kind: 'buff', cd: 300, dur: 45, buff: { dmgPct: 20, hastePct: 20 }, color: 0xff6020, desc: '+20% melee damage and 20% attack haste for 45s.' },
+    mana_burp:      { name: 'Questionable Mana Burp', kind: 'mana', cd: 240, amt: 200, desc: 'Restores 200 mana. Do not ask where it came from.' },
+  };
+  const FOCUS_LABEL = { spellDmg: 'Spell Damage', healPct: 'Healing', manaSave: 'Mana Cost Reduction', castSpeed: 'Spell Haste' };
+  const SETS = {
+    frostfang: { name: "Frostfang Raider's Kit", items: ['orc_chain', 'snow_boots', 'giant_helm', 'yeti_cloak', 'frost_mitts'],
+      bonus: { 2: { ac: 5, hp: 25 }, 4: { stats: { STR: 5, STA: 5 }, dmgPct: 5 } } },
+    bazaar: { name: 'Bargain-Bin Battlegear', items: ['bazaar_helm', 'bazaar_breastplate', 'bazaar_gauntlets', 'bazaar_greaves', 'bazaar_boots', 'bazaar_cloak', 'bazaar_shield'],
+      bonus: { 2: { ac: 8, hp: 40 }, 4: { stats: { STR: 6, STA: 6, AGI: 6 }, dmgPct: 5 } } },
+    soggy: { name: 'Soggy Bottom Ensemble', items: ['gatorhide_boots', 'troll_vest', 'drowned_wraps', 'mire_waders', 'ribbitus_crown'],
+      bonus: { 2: { hp: 60, ac: 6 }, 4: { ac: 15, hp: 80, stats: { STA: 8 }, hastePct: 5 } } },
+    ashen: { name: 'Regalia of the Ashen Hype', items: ['cultist_robe', 'kindleton_mantle', 'caldera_crown', 'ashen_handwraps', 'emberstep_boots'],
+      bonus: { 2: { mana: 80, focus: { manaSave: 10 } }, 4: { stats: { INT: 8, WIS: 8 }, focus: { spellDmg: 15, castSpeed: 10 } } } },
+  };
+  // ---------- assignments to existing items ----------
+  const ASSIGN = {
+    grimbone_blade: { proc: 'soul_siphon', q: 'epic' }, frost_greatsword: { proc: 'frostbite', q: 'epic' }, icicle_dagger: { proc: 'chilly' }, fang_warblade: { proc: 'chilly' },
+    venom_stinger: { proc: 'venom_drip' }, sunforged_khopesh: { proc: 'solar_flare', q: 'epic' }, dune_maul: { proc: 'sandblast' }, mire_greatsword: { proc: 'bog_rot' },
+    brasskull_hammer: { proc: 'hammer_time' }, unquenched_blade: { proc: 'unquenched', q: 'legendary' }, zap_rod: { proc: 'chain_zap', q: 'epic' },
+    borrowed_dagger: { proc: 'borrowed', q: 'epic' }, everflame: { proc: 'everburn', q: 'legendary' },
+    warden_signet: { click: 'warden_recall' }, sunward_signet: { click: 'warden_recall' }, pocket_hearth: { click: 'hearth', q: 'uncommon' },
+    tusk_necklace: { click: 'tusk_warcry' }, whitefang_collar: { click: 'zoomies' }, haste_gloves: { click: 'unreasonable', q: 'epic' },
+    ankh_amulet: { click: 'eternal_bandaid', focus: { healPct: 20 } }, bloated_girdle: { click: 'stretch_break' }, fippy_collar: { click: 'good_boy' },
+    caldera_signet: { click: 'fervor', q: 'legendary' }, mana_rock: { click: 'mana_burp', focus: { manaSave: 5 } },
+    crypt_ring: { focus: { manaSave: 5 } }, undying_amulet: { focus: { healPct: 10 } }, pharaoh_crook: { focus: { spellDmg: 15 } }, frozen_heart: { focus: { castSpeed: 10 } },
+    djinn_ring: { focus: { manaSave: 10 } }, mummy_mask: { focus: { spellDmg: 10 } }, soggs_censer: { focus: { healPct: 25 } },
+    glubb_scepter: { focus: { spellDmg: 25, castSpeed: 15 }, q: 'legendary' }, kindleton_mantle: { focus: { manaSave: 15 } }, caldera_crown: { focus: { spellDmg: 20, manaSave: 10 }, q: 'legendary' },
+    molten_plate: { q: 'legendary' }, oak_staff: { focus: { castSpeed: 5 } }, shaman_totem: { focus: { healPct: 10 } },
+  };
+  for (const id in ASSIGN) if (ITEMS[id]) Object.assign(ITEMS[id], ASSIGN[id]);
+  for (const s in SETS) for (const id of SETS[s].items) if (ITEMS[id]) ITEMS[id].set = s;
+  for (const id in ITEMS) {
+    const it = ITEMS[id];
+    if (!it.q) it.q = !it.slot ? 'common' : it.rare ? (it.value >= 30000 ? 'epic' : 'rare') : it.value >= 1000 || it.set ? 'uncommon' : 'common';
+  }
+
+  // ---------- suffix affixes (rolled on drops, stored as inst.sfx) ----------
+  const AFFIXES = {
+    bear:   { name: 'of the Bear Who Skipped Leg Day', stats: { STR: 1, STA: 1 } },
+    owl:    { name: 'of the Owl (Who?)', stats: { INT: 1, WIS: 1 } },
+    monkey: { name: 'of Monkey Business', stats: { AGI: 1, DEX: 1 } },
+    falcon: { name: 'of the Falcon Punch', stats: { STR: 1, DEX: 1 } },
+    fox:    { name: 'of the Smooth-Talking Fox', stats: { CHA: 2, AGI: 1 } },
+    whale:  { name: 'of the Whale', hp: 6 },
+    squid:  { name: 'of the Squid Ink', mana: 6 },
+    turtle: { name: 'of the Turtle in a Hurry', ac: 1, stats: { AGI: 1 } },
+    tank:   { name: 'of the Overconfident Tank', hp: 4, stats: { STA: 1 } },
+    sage:   { name: 'of the Sage Who Read the Manual', mana: 4, stats: { WIS: 1 } },
+  };
+  const AFFIX_KEYS = Object.keys(AFFIXES);
+  const TIER_MULT = [1, 2, 4, 6, 9];
+  function tierOf(it) { const v = it.value || 0; return v < 100 ? 0 : v < 1000 ? 1 : v < 5000 ? 2 : v < 20000 ? 3 : 4; }
+  function canAffix(it) { return !!(it && it.slot && !it.quest); }
+  function rollDrop(id, count) {
+    const it = ITEMS[id], o = { id, count: count || 1 };
+    if (canAffix(it) && Math.random() < (it.rare ? 0.35 : 0.25)) o.sfx = AFFIX_KEYS[Math.floor(Math.random() * AFFIX_KEYS.length)];
+    return o;
+  }
+  const cache = new Map();
+  // effective definition of an item instance (base item + affix); accepts an instance or a bare id
+  function def(inst) {
+    if (!inst) return null;
+    const id = typeof inst === 'string' ? inst : inst.id, sfx = typeof inst === 'string' ? null : inst.sfx, base = ITEMS[id];
+    if (!base) return null;
+    if (!sfx || !AFFIXES[sfx] || !canAffix(base)) return base;
+    const key = id + '|' + sfx; let d = cache.get(key);
+    if (d) return d;
+    const A = AFFIXES[sfx], m = TIER_MULT[tierOf(base)];
+    d = Object.assign({}, base, { name: base.name + ' ' + A.name, baseName: base.name, sfx, stats: Object.assign({}, base.stats || {}) });
+    if (A.stats) for (const k in A.stats) d.stats[k] = (d.stats[k] || 0) + A.stats[k] * m;
+    if (A.hp) d.hp = (d.hp || 0) + A.hp * m;
+    if (A.mana) d.mana = (d.mana || 0) + A.mana * m;
+    if (A.ac) d.ac = (d.ac || 0) + A.ac * m;
+    d.value = Math.round((base.value || 0) * 1.25);
+    if (QUALITY[d.q].n < 1) d.q = 'uncommon';
+    d.affixed = true;
+    cache.set(key, d); return d;
+  }
+  function quality(inst) { const d = def(inst); return (d && d.q) || 'common'; }
+  function qcolor(inst) { return QUALITY[quality(inst)].color; }
+  function copy(inst, count) { if (!inst) return null; const o = { id: inst.id, count: count != null ? count : inst.count || 1 }; if (inst.sfx && AFFIXES[inst.sfx]) o.sfx = inst.sfx; return o; }
+  function equipCopy(inst) { const o = { id: inst.id }; if (inst.sfx && AFFIXES[inst.sfx]) o.sfx = inst.sfx; return o; }
+
+  // totals for a worn equipment map: stats, hp/mana/ac, focus (best of each kind, no stacking), set bonuses, procs, clickies
+  const totCache = new Map();
+  function totals(equip) {
+    let key = '';
+    for (const sl in equip) { const e = equip[sl]; if (e) key += sl + ':' + e.id + (e.sfx ? '+' + e.sfx : '') + ';'; }
+    let T = totCache.get(key);
+    if (T) return T;
+    T = { stats: {}, hp: 0, mana: 0, ac: 0, dmgPct: 0, hastePct: 0, focus: {}, sets: [], procs: [], clicks: [], legendaryArmor: false };
+    const setN = {};
+    const addF = (f) => { for (const k in f) T.focus[k] = Math.max(T.focus[k] || 0, f[k]); };
+    for (const sl in equip) {
+      const it = def(equip[sl]); if (!it) continue;
+      if (it.stats) for (const k in it.stats) T.stats[k] = (T.stats[k] || 0) + it.stats[k];
+      T.hp += it.hp || 0; T.mana += it.mana || 0; T.ac += it.ac || 0;
+      if (it.focus) addF(it.focus);
+      if (it.set) setN[it.set] = (setN[it.set] || 0) + 1;
+      if (it.proc && sl === 'primary') T.procs.push(it.proc);
+      if (it.click) T.clicks.push(equip[sl].id);
+      if (it.q === 'legendary' && sl !== 'primary' && sl !== 'secondary') T.legendaryArmor = true;
+    }
+    for (const s in setN) {
+      const S = SETS[s], n = setN[s], act = [];
+      for (const need of Object.keys(S.bonus).map(Number).sort((a, b) => a - b)) {
+        if (n < need) continue;
+        const B = S.bonus[need]; act.push(need);
+        if (B.stats) for (const k in B.stats) T.stats[k] = (T.stats[k] || 0) + B.stats[k];
+        T.hp += B.hp || 0; T.mana += B.mana || 0; T.ac += B.ac || 0; T.dmgPct += B.dmgPct || 0; T.hastePct += B.hastePct || 0;
+        if (B.focus) addF(B.focus);
+      }
+      T.sets.push({ id: s, n, active: act });
+    }
+    if (totCache.size > 500) totCache.clear();
+    totCache.set(key, T); return T;
+  }
+  function procChance(p, delay) { return Math.min(0.5, (PROCS[p].ppm * (delay || 3)) / 60); }
+  function glowHex(id) {
+    const it = ITEMS[id]; if (!it) return null;
+    if (it.proc) return PROCS[it.proc].color;
+    if (it.q === 'legendary' || it.q === 'epic') return QHEX[it.q];
+    return null;
+  }
+  function bonusText(B) {
+    const p = [];
+    if (B.stats) for (const k in B.stats) p.push(`${k} +${B.stats[k]}`);
+    if (B.ac) p.push(`AC +${B.ac}`); if (B.hp) p.push(`HP +${B.hp}`); if (B.mana) p.push(`Mana +${B.mana}`);
+    if (B.dmgPct) p.push(`Melee damage +${B.dmgPct}%`); if (B.hastePct) p.push(`Attack haste +${B.hastePct}%`);
+    if (B.focus) for (const k in B.focus) p.push(`${FOCUS_LABEL[k]} +${B.focus[k]}%`);
+    return p.join(', ');
+  }
+  EB.gear = { QUALITY, QORDER, QHEX, PROCS, CLICKS, SETS, AFFIXES, FOCUS_LABEL, def, quality, qcolor, rollDrop, copy, equipCopy, totals, procChance, glowHex, bonusText, canAffix };
+})();
+
+</script>
+<script>
 // Everblock - procedurally drawn spell/ability icons (canvas, cached as data URLs)
 (function () {
   const EB = window.EB;
@@ -2262,7 +2476,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     if (/rusty/.test(id)) return METAL.rusty; if (/bronze/.test(id)) return METAL.bronze; if (/bone/.test(id)) return METAL.bone;
     if (/icicle|frost/.test(id)) return METAL.ice; if (/grimbone/.test(id)) return METAL.dark; if (/sunforged|pharaoh|sand_/.test(id)) return METAL.gold; return METAL.steel;
   }
-  function weaponGlow(id) { return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : /sunforged|pharaoh/.test(id || '') ? 0xffc040 : /venom/.test(id || '') ? 0x90ff40 : null; }
+  function weaponGlow(id) { const gq = EB.gear && id && EB.gear.glowHex(id); if (gq) return gq; return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : /sunforged|pharaoh/.test(id || '') ? 0xffc040 : /venom/.test(id || '') ? 0x90ff40 : null; }
   function chestTier(id, clsColor) {
     if (!id) return { tier: 'cloth', color: clsColor };
     if (/robe/.test(id)) return { tier: 'robe', color: clsColor };
@@ -4963,7 +5177,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       EB.models.setDead(this.model, true);
       const L = this.level;
       this.loot = { coins: Math.random() < 0.8 ? U.randInt(0, L * 9 + 3) * (this.def.named ? 6 : 1) : 0, items: [] };
-      for (const [id, ch] of this.def.loot || []) if (Math.random() < ch) this.loot.items.push({ id, count: 1 });
+      for (const [id, ch] of this.def.loot || []) if (Math.random() < ch) this.loot.items.push(EB.gear ? EB.gear.rollDrop(id) : { id, count: 1 }); // v8: drops may roll a suffix affix
       this.refreshPlate(game);
       if (this.spawn) this.spawn.respawnAt = game.time + this.spawn.def.respawn * (0.85 + Math.random() * 0.3);
     }
@@ -5284,8 +5498,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       return true;
     }
     buffSum(f) { let t = 0; for (const b of this.buffs) if (b.buff[f]) t += b.buff[f]; return t; }
-    itemSum(f) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it[f]) t += it[f]; } return t; }
-    statSum(n) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it.stats && it.stats[n]) t += it.stats[n]; } return t; }
+    itemSum(f) { let t = 0; for (const sl in this.equip) { const it = EB.gear.def(this.equip[sl]); if (it && it[f]) t += it[f]; } return t; }
+    statSum(n) { let t = 0; for (const sl in this.equip) { const it = EB.gear.def(this.equip[sl]); if (it && it.stats && it.stats[n]) t += it.stats[n]; } return t; }
     get maxHp() {
       if (this.isPet) return Math.floor(EB.calc.maxHp('warrior', this.level, 80) * 0.85);
       const base = Math.floor(EB.calc.maxHp(this.cls, this.level, this.role === 'tank' ? 100 : 85) * (this.role === 'tank' ? 1.3 : 1));
@@ -5385,7 +5599,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     melee(foe, game, dt) {
       this.swing -= dt;
       if (this.swing > 0) return;
-      const tank = this.role === 'tank', w = this.equip.primary && ITEMS[this.equip.primary.id];
+      const tank = this.role === 'tank', w = this.equip.primary && EB.gear.def(this.equip.primary);
       this.swing = this.isPet ? 2.2 : w && w.delay ? w.delay : tank ? 2.4 : 3.0; this.attackT = 0.01;
       const verb = this.isPet ? 'hits' : w ? { slash: 'slashes', pierce: 'pierces', crush: 'crushes' }[w.verb] || 'hits' : tank ? 'slashes' : 'crushes';
       if (Math.random() > U.clamp(0.72 + (this.level - foe.level) * 0.05, 0.3, 0.95)) { game.log(`${this.name} tries to hit ${foe.name}, but whiffs!`, 'other'); foe.addHate(this, 1); return; }
@@ -5602,11 +5816,11 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
   // ---------- HUD ----------
   const MAX_LOG = 250;
   const ui = {
-    log(msg, type) {
+    log(msg, type, html) {
       const el = $('chatLog');
       const d = document.createElement('div');
       d.className = 'm ' + (type || 'sys');
-      d.textContent = msg;
+      if (html) d.innerHTML = msg; else d.textContent = msg;
       const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
       el.appendChild(d);
       while (el.childNodes.length > MAX_LOG) el.removeChild(el.firstChild);
@@ -5631,10 +5845,13 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     },
     moveTip(e) { const t = $('tooltip'); t.style.left = Math.min(window.innerWidth - 270, e.clientX + 14) + 'px'; t.style.top = Math.min(window.innerHeight - 160, e.clientY + 14) + 'px'; },
     hideTip() { $('tooltip').classList.add('hidden'); },
-    itemTip(id) {
-      const it = ITEMS[id]; if (!it) return '';
-      let h = `<div class="tn ${it.rare ? 'rare' : ''}">${it.name}</div>`;
-      if (it.rare) h += '<div style="color:#ffb040">MAGIC ITEM &nbsp;LORE ITEM</div>';
+    qcls(item) { return item ? ' q-' + EB.gear.quality(item) : ''; },
+    // v8: tooltips show quality, affix, procs, click effects, focus effects and set bonuses; accepts an instance or an id
+    itemTip(inst) {
+      const G = EB.gear, it = G.def(inst); if (!it) return '';
+      const id = typeof inst === 'string' ? inst : inst.id, q = G.QUALITY[it.q] || G.QUALITY.common;
+      let h = `<div class="tn" style="color:${q.color}">${it.name}</div>`;
+      h += `<div style="color:${q.color}">${q.label}${it.slot ? '' : ' item'}${it.rare ? ' &nbsp;MAGIC ITEM &nbsp;LORE ITEM' : ''}</div>`;
       if (it.slot) h += `<div>Slot: ${it.slot.toUpperCase()}</div>`;
       if (it.dmg) h += `<div>Skill: ${it.verb === 'pierce' ? 'Piercing' : it.verb === 'crush' ? '1H Blunt' : '1H Slashing'} &nbsp; DMG: ${it.dmg} &nbsp; Delay: ${Math.round(it.delay * 10)}</div>`;
       if (it.ac) h += `<div>AC: ${it.ac}</div>`;
@@ -5643,13 +5860,25 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (it.hp) st.push(`HP: +${it.hp}`);
       if (it.mana) st.push(`MANA: +${it.mana}`);
       if (st.length) h += `<div style="color:#90e070">${st.join(' &nbsp; ')}</div>`;
+      if (it.affixed) h += `<div style="color:#5ee05e;font-style:italic">Suffix: ${G.AFFIXES[it.sfx].name}</div>`;
+      if (it.proc) { const P = G.PROCS[it.proc]; h += `<div style="color:#ffb060">Combat Effect: ${P.name} - ${P.desc} (${Math.round(G.procChance(it.proc, it.delay) * 100)}% per hit)</div>`; }
+      if (it.click) { const C = G.CLICKS[it.click]; h += `<div style="color:#8fd0ff">Click Effect: ${C.name} - ${C.desc} (recast ${C.cd >= 60 ? Math.round(C.cd / 60) + 'm' : C.cd + 's'}${it.slot ? ', must be worn' : ''})</div>`; }
+      if (it.focus) for (const k in it.focus) h += `<div style="color:#8fd0ff">Focus: ${G.FOCUS_LABEL[k]} +${it.focus[k]}%</div>`;
       if (it.use) h += `<div style="color:#8fd0ff">Use: Heals ${it.use.heal} HP</div>`;
+      if (it.set) {
+        const S = G.SETS[it.set], eq = (EB.game && EB.game.player && EB.game.player.equip) || {}, worn = new Set(Object.values(eq).filter(Boolean).map((e) => e.id));
+        const n = S.items.filter((x) => worn.has(x)).length;
+        h += `<div class="setb"><div style="color:#ffd870">${S.name} (${n}/${S.items.length})</div>`;
+        h += S.items.map((x) => `<div style="color:${worn.has(x) ? '#e8e0cc' : '#7a7468'};padding-left:8px">${EB.data.ITEMS[x].name}</div>`).join('');
+        for (const k in S.bonus) h += `<div style="color:${n >= +k ? '#5ee05e' : '#7a7468'}">(${k}) Set: ${G.bonusText(S.bonus[k])}</div>`;
+        h += '</div>';
+      }
       h += `<div style="color:#b0a080">Value: ${U.coinShort(it.value)}</div>`;
       return h;
     },
     slotHTML(item, label) {
       if (!item) return `<div class="sl">${label || ''}</div>`;
-      const it = ITEMS[item.id];
+      const it = EB.gear.def(item);
       return `${label ? `<div class="sl">${label}</div>` : ''}<div class="ic">${it.icon || '◆'}</div><div class="nm">${it.name}</div>${item.count > 1 ? `<div class="ct">${item.count}</div>` : ''}`;
     },
     blockSwatch(game, b) {
@@ -5705,7 +5934,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const known = this.spells.slice().sort((a, b) => key(a) - key(b));
       const pad = (a) => { a = (a || []).slice(0, 8).map((x) => (x && SPELLS[x] && this.spells.includes(x) ? x : null)); while (a.length < 8) a.push(null); return a; };
       this.gems = pad(c.gems || known.filter(isSpell));
-      this.hotbar = pad(c.hotbar || known);
+      this.hotbar = (c.hotbar || known).slice(0, 8).map((x) => (x && ((SPELLS[x] && this.spells.includes(x)) || (/^click:/.test(x) && ITEMS[x.slice(6)] && ITEMS[x.slice(6)].click)) ? x : null)); while (this.hotbar.length < 8) this.hotbar.push(null);
       this.title = c.title || '';
       // v5: EQ-style faction standings (older saves start at the defaults)
       this.faction = Object.assign({}, c.faction || {});
@@ -5732,16 +5961,18 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     stats() {
       const s = {};
       STAT_NAMES.forEach((n, i) => (s[n] = this.base[i]));
-      for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it.stats) for (const k in it.stats) s[k] += it.stats[k]; }
+      const T = this.gear(); for (const k in T.stats) if (k in s) s[k] += T.stats[k];
       return s;
     }
     statArr() { const s = this.stats(); return STAT_NAMES.map((n) => s[n]); }
-    itemSum(field) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it[field]) t += it[field]; } return t; }
+    gear() { return EB.gear.totals(this.equip); } // v8: items + affixes + set bonuses + focus
+    itemSum(field) { return this.gear()[field] || 0; }
+    focus(k) { return this.gear().focus[k] || 0; }
     buffSum(field) { let t = 0; for (const b of this.buffs) if (b.buff[field]) t += b.buff[field]; return t; }
     get maxHp() { return calc.maxHp(this.cls, this.level, this.stats().STA) + this.itemSum('hp') + this.buffSum('hp'); }
     get maxMana() { const m = calc.maxMana(this.cls, this.level, this.statArr()); return m ? m + this.itemSum('mana') : 0; }
     get ac() { return this.itemSum('ac') + this.buffSum('ac') + Math.floor(this.stats().AGI / 8) + this.level * ({ warrior: 3, paladin: 3, rogue: 2, ranger: 2, shaman: 1.5 }[this.cls] || 1); }
-    weapon() { return this.equip.primary ? ITEMS[this.equip.primary.id] : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
+    weapon() { return this.equip.primary ? EB.gear.def(this.equip.primary) : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
     castStat() { const ms = CLASSES[this.cls].manaStat; return ms != null ? this.statArr()[ms] : 75; }
     modelOpts() {
       return EB.models.playerOpts({ race: this.race, cls: this.cls, equip: this.equip });
@@ -5864,7 +6095,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`Town Crier: Greetings, ${pl.name}. New in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      ui.log(`Town Crier: Greetings, ${pl.name}. New in v8, the gear pass: item quality colors, weapon procs, click effects (look for the ⚡ button and your hotbar), focus effects, armor set bonuses and random suffixes like 'of the Bear Who Skipped Leg Day'. Also new in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
       if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soul-Notary Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guild Coach Aldric says: "Welcome, young ${RACES[pl.race].name.toLowerCase()}. Go bully the rats and snakes outside the walls. Come back when you have grown, and stretch first."`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
@@ -5989,7 +6220,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       catch (e) { ui.log('Save failed: ' + e.message, 'death'); }
     }
 
-    log(m, t) { ui.log(m, t); }
+    log(m, t, html) { ui.log(m, t, html); }
     throttled(key, sec, m, t) { if ((this.msgThrottle[key] || 0) > this.time) return; this.msgThrottle[key] = this.time + sec; ui.log(m, t); }
 
     // ---------- spawns ----------
@@ -6287,7 +6518,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (d > this.meleeReach(t)) { this.throttled('far', 3, 'Your target is too far away. Your arms are not that long!', 'sys'); return; }
       if (!this.facing(t)) { this.throttled('face', 3, 'You need to face your target. It is rude to swing behind your back.', 'sys'); return; }
       const w = pl.weapon(), st = pl.stats();
-      pl.swing = w.delay * (1 - Math.min(0.25, (st.DEX - 60) / 800 + pl.level / 200));
+      pl.swing = w.delay * (1 - Math.min(0.25, (st.DEX - 60) / 800 + pl.level / 200)) * (1 - Math.min(0.4, (pl.buffSum('hastePct') + pl.gear().hastePct) / 100));
       this.pAttackAnim = 0.01; this.pAttackKind = null;
       EB.audio.swing();
       const hitChance = U.clamp(0.72 + (pl.level - t.level) * 0.05 + (st.DEX - 75) / 400, 0.3, 0.95);
@@ -6296,16 +6527,78 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.log(`You ${w.verb} ${t.name} for ${dmg} damage.`, 'melee');
       EB.audio.hit();
       this.damageMob(t, dmg, pl);
+      this.tryProc(t, w);
       if (t.alive && (pl.cls === 'warrior' || pl.cls === 'rogue') && pl.level >= 5 && Math.random() < 0.15 + pl.level * 0.01) {
         const d2 = this.meleeDamage(w, st);
         this.log(`You ${w.verb} ${t.name} for ${d2} damage.`, 'melee');
         this.damageMob(t, d2, pl);
       }
     }
+    // ---------- v8: gear effects ----------
+    manaCost(sp) { return Math.max(0, Math.round(sp.mana * (sp.skill ? 1 : 1 - this.player.focus('manaSave') / 100))); }
+    lootMsg(it, from) {
+      const I = EB.gear.def(it), q = EB.gear.quality(it), big = EB.gear.QUALITY[q].n >= 2;
+      this.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} <span style="color:${EB.gear.qcolor(it)}">[${I.name}]</span> from ${from}!`, big ? 'ding' : 'loot', true);
+      EB.audio.loot();
+    }
+    tryProc(t, w) {
+      const pl = this.player, pid = w && w.proc, P = pid && EB.gear.PROCS[pid];
+      if (!P || !t.alive || Math.random() >= EB.gear.procChance(pid, w.delay)) return false;
+      const roll = (r) => U.randInt(r[0], r[1]);
+      this.log(`Your ${w.name} flares: ${P.name}!`, 'spell');
+      EB.fx.burst(EB.fx.center(t), P.color, 44, 5, 0.45, 0.8, 1); EB.fx.column(t, P.color); this.spellFx(t, P.school);
+      if (this.pmodel && this.pmodel.parts.weapon) { this.pmodel.group.updateMatrixWorld(true); const v = this.pmodel.parts.weapon.localToWorld(new THREE.Vector3(0, 0.5, 0)); EB.fx.burst(v, P.color, 18, 3, 0.25, 0.5, 0.5); }
+      EB.audio.spell();
+      const hit = (m, dmg) => { this.log(`${U.cap(m.name)} is hit by ${P.name} for ${dmg} damage.`, 'nonmelee'); this.damageMob(m, dmg, pl); };
+      switch (P.kind) {
+        case 'nuke': hit(t, roll(P.dmg)); if (P.dot && t.alive) { t.dots = (t.dots || []).filter((d) => d.id !== pid); t.dots.push({ id: pid, name: P.name, src: pl, dmg: roll(P.dot), left: P.dur, next: 3, school: P.school }); } break;
+        case 'dot': t.dots = (t.dots || []).filter((d) => d.id !== pid); t.dots.push({ id: pid, name: P.name, src: pl, dmg: roll(P.dmg), left: P.dur, next: 3, school: P.school }); this.damageMob(t, 0, pl); this.log(`${U.cap(t.name)} ${P.school === 'fire' ? 'is covered in flames' : 'begins to sicken'}. (${P.name})`, 'spell'); break;
+        case 'tap': { const d = roll(P.dmg); hit(t, d); const b = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + d); this.log(`You feel invigorated. (+${Math.round(pl.hp - b)} HP)`, 'spell'); EB.fx.heal(pl, P.color); break; }
+        case 'frost': hit(t, roll(P.dmg)); if (t.alive) { t.slowedUntil = this.time + P.slow; this.log(`${U.cap(t.name)} is chilled to the bone. (slowed)`, 'spell'); } break;
+        case 'chain': {
+          hit(t, roll(P.dmg)); let from = t, n = 0;
+          for (const m of this.mobs) {
+            if (n >= P.jumps) break;
+            if (m === t || !m.alive || m.pos.distanceTo(t.pos) > 8 || !(m.hate && (m.hate.has(pl) || this.mercs.some((mc) => m.hate.has(mc))))) continue;
+            EB.fx.bolt(EB.fx.center(from).clone(), m, P.color, { speed: 40 }); hit(m, Math.round(roll(P.dmg) * 0.6)); from = m; n++;
+          }
+          break;
+        }
+      }
+      this.lastProc = { id: pid, t: this.time };
+      return true;
+    }
+    hasClicky(id) { const pl = this.player; return Object.values(pl.equip).some((e) => e && e.id === id) || pl.inv.some((e) => e && e.id === id); }
+    clickBtn(el, item) {
+      const I = ITEMS[item.id]; if (!I.click) return;
+      const b = document.createElement('div'); b.className = 'clickBtn'; b.textContent = '⚡'; b.title = 'Activate ' + EB.gear.CLICKS[I.click].name;
+      const go = (e) => { e.preventDefault(); e.stopPropagation(); this.useClick(item.id); };
+      b.addEventListener('click', go); b.addEventListener('touchend', go);
+      el.appendChild(b);
+    }
+    useClick(id) {
+      const pl = this.player, I = ITEMS[id], C = I && EB.gear.CLICKS[I.click];
+      if (!C || !pl.alive) return false;
+      if (!this.hasClicky(id)) { this.log(`You need the ${I.name} in your bags or equipped to use ${C.name}.`, 'sys'); return false; }
+      if (I.slot && !Object.values(pl.equip).some((e) => e && e.id === id)) { this.log(`You must be wearing the ${I.name} to use it. Fashion first.`, 'sys'); return false; }
+      if (pl.casting) { this.log('One spell at a time, show-off!', 'sys'); return false; }
+      const key = 'click:' + id, cd = (pl.cooldowns[key] || 0) - this.time;
+      if (cd > 0) { this.log(`${C.name} is recharging (${Math.ceil(cd)}s).`, 'sys'); return false; }
+      pl.cooldowns[key] = this.time + C.cd;
+      this.log(`You activate the ${I.name}: ${C.name}.`, 'spell');
+      switch (C.kind) {
+        case 'heal': { const b = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + C.amt); this.log(`You feel much better. (+${Math.round(pl.hp - b)} HP)`, 'spell'); EB.fx.heal(pl); EB.audio.heal(); break; }
+        case 'mana': { const b = pl.mana; pl.mana = Math.min(pl.maxMana, pl.mana + C.amt); this.log(`Your mind clears. (+${Math.round(pl.mana - b)} mana)`, 'spell'); EB.fx.heal(pl, 0x80a0ff); EB.audio.heal(); break; }
+        case 'buff': pl.buffs = pl.buffs.filter((b) => b.id !== key); pl.buffs.push({ id: key, name: C.name, left: C.dur, buff: C.buff }); EB.fx.buff(pl, C.color); EB.audio.spell(); break;
+        case 'port': this.log('Reality folds like a cheap lawn chair...', 'spell'); for (const m of this.mobs) if (m.alive && m.hate.has(pl)) m.goHome(); EB.fx.column(pl, 0xb080ff); this.toBind(); pl.autoAttack = false; EB.audio.spell(); break;
+      }
+      ui.hideTip(); if (this.windows.has('invWin')) this.renderInv();
+      return true;
+    }
     meleeDamage(w, st) {
       const pl = this.player;
       const strB = Math.floor(Math.max(0, st.STR - 60) / 12);
-      const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * CLASSES[pl.cls].dmgMult * (1 + pl.level / 12) * (1 + pl.buffSum('dmgPct') / 100)));
+      const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * CLASSES[pl.cls].dmgMult * (1 + pl.level / 12) * (1 + (pl.buffSum('dmgPct') + pl.gear().dmgPct) / 100)));
       return U.randInt(Math.max(1, Math.floor(max / 4)), max);
     }
     // v5: mob casters heal and buff their allies
@@ -6490,7 +6783,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (this.buildMode) { if (i < D.BUILDABLE.length) { this.buildSel = i; this.rebuildHotbar(); } return; }
       const list = this.hotbarList();
       if (this.bookSel) { const s = this.bookSel; this.bookSel = null; if (i < 8) this.assignHotbar(i, s); if (this.windows.has('bookWin')) this.renderBook(); return; }
-      if (list[i]) this.useAbility(list[i]);
+      if (list[i] && /^click:/.test(list[i])) this.useClick(list[i].slice(6)); else if (list[i]) this.useAbility(list[i]);
     }
     useAbility(id) {
       const pl = this.player, sp = SPELLS[id];
@@ -6500,7 +6793,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (isSpell(id) && !pl.gems.includes(id)) { this.log(`You do not have ${sp.name} memorized. Open your spellbook (K) and memorize it into a spell gem.`, 'sys'); return; }
       const cd = (pl.cooldowns[id] || 0) - this.time;
       if (cd > 0) { this.log(`You can use ${sp.name} again in ${Math.ceil(cd)} seconds.`, 'sys'); return; }
-      if (sp.mana > pl.mana) { this.log('Not enough mana. Try sitting down and thinking about your choices.', 'sys'); return; }
+      if (this.manaCost(sp) > pl.mana) { this.log('Not enough mana. Try sitting down and thinking about your choices.', 'sys'); return; }
       const t = this.target;
       const needsTarget = ['nuke', 'root', 'skill', 'dot', 'snare', 'slow', 'mez', 'stun'].includes(sp.kind);
       if (needsTarget) {
@@ -6515,7 +6808,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (sp.kind === 'pet' && this.mercs.filter((m) => !m.isPet).length >= 2 && !this.mercs.some((m) => m.isPet)) { /* group of 4 max: player + 2 mercs + pet is fine */ }
       this.stand();
       if (sp.cast > 0) {
-        pl.casting = { id, t: 0, total: sp.cast, target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
+        pl.casting = { id, t: 0, total: sp.skill ? sp.cast : sp.cast * (1 - pl.focus('castSpeed') / 100), target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
         if (!sp.skill) { this.log(`You start waving your hands around: ${sp.name}.`, 'spell'); EB.audio.cast(); }
         else this.log(`You begin to ${sp.name.toLowerCase()}.`, 'sys');
         $('castBar').classList.remove('hidden'); $('castName').textContent = sp.name; $('castFill').style.width = '0%';
@@ -6540,7 +6833,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
           const fz = calc.fizzle(pl.level, pl.castStat());
           if (Math.random() * 100 < fz) {
             this.log('Your spell fizzles like a wet firecracker!', 'spell'); EB.audio.fizzle();
-            pl.mana -= Math.ceil(sp.mana / 2); pl.cooldowns[c.id] = this.time + 1;
+            pl.mana -= Math.ceil(this.manaCost(sp) / 2); pl.cooldowns[c.id] = this.time + 1;
             return;
           }
         }
@@ -6550,12 +6843,13 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
     applyAbility(id, t) {
       const pl = this.player, sp = SPELLS[id];
-      pl.mana -= sp.mana;
+      pl.mana -= this.manaCost(sp);
       pl.cooldowns[id] = this.time + sp.recast;
+      const healF = sp.skill ? 1 : 1 + pl.focus('healPct') / 100, dmgF = sp.skill ? 1 : 1 + pl.focus('spellDmg') / 100;
       const L = pl.level;
       switch (sp.kind) {
         case 'heal': {
-          const amt = U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          const amt = Math.round((U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * healF);
           const tg = t && (t.kind === 'merc' || t.kind === 'pc') ? t : pl;
           const before = tg.hp; tg.hp = Math.min(tg.maxHp, tg.hp + amt);
           const got = Math.round(tg.hp - before);
@@ -6569,7 +6863,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         case 'groupheal': {
           for (const g of this.groupMembers()) {
             if (g.pos.distanceTo(pl.pos) > 40) continue;
-            const amt = U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+            const amt = Math.round((U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * healF);
             const before = g.hp; g.hp = Math.min(g.maxHp, g.hp + amt);
             this.log(g === pl ? `You feel much better. (+${Math.round(g.hp - before)} HP)` : `${g.name} feels much better. (+${Math.round(g.hp - before)} HP)`, 'spell');
             this.healAggro(pl, g.hp - before);
@@ -6580,7 +6874,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         }
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
-          let dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          let dmg = Math.round((U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * dmgF);
           if (sp.undead && t.def.faction === 'undead') { dmg = Math.floor(dmg * sp.undead); this.log(`${U.cap(t.name)} is seared by holy fire!`, 'spell'); }
           const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
@@ -6593,7 +6887,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         }
         case 'dot': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
-          const per = U.randInt(sp.tick[0], sp.tick[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          const per = Math.round((U.randInt(sp.tick[0], sp.tick[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * dmgF);
           t.dots = (t.dots || []).filter((d) => d.id !== id);
           t.dots.push({ id, name: sp.name, src: pl, dmg: per, left: sp.dur, next: 3, school: sp.school });
           this.log(`${U.cap(t.name)} ${sp.school === 'fire' ? 'is covered in flames' : 'begins to sicken'}. (${sp.name})`, 'spell');
@@ -6779,10 +7073,10 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const c = this.lootCorpse, g = $('lootGrid'); g.innerHTML = '';
       if (!c) return;
       c.loot.items.forEach((it, i) => {
-        const el = document.createElement('div'); el.className = 'islot' + (ITEMS[it.id].rare ? ' rare' : '');
+        const el = document.createElement('div'); el.className = 'islot' + ui.qcls(it);
         el.innerHTML = ui.slotHTML(it);
         el.onclick = () => this.takeLoot(i);
-        ui.tooltipFor(el, () => ui.itemTip(it.id));
+        ui.tooltipFor(el, () => ui.itemTip(it));
         g.appendChild(el);
       });
       if (!c.loot.items.length) g.innerHTML = '<div class="sub">Empty.</div>';
@@ -6791,10 +7085,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const c = this.lootCorpse; if (!c) return false;
       const it = c.loot.items[i];
       if (this.net && c.net) return this.net.takeLoot(c, i);
-      if (!this.addItem(it.id, it.count)) return false;
-      const I = ITEMS[it.id];
-      this.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c.corpseName()}!`, I.rare ? 'ding' : 'loot');
-      EB.audio.loot();
+      if (!this.addItem(it.id, it.count, false, it.sfx)) return false;
+      this.lootMsg(it, c.corpseName());
       c.loot.items.splice(i, 1);
       ui.hideTip();
       if (!c.loot.items.length) this.closeWin('lootWin'); else this.renderLoot();
@@ -6809,8 +7101,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
     lootOwnCorpse(c) {
       const pl = this.player;
-      for (const sl in c.loot.equip) { if (!pl.equip[sl]) pl.equip[sl] = c.loot.equip[sl]; else this.addItem(c.loot.equip[sl].id, 1, true); }
-      for (const it of c.loot.items) this.addItem(it.id, it.count, true);
+      for (const sl in c.loot.equip) { if (!pl.equip[sl]) pl.equip[sl] = c.loot.equip[sl]; else this.addItem(c.loot.equip[sl].id, 1, true, c.loot.equip[sl].sfx); }
+      for (const it of c.loot.items) this.addItem(it.id, it.count, true, it.sfx);
       pl.coins += c.loot.coins;
       this.log(`You have recovered your belongings from ${c.name}.`, 'loot');
       if (c.loot.coins) this.log(`You receive ${U.coinStr(c.loot.coins)} from your corpse.`, 'loot');
@@ -6820,13 +7112,13 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
 
     // ---------- inventory ----------
-    addItem(id, count, silent) {
+    addItem(id, count, silent, sfx) {
       const pl = this.player, it = ITEMS[id];
       count = count || 1;
-      if (it.stack) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; this.questDirty = true; return true; } }
+      if (it.stack && !sfx) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; this.questDirty = true; return true; } }
       const i = pl.inv.indexOf(null);
       if (i < 0) { if (!silent) this.log('Your inventory is full!', 'sys'); return false; }
-      pl.inv[i] = { id, count };
+      pl.inv[i] = { id, count }; if (sfx && EB.gear.AFFIXES[sfx]) pl.inv[i].sfx = sfx;
       this.questDirty = true;
       return true;
     }
@@ -6835,20 +7127,21 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const eg = $('equipGrid'); eg.innerHTML = '';
       for (const sl of EQUIP_SLOTS) {
         const el = document.createElement('div'); const item = pl.equip[sl];
-        el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+        el.className = 'islot' + ui.qcls(item);
         el.innerHTML = ui.slotHTML(item, sl);
-        if (item) { el.onclick = () => this.unequip(sl); ui.tooltipFor(el, () => ui.itemTip(item.id)); }
+        if (item) { el.onclick = () => this.unequip(sl); ui.tooltipFor(el, () => ui.itemTip(item)); this.clickBtn(el, item); }
         eg.appendChild(el);
       }
       const bg = $('bagGrid'); bg.innerHTML = '';
       pl.inv.forEach((item, i) => {
         const el = document.createElement('div');
-        el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+        el.className = 'islot' + ui.qcls(item);
         el.innerHTML = ui.slotHTML(item);
         if (item) {
           el.onclick = () => this.useBagItem(i);
           el.oncontextmenu = (e) => { e.preventDefault(); this.sellItem(i); };
-          ui.tooltipFor(el, () => ui.itemTip(item.id) + (this.merchant ? `<div style="color:#f0d070">Right-click to sell for ${U.coinShort(this.sellPrice(item.id) * item.count)}</div>` : ''));
+          if (!ITEMS[item.id].slot) this.clickBtn(el, item);
+          ui.tooltipFor(el, () => ui.itemTip(item) + (this.merchant ? `<div style="color:#f0d070">Right-click to sell for ${U.coinShort(this.sellPrice(item) * item.count)}</div>` : ''));
         }
         bg.appendChild(el);
       });
@@ -6858,6 +7151,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         `AC: ${pl.ac} &nbsp; ${w.name} (${w.dmg}/${Math.round(w.delay * 10)})<br>` +
         STAT_NAMES.map((n) => `${n}: <b>${st[n]}</b>`).join(' &nbsp; ') +
         `<br>XP: ${Math.floor((pl.xp / D.xpToNext(pl.level)) * 100)}% &nbsp; Played: ${Math.floor(pl.played / 60)}m`;
+      const G = pl.gear(), fl = Object.keys(G.focus).map((k) => `${EB.gear.FOCUS_LABEL[k]} ${G.focus[k]}%`);
+      if (fl.length) $('statsBox').innerHTML += `<br><span style="color:#8fd0ff">Focus: ${fl.join(', ')}</span>`;
+      for (const st2 of G.sets) $('statsBox').innerHTML += `<br><span style="color:#ffd870">${EB.gear.SETS[st2.id].name} (${st2.n}/${EB.gear.SETS[st2.id].items.length})${st2.active.length ? ' - bonus ' + st2.active.join('+') + 'pc active' : ''}</span>`;
       $('coinBox').innerHTML = `Coin: ${U.coinStr(pl.coins)}`;
     }
     useBagItem(i) {
@@ -6865,9 +7161,11 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const it = ITEMS[item.id];
       if (it.slot) {
         const old = pl.equip[it.slot];
-        pl.equip[it.slot] = { id: item.id };
-        pl.inv[i] = old ? { id: old.id, count: 1 } : null;
-        this.log(`You equip the ${it.name}.`, 'sys');
+        pl.equip[it.slot] = EB.gear.equipCopy(item);
+        pl.inv[i] = old ? EB.gear.copy(old, 1) : null;
+        this.log(`You equip the ${EB.gear.def(item).name}.`, 'sys');
+        if (it.click && !pl.hotbar.includes('click:' + item.id)) { const hs = pl.hotbar.indexOf(null); if (hs >= 0) { pl.hotbar[hs] = 'click:' + item.id; this.rebuildHotbar(); this.log(`${EB.gear.CLICKS[it.click].name} added to hotbar slot ${hs + 1}. Click it to activate.`, 'help'); } }
+      } else if (it.click) { this.useClick(item.id); return;
       } else if (it.use) {
         if (it.use.heal) { pl.hp = Math.min(pl.maxHp, pl.hp + it.use.heal); this.log(`You use the ${it.name}. You feel better.`, 'spell'); EB.audio.heal(); }
         item.count--; if (item.count <= 0) pl.inv[i] = null;
@@ -6877,16 +7175,16 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
     unequip(sl) {
       const pl = this.player, item = pl.equip[sl]; if (!item) return;
-      if (!this.addItem(item.id, 1)) return;
+      if (!this.addItem(item.id, 1, false, item.sfx)) return;
       delete pl.equip[sl];
-      this.log(`You remove the ${ITEMS[item.id].name}.`, 'sys');
+      this.log(`You remove the ${EB.gear.def(item).name}.`, 'sys');
       pl.hp = Math.min(pl.hp, pl.maxHp); pl.mana = Math.min(pl.mana, pl.maxMana);
       ui.hideTip(); this.renderInv();
     }
     chaMod() { return (this.player.stats().CHA - 75) / 600; }
     fMult() { return (this.merchant && this.priceMult(this.merchant)) || 1; }
     buyPrice(id) { return Math.max(1, Math.round(ITEMS[id].value * (1.25 - this.chaMod()) * this.fMult())); }
-    sellPrice(id) { return Math.max(1, Math.floor(ITEMS[id].value * (0.5 + this.chaMod() / 2) / this.fMult())); }
+    sellPrice(id) { return Math.max(1, Math.floor(EB.gear.def(id).value * (0.5 + this.chaMod() / 2) / this.fMult())); }
     renderMerchant() {
       const m = this.merchant; if (!m) return;
       $('merchTitle').firstChild.textContent = `${m.name} `;
@@ -6906,8 +7204,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (inv.length) {
         const h = document.createElement('h4'); h.textContent = 'Sell your items'; h.className = 'sellHdr'; list.appendChild(h);
         for (const [it, i] of inv) {
-          const I = ITEMS[it.id], row = document.createElement('div'); row.className = 'row sellRow';
-          row.innerHTML = `<span>${I.icon || '•'}</span><span class="n">${I.name}${it.count > 1 ? ' x' + it.count : ''}</span><span>${U.coinShort(this.sellPrice(it.id) * it.count)}</span>`;
+          const I = EB.gear.def(it), row = document.createElement('div'); row.className = 'row sellRow';
+          row.innerHTML = `<span>${I.icon || '•'}</span><span class="n" style="color:${EB.gear.qcolor(it)}">${I.name}${it.count > 1 ? ' x' + it.count : ''}</span><span>${U.coinShort(this.sellPrice(it) * it.count)}</span>`;
           const b = document.createElement('button'); b.textContent = 'Sell'; b.className = 'small'; b.onclick = () => this.sellItem(i);
           row.appendChild(b); list.appendChild(row);
         }
@@ -6924,9 +7222,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     sellItem(i) {
       if (!this.merchant) { this.log('You need to be trading with a merchant to sell items. (Open a merchant with E)', 'sys'); return; }
       const pl = this.player, item = pl.inv[i]; if (!item) return;
-      const p = this.sellPrice(item.id) * item.count;
+      const p = this.sellPrice(item) * item.count;
       pl.coins += p; pl.inv[i] = null;
-      this.log(`You sold ${item.count > 1 ? item.count + ' ' : 'a '}${ITEMS[item.id].name} to ${this.merchant.name} for ${U.coinStr(p)}.`, 'loot');
+      this.log(`You sold ${item.count > 1 ? item.count + ' ' : 'a '}${EB.gear.def(item).name} to ${this.merchant.name} for ${U.coinStr(p)}.`, 'loot');
       EB.audio.loot(); ui.hideTip(); this.renderInv(); this.renderMerchant();
     }
     trainCost(L) { return L <= 1 ? 0 : L * L * 12; }
@@ -6960,9 +7258,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const pl = this.player, mk = (grid, arr, fn) => {
         const g = $(grid); g.innerHTML = '';
         arr.forEach((item, i) => {
-          const el = document.createElement('div'); el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+          const el = document.createElement('div'); el.className = 'islot' + ui.qcls(item);
           el.innerHTML = ui.slotHTML(item);
-          if (item) { el.onclick = () => fn(i); ui.tooltipFor(el, () => ui.itemTip(item.id)); }
+          if (item) { el.onclick = () => fn(i); ui.tooltipFor(el, () => ui.itemTip(item)); }
           g.appendChild(el);
         });
       };
@@ -6974,9 +7272,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const pl = this.player, it = pl.inv[i]; if (!it) return false;
       const I = ITEMS[it.id];
       if (I.quest) { this.log('The Vaultkeeper refuses to store quest items. "Too much paperwork."', 'sys'); return false; }
-      let slot = I.stack ? pl.bank.findIndex((s) => s && s.id === it.id) : -1;
+      let slot = I.stack && !it.sfx ? pl.bank.findIndex((s) => s && s.id === it.id) : -1;
       if (slot >= 0) pl.bank[slot].count += it.count;
-      else { slot = pl.bank.indexOf(null); if (slot < 0) { this.log('Your vault is full!', 'sys'); return false; } pl.bank[slot] = { id: it.id, count: it.count }; }
+      else { slot = pl.bank.indexOf(null); if (slot < 0) { this.log('Your vault is full!', 'sys'); return false; } pl.bank[slot] = EB.gear.copy(it); }
       pl.inv[i] = null;
       this.log(`You deposit ${it.count > 1 ? it.count + ' ' : 'a '}${I.name} in your vault.`, 'loot');
       EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
@@ -6984,7 +7282,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
     bankWithdraw(i) {
       const pl = this.player, it = pl.bank[i]; if (!it) return false;
-      if (!this.addItem(it.id, it.count)) return false;
+      if (!this.addItem(it.id, it.count, false, it.sfx)) return false;
       pl.bank[i] = null;
       this.log(`You withdraw ${it.count > 1 ? it.count + ' ' : 'a '}${ITEMS[it.id].name} from your vault.`, 'loot');
       EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
@@ -7088,7 +7386,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.renderGroup();
     }
     dismissMerc(m) {
-      if (!m.isPet) for (const sl in m.equip) { if (!this.addItem(m.equip[sl].id, 1, true)) this.log(`${ITEMS[m.equip[sl].id].name} was lost (inventory full).`, 'sys'); }
+      if (!m.isPet) for (const sl in m.equip) { if (!this.addItem(m.equip[sl].id, 1, true, m.equip[sl].sfx)) this.log(`${ITEMS[m.equip[sl].id].name} was lost (inventory full).`, 'sys'); }
       this.log(m.isPet ? `${m.name} crumbles to dust.` : `${m.name} has left the group.${Object.keys(m.equip).length ? ' They return the gear you gave them.' : ''}`, 'sys');
       this.removeMercModel(m); this.save();
     }
@@ -7173,9 +7471,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const eq = $('mcfgEquip');
       for (const sl of EQUIP_SLOTS) {
         const it = m.equip[sl], el = document.createElement('div');
-        el.className = 'islot' + (it && ITEMS[it.id].rare ? ' rare' : '');
+        el.className = 'islot' + ui.qcls(it);
         el.innerHTML = ui.slotHTML(it, sl);
-        if (it) { el.onclick = () => this.takeFromMerc(m, sl); ui.tooltipFor(el, () => ui.itemTip(it.id)); }
+        if (it) { el.onclick = () => this.takeFromMerc(m, sl); ui.tooltipFor(el, () => ui.itemTip(it)); }
         eq.appendChild(el);
       }
       const gv = $('mcfgGive'); let any = false;
@@ -7186,7 +7484,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
         el.innerHTML = `<span>${I.icon}</span><span class="n">${I.name} <span style="color:#b0a080">(${I.slot})</span></span>`;
         const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Give'; b.disabled = m.dead;
         b.onclick = () => this.giveToMerc(m, i);
-        el.appendChild(b); ui.tooltipFor(el, () => ui.itemTip(item.id)); gv.appendChild(el);
+        el.appendChild(b); ui.tooltipFor(el, () => ui.itemTip(item)); gv.appendChild(el);
       });
       if (!any) gv.innerHTML = '<div class="sub">You have no equippable items in your bags.</div>';
     }
@@ -7194,9 +7492,9 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       const pl = this.player, item = pl.inv[i]; if (!item || m.dead) return;
       const I = ITEMS[item.id]; if (!I.slot) return;
       const hpPct = m.hp / m.maxHp, old = m.equip[I.slot];
-      m.equip[I.slot] = { id: item.id };
+      m.equip[I.slot] = EB.gear.equipCopy(item);
       item.count--; if (item.count <= 0) pl.inv[i] = null;
-      if (old) this.addItem(old.id, 1, true);
+      if (old) this.addItem(old.id, 1, true, old.sfx);
       m.hp = Math.ceil(m.maxHp * hpPct); m.mana = Math.min(m.mana, m.maxMana);
       this.log(`You give ${I.name} to ${m.name}.${old ? ` ${m.name} hands back the ${ITEMS[old.id].name}.` : ''}`, 'loot');
       this.log(`${m.name} says: "My thanks, ${pl.name}. This will serve me well."`, 'say');
@@ -7204,7 +7502,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
     takeFromMerc(m, sl) {
       const it = m.equip[sl]; if (!it) return;
-      if (!this.addItem(it.id, 1)) return;
+      if (!this.addItem(it.id, 1, false, it.sfx)) return;
       const hpPct = m.hp / m.maxHp;
       delete m.equip[sl];
       m.hp = Math.min(m.maxHp, Math.ceil(m.maxHp * hpPct)); m.mana = Math.min(m.mana, m.maxMana);
@@ -7366,10 +7664,11 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
     }
     assignHotbar(slot, id) {
       const pl = this.player;
-      if (id && !pl.spells.includes(id)) return;
+      if (id && !pl.spells.includes(id) && !/^click:/.test(id)) return;
       for (let i = 0; i < 8; i++) if (pl.hotbar[i] === id) pl.hotbar[i] = null;
       pl.hotbar[slot] = id;
-      if (id) this.log(`${SPELLS[id].name} placed on hotbar slot ${slot + 1}.${isSpell(id) && !pl.gems.includes(id) ? ' (Memorize it in a spell gem to cast it.)' : ''}`, 'sys');
+      if (id && /^click:/.test(id)) this.log(`${ITEMS[id.slice(6)].name} placed on hotbar slot ${slot + 1}.`, 'sys');
+      else if (id) this.log(`${SPELLS[id].name} placed on hotbar slot ${slot + 1}.${isSpell(id) && !pl.gems.includes(id) ? ' (Memorize it in a spell gem to cast it.)' : ''}`, 'sys');
       this.rebuildHotbar(); this.save();
     }
     renderBook() {
@@ -7604,6 +7903,15 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
           el.onclick = () => this.hotkey(i);
           hb.appendChild(el); return;
         }
+        if (/^click:/.test(id)) { // v8: item click effect
+          const I = ITEMS[id.slice(6)], C = EB.gear.CLICKS[I.click];
+          el.className = 'slot clicky'; el.style.borderColor = EB.gear.qcolor(id.slice(6));
+          el.innerHTML = `<span class="k">${i + 1}</span><span class="ic">${I.icon || '◆'}</span><span class="hn">${C.name}</span><div class="cd"></div>`;
+          el.onclick = () => this.hotkey(i);
+          el.oncontextmenu = (e) => { e.preventDefault(); this.assignHotbar(i, null); };
+          ui.tooltipFor(el, () => ui.itemTip(id.slice(6)) + '<div style="color:#b0a080">Right-click to clear</div>');
+          hb.appendChild(el); this.hotbarEls.push({ el, id, click: id.slice(6), cd: el.querySelector('.cd') }); return;
+        }
         const sp = SPELLS[id];
         el.className = 'slot' + (isSpell(id) ? ' spell' : '');
         el.innerHTML = `<span class="k">${i + 1}</span>${EB.icons.img(id, 'sic hic')}<span class="hn">${sp.name}</span><div class="cd"></div>`;
@@ -7634,6 +7942,7 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.petWinT = (this.petWinT || 0) + 1; if (this.windows.has('petWin') && this.petWinT % 5 === 0) this.renderPetWin();
       const at = $('atkSlot'); if (at) at.classList.toggle('active', pl.autoAttack);
       for (const h of this.hotbarEls || []) {
+        if (h.click) { const C = EB.gear.CLICKS[ITEMS[h.click].click], left = (pl.cooldowns['click:' + h.click] || 0) - this.time; h.cd.style.height = left > 0 ? Math.min(100, (left / C.cd) * 100) + '%' : '0%'; h.el.classList.toggle('unmem', !this.hasClicky(h.click)); continue; }
         const sp = SPELLS[h.id], left = (pl.cooldowns[h.id] || 0) - this.time;
         h.cd.style.height = left > 0 ? Math.min(100, (left / sp.recast) * 100) + '%' : '0%';
         h.el.classList.toggle('nomana', sp.mana > pl.mana);
@@ -7873,7 +8182,40 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       if (pl.alive && pl.casting && !pl.casting.skill && this.camDist > 0) { const sp = SPELLS[pl.casting.id]; this.castGlow(pl, EB.fx.SCHOOL[sp && sp.school] || (sp && sp.kind === 'heal' ? 0x9effa0 : 0xfff080), dt); }
       // showcase models (photo mode / gallery): {M, walk, attack, cast} animated in place
       if (this.showcase) for (const sc of this.showcase) { sc.ph = (sc.ph || 0) + dt * (sc.walk ? 8 : 0); if (sc.attack) { sc.at = (sc.at || 0) + dt * 1.3; if (sc.at > 1.6) sc.at = 0.01; } EB.models.animateModel(sc.M, sc.ph, !!sc.walk, sc.at > 0 && sc.at < 1 ? sc.at : 0, !!sc.sit, { dt, cast: !!sc.cast, always: true }); if (sc.cast) { sc.model = sc.M; this.castGlow(sc, sc.castColor || 0x80c0ff, dt); } }
+      this.gearFx(dt);
       EB.fx.update(dt, this.camera, this.renderer);
+    }
+    // v8: enchanted weapons shimmer by quality and leave a particle trail while swinging; legendary armor wears an aura
+    gearFx(dt) {
+      const pl = this.player, M = this.pmodel;
+      if (!pl || !pl.alive || !M || this.camDist <= 0) return;
+      const hi = EB.fx.high, G = pl.gear();
+      const w = pl.equip.primary && ITEMS[pl.equip.primary.id], col = w && EB.gear.glowHex(pl.equip.primary.id);
+      if (col && M.parts.weapon) {
+        const swinging = this.pAttackAnim > 0;
+        this._wfxT = (this._wfxT || 0) - dt;
+        if (this._wfxT <= 0) {
+          this._wfxT = swinging ? (hi ? 1 / 60 : 1 / 20) : (hi ? 0.12 : 0.35);
+          M.group.updateMatrixWorld(true);
+          const len = { dagger: 0.3, greatsword: 1.2, staff: 1.3, spear: 1.4, longsword: 0.9 }[M.weaponKind] || 0.7;
+          const n = swinging ? (hi ? 3 : 1) : 1;
+          for (let k = 0; k < n; k++) {
+            const tip = M.parts.weapon.localToWorld(this._wv = (this._wv || new THREE.Vector3()).set(0, 0.15 + Math.random() * len, 0));
+            EB.fx.emit(tip.x, tip.y, tip.z, (Math.random() - 0.5) * 0.3, swinging ? 0.1 : 0.5, (Math.random() - 0.5) * 0.3, swinging ? 0.45 : 0.7, swinging ? 0.16 : 0.1, col, 0, 1.5);
+          }
+        }
+      }
+      if (G.legendaryArmor) {
+        this._afxT = (this._afxT || 0) - dt;
+        if (this._afxT <= 0) {
+          this._afxT = hi ? 0.035 : 0.2;
+          this._afxA = ((this._afxA || 0) + 0.9) % (Math.PI * 2);
+          for (let k = 0; k < (hi ? 2 : 1); k++) {
+            const a = this._afxA + k * Math.PI + Math.random() * 0.3, r = 0.6 + Math.random() * 0.12, y = pl.pos.y + 0.05 + Math.random() * 0.3;
+            EB.fx.emit(pl.pos.x + Math.cos(a) * r, y, pl.pos.z + Math.sin(a) * r, -Math.cos(a) * 0.15, 1.3 + Math.random() * 0.5, -Math.sin(a) * 0.15, 1.3, 0.26, k ? 0xffd060 : EB.gear.QHEX.legendary, -0.15, 0.4);
+          }
+        }
+      }
     }
     castGlow(e, color, dt) {
       e._glowT = (e._glowT || 0) + dt;
@@ -8319,9 +8661,8 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
       this.pendingTake = false;
       const c = this.mobById(m.id);
       if (m.item) {
-        g.addItem(m.item.id, m.item.count);
-        const I = ITEMS[m.item.id];
-        g.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c ? c.corpseName() : 'a corpse'}!`, I.rare ? 'ding' : 'loot');
+        g.addItem(m.item.id, m.item.count, false, m.item.sfx);
+        g.lootMsg(m.item, c ? c.corpseName() : 'a corpse');
         EB.audio.loot();
       }
       if (!c || g.lootCorpse !== c) return;

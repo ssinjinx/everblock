@@ -359,9 +359,8 @@
       this.pendingTake = false;
       const c = this.mobById(m.id);
       if (m.item) {
-        g.addItem(m.item.id, m.item.count);
-        const I = ITEMS[m.item.id];
-        g.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c ? c.corpseName() : 'a corpse'}!`, I.rare ? 'ding' : 'loot');
+        g.addItem(m.item.id, m.item.count, false, m.item.sfx);
+        g.lootMsg(m.item, c ? c.corpseName() : 'a corpse');
         EB.audio.loot();
       }
       if (!c || g.lootCorpse !== c) return;

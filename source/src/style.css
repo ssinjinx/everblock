@@ -413,3 +413,15 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
 #netToast.hidden { display: none; }
 #groupWin .gpc .gname { color: #9fd8ff; } #groupWin .gl { color: #f3c85a; } #groupWin .gsep { border-top: 1px solid #5a4a30; margin: 3px 0; }
 .m.ooc { color: #60e0a0; } .m.group { color: #70c8ff; } .m.announce { color: #ffb040; font-weight: bold; }
+
+/* ---- v8: item quality tiers, click effects, set bonuses ---- */
+.islot.q-uncommon { border-color: #3a8a3a; } .islot.q-uncommon .nm { color: #5ee05e; }
+.islot.q-rare { border-color: #2f6fc0; box-shadow: inset 0 0 6px rgba(79,163,255,0.35); } .islot.q-rare .nm { color: #4fa3ff; }
+.islot.q-epic { border-color: #9050d0; box-shadow: inset 0 0 8px rgba(192,112,255,0.45); } .islot.q-epic .nm { color: #c070ff; }
+.islot.q-legendary { border-color: #ff9a1f; box-shadow: inset 0 0 10px rgba(255,154,31,0.55), 0 0 6px rgba(255,154,31,0.5); animation: legPulse 2.4s ease-in-out infinite; } .islot.q-legendary .nm { color: #ff9a1f; }
+@keyframes legPulse { 50% { box-shadow: inset 0 0 14px rgba(255,154,31,0.8), 0 0 10px rgba(255,154,31,0.8); } }
+.clickBtn { position: absolute; left: 2px; bottom: 2px; width: 20px; height: 20px; line-height: 20px; font-size: 13px; background: rgba(40,80,140,0.85); border: 1px solid #8fd0ff; border-radius: 4px; cursor: pointer; z-index: 2; }
+.clickBtn:hover { background: rgba(70,120,200,0.95); }
+#tooltip { max-width: 300px; }
+#tooltip .setb { margin: 4px 0; padding-top: 3px; border-top: 1px solid #4a3e28; }
+.slot.clicky { border-width: 2px; }

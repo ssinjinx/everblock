@@ -730,7 +730,7 @@
     if (/rusty/.test(id)) return METAL.rusty; if (/bronze/.test(id)) return METAL.bronze; if (/bone/.test(id)) return METAL.bone;
     if (/icicle|frost/.test(id)) return METAL.ice; if (/grimbone/.test(id)) return METAL.dark; if (/sunforged|pharaoh|sand_/.test(id)) return METAL.gold; return METAL.steel;
   }
-  function weaponGlow(id) { return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : /sunforged|pharaoh/.test(id || '') ? 0xffc040 : /venom/.test(id || '') ? 0x90ff40 : null; }
+  function weaponGlow(id) { const gq = EB.gear && id && EB.gear.glowHex(id); if (gq) return gq; return /frost_greatsword|icicle/.test(id || '') ? 0x9ef0ff : /grimbone/.test(id || '') ? 0x55ff99 : /sunforged|pharaoh/.test(id || '') ? 0xffc040 : /venom/.test(id || '') ? 0x90ff40 : null; }
   function chestTier(id, clsColor) {
     if (!id) return { tier: 'cloth', color: clsColor };
     if (/robe/.test(id)) return { tier: 'robe', color: clsColor };

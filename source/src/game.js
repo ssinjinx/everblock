@@ -36,7 +36,7 @@
       const known = this.spells.slice().sort((a, b) => key(a) - key(b));
       const pad = (a) => { a = (a || []).slice(0, 8).map((x) => (x && SPELLS[x] && this.spells.includes(x) ? x : null)); while (a.length < 8) a.push(null); return a; };
       this.gems = pad(c.gems || known.filter(isSpell));
-      this.hotbar = pad(c.hotbar || known);
+      this.hotbar = (c.hotbar || known).slice(0, 8).map((x) => (x && ((SPELLS[x] && this.spells.includes(x)) || (/^click:/.test(x) && ITEMS[x.slice(6)] && ITEMS[x.slice(6)].click)) ? x : null)); while (this.hotbar.length < 8) this.hotbar.push(null);
       this.title = c.title || '';
       // v5: EQ-style faction standings (older saves start at the defaults)
       this.faction = Object.assign({}, c.faction || {});
@@ -63,16 +63,18 @@
     stats() {
       const s = {};
       STAT_NAMES.forEach((n, i) => (s[n] = this.base[i]));
-      for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it.stats) for (const k in it.stats) s[k] += it.stats[k]; }
+      const T = this.gear(); for (const k in T.stats) if (k in s) s[k] += T.stats[k];
       return s;
     }
     statArr() { const s = this.stats(); return STAT_NAMES.map((n) => s[n]); }
-    itemSum(field) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it[field]) t += it[field]; } return t; }
+    gear() { return EB.gear.totals(this.equip); } // v8: items + affixes + set bonuses + focus
+    itemSum(field) { return this.gear()[field] || 0; }
+    focus(k) { return this.gear().focus[k] || 0; }
     buffSum(field) { let t = 0; for (const b of this.buffs) if (b.buff[field]) t += b.buff[field]; return t; }
     get maxHp() { return calc.maxHp(this.cls, this.level, this.stats().STA) + this.itemSum('hp') + this.buffSum('hp'); }
     get maxMana() { const m = calc.maxMana(this.cls, this.level, this.statArr()); return m ? m + this.itemSum('mana') : 0; }
     get ac() { return this.itemSum('ac') + this.buffSum('ac') + Math.floor(this.stats().AGI / 8) + this.level * ({ warrior: 3, paladin: 3, rogue: 2, ranger: 2, shaman: 1.5 }[this.cls] || 1); }
-    weapon() { return this.equip.primary ? ITEMS[this.equip.primary.id] : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
+    weapon() { return this.equip.primary ? EB.gear.def(this.equip.primary) : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
     castStat() { const ms = CLASSES[this.cls].manaStat; return ms != null ? this.statArr()[ms] : 75; }
     modelOpts() {
       return EB.models.playerOpts({ race: this.race, cls: this.cls, equip: this.equip });
@@ -195,7 +197,7 @@
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`Town Crier: Greetings, ${pl.name}. New in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      ui.log(`Town Crier: Greetings, ${pl.name}. New in v8, the gear pass: item quality colors, weapon procs, click effects (look for the ⚡ button and your hotbar), focus effects, armor set bonuses and random suffixes like 'of the Bear Who Skipped Leg Day'. Also new in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
       if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soul-Notary Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guild Coach Aldric says: "Welcome, young ${RACES[pl.race].name.toLowerCase()}. Go bully the rats and snakes outside the walls. Come back when you have grown, and stretch first."`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
@@ -320,7 +322,7 @@
       catch (e) { ui.log('Save failed: ' + e.message, 'death'); }
     }
 
-    log(m, t) { ui.log(m, t); }
+    log(m, t, html) { ui.log(m, t, html); }
     throttled(key, sec, m, t) { if ((this.msgThrottle[key] || 0) > this.time) return; this.msgThrottle[key] = this.time + sec; ui.log(m, t); }
 
     // ---------- spawns ----------
@@ -618,7 +620,7 @@
       if (d > this.meleeReach(t)) { this.throttled('far', 3, 'Your target is too far away. Your arms are not that long!', 'sys'); return; }
       if (!this.facing(t)) { this.throttled('face', 3, 'You need to face your target. It is rude to swing behind your back.', 'sys'); return; }
       const w = pl.weapon(), st = pl.stats();
-      pl.swing = w.delay * (1 - Math.min(0.25, (st.DEX - 60) / 800 + pl.level / 200));
+      pl.swing = w.delay * (1 - Math.min(0.25, (st.DEX - 60) / 800 + pl.level / 200)) * (1 - Math.min(0.4, (pl.buffSum('hastePct') + pl.gear().hastePct) / 100));
       this.pAttackAnim = 0.01; this.pAttackKind = null;
       EB.audio.swing();
       const hitChance = U.clamp(0.72 + (pl.level - t.level) * 0.05 + (st.DEX - 75) / 400, 0.3, 0.95);
@@ -627,16 +629,78 @@
       this.log(`You ${w.verb} ${t.name} for ${dmg} damage.`, 'melee');
       EB.audio.hit();
       this.damageMob(t, dmg, pl);
+      this.tryProc(t, w);
       if (t.alive && (pl.cls === 'warrior' || pl.cls === 'rogue') && pl.level >= 5 && Math.random() < 0.15 + pl.level * 0.01) {
         const d2 = this.meleeDamage(w, st);
         this.log(`You ${w.verb} ${t.name} for ${d2} damage.`, 'melee');
         this.damageMob(t, d2, pl);
       }
     }
+    // ---------- v8: gear effects ----------
+    manaCost(sp) { return Math.max(0, Math.round(sp.mana * (sp.skill ? 1 : 1 - this.player.focus('manaSave') / 100))); }
+    lootMsg(it, from) {
+      const I = EB.gear.def(it), q = EB.gear.quality(it), big = EB.gear.QUALITY[q].n >= 2;
+      this.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} <span style="color:${EB.gear.qcolor(it)}">[${I.name}]</span> from ${from}!`, big ? 'ding' : 'loot', true);
+      EB.audio.loot();
+    }
+    tryProc(t, w) {
+      const pl = this.player, pid = w && w.proc, P = pid && EB.gear.PROCS[pid];
+      if (!P || !t.alive || Math.random() >= EB.gear.procChance(pid, w.delay)) return false;
+      const roll = (r) => U.randInt(r[0], r[1]);
+      this.log(`Your ${w.name} flares: ${P.name}!`, 'spell');
+      EB.fx.burst(EB.fx.center(t), P.color, 44, 5, 0.45, 0.8, 1); EB.fx.column(t, P.color); this.spellFx(t, P.school);
+      if (this.pmodel && this.pmodel.parts.weapon) { this.pmodel.group.updateMatrixWorld(true); const v = this.pmodel.parts.weapon.localToWorld(new THREE.Vector3(0, 0.5, 0)); EB.fx.burst(v, P.color, 18, 3, 0.25, 0.5, 0.5); }
+      EB.audio.spell();
+      const hit = (m, dmg) => { this.log(`${U.cap(m.name)} is hit by ${P.name} for ${dmg} damage.`, 'nonmelee'); this.damageMob(m, dmg, pl); };
+      switch (P.kind) {
+        case 'nuke': hit(t, roll(P.dmg)); if (P.dot && t.alive) { t.dots = (t.dots || []).filter((d) => d.id !== pid); t.dots.push({ id: pid, name: P.name, src: pl, dmg: roll(P.dot), left: P.dur, next: 3, school: P.school }); } break;
+        case 'dot': t.dots = (t.dots || []).filter((d) => d.id !== pid); t.dots.push({ id: pid, name: P.name, src: pl, dmg: roll(P.dmg), left: P.dur, next: 3, school: P.school }); this.damageMob(t, 0, pl); this.log(`${U.cap(t.name)} ${P.school === 'fire' ? 'is covered in flames' : 'begins to sicken'}. (${P.name})`, 'spell'); break;
+        case 'tap': { const d = roll(P.dmg); hit(t, d); const b = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + d); this.log(`You feel invigorated. (+${Math.round(pl.hp - b)} HP)`, 'spell'); EB.fx.heal(pl, P.color); break; }
+        case 'frost': hit(t, roll(P.dmg)); if (t.alive) { t.slowedUntil = this.time + P.slow; this.log(`${U.cap(t.name)} is chilled to the bone. (slowed)`, 'spell'); } break;
+        case 'chain': {
+          hit(t, roll(P.dmg)); let from = t, n = 0;
+          for (const m of this.mobs) {
+            if (n >= P.jumps) break;
+            if (m === t || !m.alive || m.pos.distanceTo(t.pos) > 8 || !(m.hate && (m.hate.has(pl) || this.mercs.some((mc) => m.hate.has(mc))))) continue;
+            EB.fx.bolt(EB.fx.center(from).clone(), m, P.color, { speed: 40 }); hit(m, Math.round(roll(P.dmg) * 0.6)); from = m; n++;
+          }
+          break;
+        }
+      }
+      this.lastProc = { id: pid, t: this.time };
+      return true;
+    }
+    hasClicky(id) { const pl = this.player; return Object.values(pl.equip).some((e) => e && e.id === id) || pl.inv.some((e) => e && e.id === id); }
+    clickBtn(el, item) {
+      const I = ITEMS[item.id]; if (!I.click) return;
+      const b = document.createElement('div'); b.className = 'clickBtn'; b.textContent = '⚡'; b.title = 'Activate ' + EB.gear.CLICKS[I.click].name;
+      const go = (e) => { e.preventDefault(); e.stopPropagation(); this.useClick(item.id); };
+      b.addEventListener('click', go); b.addEventListener('touchend', go);
+      el.appendChild(b);
+    }
+    useClick(id) {
+      const pl = this.player, I = ITEMS[id], C = I && EB.gear.CLICKS[I.click];
+      if (!C || !pl.alive) return false;
+      if (!this.hasClicky(id)) { this.log(`You need the ${I.name} in your bags or equipped to use ${C.name}.`, 'sys'); return false; }
+      if (I.slot && !Object.values(pl.equip).some((e) => e && e.id === id)) { this.log(`You must be wearing the ${I.name} to use it. Fashion first.`, 'sys'); return false; }
+      if (pl.casting) { this.log('One spell at a time, show-off!', 'sys'); return false; }
+      const key = 'click:' + id, cd = (pl.cooldowns[key] || 0) - this.time;
+      if (cd > 0) { this.log(`${C.name} is recharging (${Math.ceil(cd)}s).`, 'sys'); return false; }
+      pl.cooldowns[key] = this.time + C.cd;
+      this.log(`You activate the ${I.name}: ${C.name}.`, 'spell');
+      switch (C.kind) {
+        case 'heal': { const b = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + C.amt); this.log(`You feel much better. (+${Math.round(pl.hp - b)} HP)`, 'spell'); EB.fx.heal(pl); EB.audio.heal(); break; }
+        case 'mana': { const b = pl.mana; pl.mana = Math.min(pl.maxMana, pl.mana + C.amt); this.log(`Your mind clears. (+${Math.round(pl.mana - b)} mana)`, 'spell'); EB.fx.heal(pl, 0x80a0ff); EB.audio.heal(); break; }
+        case 'buff': pl.buffs = pl.buffs.filter((b) => b.id !== key); pl.buffs.push({ id: key, name: C.name, left: C.dur, buff: C.buff }); EB.fx.buff(pl, C.color); EB.audio.spell(); break;
+        case 'port': this.log('Reality folds like a cheap lawn chair...', 'spell'); for (const m of this.mobs) if (m.alive && m.hate.has(pl)) m.goHome(); EB.fx.column(pl, 0xb080ff); this.toBind(); pl.autoAttack = false; EB.audio.spell(); break;
+      }
+      ui.hideTip(); if (this.windows.has('invWin')) this.renderInv();
+      return true;
+    }
     meleeDamage(w, st) {
       const pl = this.player;
       const strB = Math.floor(Math.max(0, st.STR - 60) / 12);
-      const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * CLASSES[pl.cls].dmgMult * (1 + pl.level / 12) * (1 + pl.buffSum('dmgPct') / 100)));
+      const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * CLASSES[pl.cls].dmgMult * (1 + pl.level / 12) * (1 + (pl.buffSum('dmgPct') + pl.gear().dmgPct) / 100)));
       return U.randInt(Math.max(1, Math.floor(max / 4)), max);
     }
     // v5: mob casters heal and buff their allies
@@ -821,7 +885,7 @@
       if (this.buildMode) { if (i < D.BUILDABLE.length) { this.buildSel = i; this.rebuildHotbar(); } return; }
       const list = this.hotbarList();
       if (this.bookSel) { const s = this.bookSel; this.bookSel = null; if (i < 8) this.assignHotbar(i, s); if (this.windows.has('bookWin')) this.renderBook(); return; }
-      if (list[i]) this.useAbility(list[i]);
+      if (list[i] && /^click:/.test(list[i])) this.useClick(list[i].slice(6)); else if (list[i]) this.useAbility(list[i]);
     }
     useAbility(id) {
       const pl = this.player, sp = SPELLS[id];
@@ -831,7 +895,7 @@
       if (isSpell(id) && !pl.gems.includes(id)) { this.log(`You do not have ${sp.name} memorized. Open your spellbook (K) and memorize it into a spell gem.`, 'sys'); return; }
       const cd = (pl.cooldowns[id] || 0) - this.time;
       if (cd > 0) { this.log(`You can use ${sp.name} again in ${Math.ceil(cd)} seconds.`, 'sys'); return; }
-      if (sp.mana > pl.mana) { this.log('Not enough mana. Try sitting down and thinking about your choices.', 'sys'); return; }
+      if (this.manaCost(sp) > pl.mana) { this.log('Not enough mana. Try sitting down and thinking about your choices.', 'sys'); return; }
       const t = this.target;
       const needsTarget = ['nuke', 'root', 'skill', 'dot', 'snare', 'slow', 'mez', 'stun'].includes(sp.kind);
       if (needsTarget) {
@@ -846,7 +910,7 @@
       if (sp.kind === 'pet' && this.mercs.filter((m) => !m.isPet).length >= 2 && !this.mercs.some((m) => m.isPet)) { /* group of 4 max: player + 2 mercs + pet is fine */ }
       this.stand();
       if (sp.cast > 0) {
-        pl.casting = { id, t: 0, total: sp.cast, target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
+        pl.casting = { id, t: 0, total: sp.skill ? sp.cast : sp.cast * (1 - pl.focus('castSpeed') / 100), target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
         if (!sp.skill) { this.log(`You start waving your hands around: ${sp.name}.`, 'spell'); EB.audio.cast(); }
         else this.log(`You begin to ${sp.name.toLowerCase()}.`, 'sys');
         $('castBar').classList.remove('hidden'); $('castName').textContent = sp.name; $('castFill').style.width = '0%';
@@ -871,7 +935,7 @@
           const fz = calc.fizzle(pl.level, pl.castStat());
           if (Math.random() * 100 < fz) {
             this.log('Your spell fizzles like a wet firecracker!', 'spell'); EB.audio.fizzle();
-            pl.mana -= Math.ceil(sp.mana / 2); pl.cooldowns[c.id] = this.time + 1;
+            pl.mana -= Math.ceil(this.manaCost(sp) / 2); pl.cooldowns[c.id] = this.time + 1;
             return;
           }
         }
@@ -881,12 +945,13 @@
     }
     applyAbility(id, t) {
       const pl = this.player, sp = SPELLS[id];
-      pl.mana -= sp.mana;
+      pl.mana -= this.manaCost(sp);
       pl.cooldowns[id] = this.time + sp.recast;
+      const healF = sp.skill ? 1 : 1 + pl.focus('healPct') / 100, dmgF = sp.skill ? 1 : 1 + pl.focus('spellDmg') / 100;
       const L = pl.level;
       switch (sp.kind) {
         case 'heal': {
-          const amt = U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          const amt = Math.round((U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * healF);
           const tg = t && (t.kind === 'merc' || t.kind === 'pc') ? t : pl;
           const before = tg.hp; tg.hp = Math.min(tg.maxHp, tg.hp + amt);
           const got = Math.round(tg.hp - before);
@@ -900,7 +965,7 @@
         case 'groupheal': {
           for (const g of this.groupMembers()) {
             if (g.pos.distanceTo(pl.pos) > 40) continue;
-            const amt = U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+            const amt = Math.round((U.randInt(sp.amt[0], sp.amt[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * healF);
             const before = g.hp; g.hp = Math.min(g.maxHp, g.hp + amt);
             this.log(g === pl ? `You feel much better. (+${Math.round(g.hp - before)} HP)` : `${g.name} feels much better. (+${Math.round(g.hp - before)} HP)`, 'spell');
             this.healAggro(pl, g.hp - before);
@@ -911,7 +976,7 @@
         }
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
-          let dmg = U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          let dmg = Math.round((U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * dmgF);
           if (sp.undead && t.def.faction === 'undead') { dmg = Math.floor(dmg * sp.undead); this.log(`${U.cap(t.name)} is seared by holy fire!`, 'spell'); }
           const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
@@ -924,7 +989,7 @@
         }
         case 'dot': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
-          const per = U.randInt(sp.tick[0], sp.tick[1]) + Math.floor((sp.perLvl || 0) * (L - 1));
+          const per = Math.round((U.randInt(sp.tick[0], sp.tick[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * dmgF);
           t.dots = (t.dots || []).filter((d) => d.id !== id);
           t.dots.push({ id, name: sp.name, src: pl, dmg: per, left: sp.dur, next: 3, school: sp.school });
           this.log(`${U.cap(t.name)} ${sp.school === 'fire' ? 'is covered in flames' : 'begins to sicken'}. (${sp.name})`, 'spell');
@@ -1110,10 +1175,10 @@
       const c = this.lootCorpse, g = $('lootGrid'); g.innerHTML = '';
       if (!c) return;
       c.loot.items.forEach((it, i) => {
-        const el = document.createElement('div'); el.className = 'islot' + (ITEMS[it.id].rare ? ' rare' : '');
+        const el = document.createElement('div'); el.className = 'islot' + ui.qcls(it);
         el.innerHTML = ui.slotHTML(it);
         el.onclick = () => this.takeLoot(i);
-        ui.tooltipFor(el, () => ui.itemTip(it.id));
+        ui.tooltipFor(el, () => ui.itemTip(it));
         g.appendChild(el);
       });
       if (!c.loot.items.length) g.innerHTML = '<div class="sub">Empty.</div>';
@@ -1122,10 +1187,8 @@
       const c = this.lootCorpse; if (!c) return false;
       const it = c.loot.items[i];
       if (this.net && c.net) return this.net.takeLoot(c, i);
-      if (!this.addItem(it.id, it.count)) return false;
-      const I = ITEMS[it.id];
-      this.log(`You yoink ${I.rare ? 'the' : /^[aeiou]/i.test(I.name) ? 'an' : 'a'} ${I.name} from ${c.corpseName()}!`, I.rare ? 'ding' : 'loot');
-      EB.audio.loot();
+      if (!this.addItem(it.id, it.count, false, it.sfx)) return false;
+      this.lootMsg(it, c.corpseName());
       c.loot.items.splice(i, 1);
       ui.hideTip();
       if (!c.loot.items.length) this.closeWin('lootWin'); else this.renderLoot();
@@ -1140,8 +1203,8 @@
     }
     lootOwnCorpse(c) {
       const pl = this.player;
-      for (const sl in c.loot.equip) { if (!pl.equip[sl]) pl.equip[sl] = c.loot.equip[sl]; else this.addItem(c.loot.equip[sl].id, 1, true); }
-      for (const it of c.loot.items) this.addItem(it.id, it.count, true);
+      for (const sl in c.loot.equip) { if (!pl.equip[sl]) pl.equip[sl] = c.loot.equip[sl]; else this.addItem(c.loot.equip[sl].id, 1, true, c.loot.equip[sl].sfx); }
+      for (const it of c.loot.items) this.addItem(it.id, it.count, true, it.sfx);
       pl.coins += c.loot.coins;
       this.log(`You have recovered your belongings from ${c.name}.`, 'loot');
       if (c.loot.coins) this.log(`You receive ${U.coinStr(c.loot.coins)} from your corpse.`, 'loot');
@@ -1151,13 +1214,13 @@
     }
 
     // ---------- inventory ----------
-    addItem(id, count, silent) {
+    addItem(id, count, silent, sfx) {
       const pl = this.player, it = ITEMS[id];
       count = count || 1;
-      if (it.stack) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; this.questDirty = true; return true; } }
+      if (it.stack && !sfx) { const ex = pl.inv.find((s) => s && s.id === id); if (ex) { ex.count += count; this.questDirty = true; return true; } }
       const i = pl.inv.indexOf(null);
       if (i < 0) { if (!silent) this.log('Your inventory is full!', 'sys'); return false; }
-      pl.inv[i] = { id, count };
+      pl.inv[i] = { id, count }; if (sfx && EB.gear.AFFIXES[sfx]) pl.inv[i].sfx = sfx;
       this.questDirty = true;
       return true;
     }
@@ -1166,20 +1229,21 @@
       const eg = $('equipGrid'); eg.innerHTML = '';
       for (const sl of EQUIP_SLOTS) {
         const el = document.createElement('div'); const item = pl.equip[sl];
-        el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+        el.className = 'islot' + ui.qcls(item);
         el.innerHTML = ui.slotHTML(item, sl);
-        if (item) { el.onclick = () => this.unequip(sl); ui.tooltipFor(el, () => ui.itemTip(item.id)); }
+        if (item) { el.onclick = () => this.unequip(sl); ui.tooltipFor(el, () => ui.itemTip(item)); this.clickBtn(el, item); }
         eg.appendChild(el);
       }
       const bg = $('bagGrid'); bg.innerHTML = '';
       pl.inv.forEach((item, i) => {
         const el = document.createElement('div');
-        el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+        el.className = 'islot' + ui.qcls(item);
         el.innerHTML = ui.slotHTML(item);
         if (item) {
           el.onclick = () => this.useBagItem(i);
           el.oncontextmenu = (e) => { e.preventDefault(); this.sellItem(i); };
-          ui.tooltipFor(el, () => ui.itemTip(item.id) + (this.merchant ? `<div style="color:#f0d070">Right-click to sell for ${U.coinShort(this.sellPrice(item.id) * item.count)}</div>` : ''));
+          if (!ITEMS[item.id].slot) this.clickBtn(el, item);
+          ui.tooltipFor(el, () => ui.itemTip(item) + (this.merchant ? `<div style="color:#f0d070">Right-click to sell for ${U.coinShort(this.sellPrice(item) * item.count)}</div>` : ''));
         }
         bg.appendChild(el);
       });
@@ -1189,6 +1253,9 @@
         `AC: ${pl.ac} &nbsp; ${w.name} (${w.dmg}/${Math.round(w.delay * 10)})<br>` +
         STAT_NAMES.map((n) => `${n}: <b>${st[n]}</b>`).join(' &nbsp; ') +
         `<br>XP: ${Math.floor((pl.xp / D.xpToNext(pl.level)) * 100)}% &nbsp; Played: ${Math.floor(pl.played / 60)}m`;
+      const G = pl.gear(), fl = Object.keys(G.focus).map((k) => `${EB.gear.FOCUS_LABEL[k]} ${G.focus[k]}%`);
+      if (fl.length) $('statsBox').innerHTML += `<br><span style="color:#8fd0ff">Focus: ${fl.join(', ')}</span>`;
+      for (const st2 of G.sets) $('statsBox').innerHTML += `<br><span style="color:#ffd870">${EB.gear.SETS[st2.id].name} (${st2.n}/${EB.gear.SETS[st2.id].items.length})${st2.active.length ? ' - bonus ' + st2.active.join('+') + 'pc active' : ''}</span>`;
       $('coinBox').innerHTML = `Coin: ${U.coinStr(pl.coins)}`;
     }
     useBagItem(i) {
@@ -1196,9 +1263,11 @@
       const it = ITEMS[item.id];
       if (it.slot) {
         const old = pl.equip[it.slot];
-        pl.equip[it.slot] = { id: item.id };
-        pl.inv[i] = old ? { id: old.id, count: 1 } : null;
-        this.log(`You equip the ${it.name}.`, 'sys');
+        pl.equip[it.slot] = EB.gear.equipCopy(item);
+        pl.inv[i] = old ? EB.gear.copy(old, 1) : null;
+        this.log(`You equip the ${EB.gear.def(item).name}.`, 'sys');
+        if (it.click && !pl.hotbar.includes('click:' + item.id)) { const hs = pl.hotbar.indexOf(null); if (hs >= 0) { pl.hotbar[hs] = 'click:' + item.id; this.rebuildHotbar(); this.log(`${EB.gear.CLICKS[it.click].name} added to hotbar slot ${hs + 1}. Click it to activate.`, 'help'); } }
+      } else if (it.click) { this.useClick(item.id); return;
       } else if (it.use) {
         if (it.use.heal) { pl.hp = Math.min(pl.maxHp, pl.hp + it.use.heal); this.log(`You use the ${it.name}. You feel better.`, 'spell'); EB.audio.heal(); }
         item.count--; if (item.count <= 0) pl.inv[i] = null;
@@ -1208,16 +1277,16 @@
     }
     unequip(sl) {
       const pl = this.player, item = pl.equip[sl]; if (!item) return;
-      if (!this.addItem(item.id, 1)) return;
+      if (!this.addItem(item.id, 1, false, item.sfx)) return;
       delete pl.equip[sl];
-      this.log(`You remove the ${ITEMS[item.id].name}.`, 'sys');
+      this.log(`You remove the ${EB.gear.def(item).name}.`, 'sys');
       pl.hp = Math.min(pl.hp, pl.maxHp); pl.mana = Math.min(pl.mana, pl.maxMana);
       ui.hideTip(); this.renderInv();
     }
     chaMod() { return (this.player.stats().CHA - 75) / 600; }
     fMult() { return (this.merchant && this.priceMult(this.merchant)) || 1; }
     buyPrice(id) { return Math.max(1, Math.round(ITEMS[id].value * (1.25 - this.chaMod()) * this.fMult())); }
-    sellPrice(id) { return Math.max(1, Math.floor(ITEMS[id].value * (0.5 + this.chaMod() / 2) / this.fMult())); }
+    sellPrice(id) { return Math.max(1, Math.floor(EB.gear.def(id).value * (0.5 + this.chaMod() / 2) / this.fMult())); }
     renderMerchant() {
       const m = this.merchant; if (!m) return;
       $('merchTitle').firstChild.textContent = `${m.name} `;
@@ -1237,8 +1306,8 @@
       if (inv.length) {
         const h = document.createElement('h4'); h.textContent = 'Sell your items'; h.className = 'sellHdr'; list.appendChild(h);
         for (const [it, i] of inv) {
-          const I = ITEMS[it.id], row = document.createElement('div'); row.className = 'row sellRow';
-          row.innerHTML = `<span>${I.icon || '•'}</span><span class="n">${I.name}${it.count > 1 ? ' x' + it.count : ''}</span><span>${U.coinShort(this.sellPrice(it.id) * it.count)}</span>`;
+          const I = EB.gear.def(it), row = document.createElement('div'); row.className = 'row sellRow';
+          row.innerHTML = `<span>${I.icon || '•'}</span><span class="n" style="color:${EB.gear.qcolor(it)}">${I.name}${it.count > 1 ? ' x' + it.count : ''}</span><span>${U.coinShort(this.sellPrice(it) * it.count)}</span>`;
           const b = document.createElement('button'); b.textContent = 'Sell'; b.className = 'small'; b.onclick = () => this.sellItem(i);
           row.appendChild(b); list.appendChild(row);
         }
@@ -1255,9 +1324,9 @@
     sellItem(i) {
       if (!this.merchant) { this.log('You need to be trading with a merchant to sell items. (Open a merchant with E)', 'sys'); return; }
       const pl = this.player, item = pl.inv[i]; if (!item) return;
-      const p = this.sellPrice(item.id) * item.count;
+      const p = this.sellPrice(item) * item.count;
       pl.coins += p; pl.inv[i] = null;
-      this.log(`You sold ${item.count > 1 ? item.count + ' ' : 'a '}${ITEMS[item.id].name} to ${this.merchant.name} for ${U.coinStr(p)}.`, 'loot');
+      this.log(`You sold ${item.count > 1 ? item.count + ' ' : 'a '}${EB.gear.def(item).name} to ${this.merchant.name} for ${U.coinStr(p)}.`, 'loot');
       EB.audio.loot(); ui.hideTip(); this.renderInv(); this.renderMerchant();
     }
     trainCost(L) { return L <= 1 ? 0 : L * L * 12; }
@@ -1291,9 +1360,9 @@
       const pl = this.player, mk = (grid, arr, fn) => {
         const g = $(grid); g.innerHTML = '';
         arr.forEach((item, i) => {
-          const el = document.createElement('div'); el.className = 'islot' + (item && ITEMS[item.id].rare ? ' rare' : '');
+          const el = document.createElement('div'); el.className = 'islot' + ui.qcls(item);
           el.innerHTML = ui.slotHTML(item);
-          if (item) { el.onclick = () => fn(i); ui.tooltipFor(el, () => ui.itemTip(item.id)); }
+          if (item) { el.onclick = () => fn(i); ui.tooltipFor(el, () => ui.itemTip(item)); }
           g.appendChild(el);
         });
       };
@@ -1305,9 +1374,9 @@
       const pl = this.player, it = pl.inv[i]; if (!it) return false;
       const I = ITEMS[it.id];
       if (I.quest) { this.log('The Vaultkeeper refuses to store quest items. "Too much paperwork."', 'sys'); return false; }
-      let slot = I.stack ? pl.bank.findIndex((s) => s && s.id === it.id) : -1;
+      let slot = I.stack && !it.sfx ? pl.bank.findIndex((s) => s && s.id === it.id) : -1;
       if (slot >= 0) pl.bank[slot].count += it.count;
-      else { slot = pl.bank.indexOf(null); if (slot < 0) { this.log('Your vault is full!', 'sys'); return false; } pl.bank[slot] = { id: it.id, count: it.count }; }
+      else { slot = pl.bank.indexOf(null); if (slot < 0) { this.log('Your vault is full!', 'sys'); return false; } pl.bank[slot] = EB.gear.copy(it); }
       pl.inv[i] = null;
       this.log(`You deposit ${it.count > 1 ? it.count + ' ' : 'a '}${I.name} in your vault.`, 'loot');
       EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
@@ -1315,7 +1384,7 @@
     }
     bankWithdraw(i) {
       const pl = this.player, it = pl.bank[i]; if (!it) return false;
-      if (!this.addItem(it.id, it.count)) return false;
+      if (!this.addItem(it.id, it.count, false, it.sfx)) return false;
       pl.bank[i] = null;
       this.log(`You withdraw ${it.count > 1 ? it.count + ' ' : 'a '}${ITEMS[it.id].name} from your vault.`, 'loot');
       EB.audio.loot(); ui.hideTip(); this.renderBank(); if (this.windows.has('invWin')) this.renderInv(); this.save();
@@ -1419,7 +1488,7 @@
       this.renderGroup();
     }
     dismissMerc(m) {
-      if (!m.isPet) for (const sl in m.equip) { if (!this.addItem(m.equip[sl].id, 1, true)) this.log(`${ITEMS[m.equip[sl].id].name} was lost (inventory full).`, 'sys'); }
+      if (!m.isPet) for (const sl in m.equip) { if (!this.addItem(m.equip[sl].id, 1, true, m.equip[sl].sfx)) this.log(`${ITEMS[m.equip[sl].id].name} was lost (inventory full).`, 'sys'); }
       this.log(m.isPet ? `${m.name} crumbles to dust.` : `${m.name} has left the group.${Object.keys(m.equip).length ? ' They return the gear you gave them.' : ''}`, 'sys');
       this.removeMercModel(m); this.save();
     }
@@ -1504,9 +1573,9 @@
       const eq = $('mcfgEquip');
       for (const sl of EQUIP_SLOTS) {
         const it = m.equip[sl], el = document.createElement('div');
-        el.className = 'islot' + (it && ITEMS[it.id].rare ? ' rare' : '');
+        el.className = 'islot' + ui.qcls(it);
         el.innerHTML = ui.slotHTML(it, sl);
-        if (it) { el.onclick = () => this.takeFromMerc(m, sl); ui.tooltipFor(el, () => ui.itemTip(it.id)); }
+        if (it) { el.onclick = () => this.takeFromMerc(m, sl); ui.tooltipFor(el, () => ui.itemTip(it)); }
         eq.appendChild(el);
       }
       const gv = $('mcfgGive'); let any = false;
@@ -1517,7 +1586,7 @@
         el.innerHTML = `<span>${I.icon}</span><span class="n">${I.name} <span style="color:#b0a080">(${I.slot})</span></span>`;
         const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Give'; b.disabled = m.dead;
         b.onclick = () => this.giveToMerc(m, i);
-        el.appendChild(b); ui.tooltipFor(el, () => ui.itemTip(item.id)); gv.appendChild(el);
+        el.appendChild(b); ui.tooltipFor(el, () => ui.itemTip(item)); gv.appendChild(el);
       });
       if (!any) gv.innerHTML = '<div class="sub">You have no equippable items in your bags.</div>';
     }
@@ -1525,9 +1594,9 @@
       const pl = this.player, item = pl.inv[i]; if (!item || m.dead) return;
       const I = ITEMS[item.id]; if (!I.slot) return;
       const hpPct = m.hp / m.maxHp, old = m.equip[I.slot];
-      m.equip[I.slot] = { id: item.id };
+      m.equip[I.slot] = EB.gear.equipCopy(item);
       item.count--; if (item.count <= 0) pl.inv[i] = null;
-      if (old) this.addItem(old.id, 1, true);
+      if (old) this.addItem(old.id, 1, true, old.sfx);
       m.hp = Math.ceil(m.maxHp * hpPct); m.mana = Math.min(m.mana, m.maxMana);
       this.log(`You give ${I.name} to ${m.name}.${old ? ` ${m.name} hands back the ${ITEMS[old.id].name}.` : ''}`, 'loot');
       this.log(`${m.name} says: "My thanks, ${pl.name}. This will serve me well."`, 'say');
@@ -1535,7 +1604,7 @@
     }
     takeFromMerc(m, sl) {
       const it = m.equip[sl]; if (!it) return;
-      if (!this.addItem(it.id, 1)) return;
+      if (!this.addItem(it.id, 1, false, it.sfx)) return;
       const hpPct = m.hp / m.maxHp;
       delete m.equip[sl];
       m.hp = Math.min(m.maxHp, Math.ceil(m.maxHp * hpPct)); m.mana = Math.min(m.mana, m.maxMana);
@@ -1697,10 +1766,11 @@
     }
     assignHotbar(slot, id) {
       const pl = this.player;
-      if (id && !pl.spells.includes(id)) return;
+      if (id && !pl.spells.includes(id) && !/^click:/.test(id)) return;
       for (let i = 0; i < 8; i++) if (pl.hotbar[i] === id) pl.hotbar[i] = null;
       pl.hotbar[slot] = id;
-      if (id) this.log(`${SPELLS[id].name} placed on hotbar slot ${slot + 1}.${isSpell(id) && !pl.gems.includes(id) ? ' (Memorize it in a spell gem to cast it.)' : ''}`, 'sys');
+      if (id && /^click:/.test(id)) this.log(`${ITEMS[id.slice(6)].name} placed on hotbar slot ${slot + 1}.`, 'sys');
+      else if (id) this.log(`${SPELLS[id].name} placed on hotbar slot ${slot + 1}.${isSpell(id) && !pl.gems.includes(id) ? ' (Memorize it in a spell gem to cast it.)' : ''}`, 'sys');
       this.rebuildHotbar(); this.save();
     }
     renderBook() {
@@ -1935,6 +2005,15 @@
           el.onclick = () => this.hotkey(i);
           hb.appendChild(el); return;
         }
+        if (/^click:/.test(id)) { // v8: item click effect
+          const I = ITEMS[id.slice(6)], C = EB.gear.CLICKS[I.click];
+          el.className = 'slot clicky'; el.style.borderColor = EB.gear.qcolor(id.slice(6));
+          el.innerHTML = `<span class="k">${i + 1}</span><span class="ic">${I.icon || '◆'}</span><span class="hn">${C.name}</span><div class="cd"></div>`;
+          el.onclick = () => this.hotkey(i);
+          el.oncontextmenu = (e) => { e.preventDefault(); this.assignHotbar(i, null); };
+          ui.tooltipFor(el, () => ui.itemTip(id.slice(6)) + '<div style="color:#b0a080">Right-click to clear</div>');
+          hb.appendChild(el); this.hotbarEls.push({ el, id, click: id.slice(6), cd: el.querySelector('.cd') }); return;
+        }
         const sp = SPELLS[id];
         el.className = 'slot' + (isSpell(id) ? ' spell' : '');
         el.innerHTML = `<span class="k">${i + 1}</span>${EB.icons.img(id, 'sic hic')}<span class="hn">${sp.name}</span><div class="cd"></div>`;
@@ -1965,6 +2044,7 @@
       this.petWinT = (this.petWinT || 0) + 1; if (this.windows.has('petWin') && this.petWinT % 5 === 0) this.renderPetWin();
       const at = $('atkSlot'); if (at) at.classList.toggle('active', pl.autoAttack);
       for (const h of this.hotbarEls || []) {
+        if (h.click) { const C = EB.gear.CLICKS[ITEMS[h.click].click], left = (pl.cooldowns['click:' + h.click] || 0) - this.time; h.cd.style.height = left > 0 ? Math.min(100, (left / C.cd) * 100) + '%' : '0%'; h.el.classList.toggle('unmem', !this.hasClicky(h.click)); continue; }
         const sp = SPELLS[h.id], left = (pl.cooldowns[h.id] || 0) - this.time;
         h.cd.style.height = left > 0 ? Math.min(100, (left / sp.recast) * 100) + '%' : '0%';
         h.el.classList.toggle('nomana', sp.mana > pl.mana);
@@ -2204,7 +2284,40 @@
       if (pl.alive && pl.casting && !pl.casting.skill && this.camDist > 0) { const sp = SPELLS[pl.casting.id]; this.castGlow(pl, EB.fx.SCHOOL[sp && sp.school] || (sp && sp.kind === 'heal' ? 0x9effa0 : 0xfff080), dt); }
       // showcase models (photo mode / gallery): {M, walk, attack, cast} animated in place
       if (this.showcase) for (const sc of this.showcase) { sc.ph = (sc.ph || 0) + dt * (sc.walk ? 8 : 0); if (sc.attack) { sc.at = (sc.at || 0) + dt * 1.3; if (sc.at > 1.6) sc.at = 0.01; } EB.models.animateModel(sc.M, sc.ph, !!sc.walk, sc.at > 0 && sc.at < 1 ? sc.at : 0, !!sc.sit, { dt, cast: !!sc.cast, always: true }); if (sc.cast) { sc.model = sc.M; this.castGlow(sc, sc.castColor || 0x80c0ff, dt); } }
+      this.gearFx(dt);
       EB.fx.update(dt, this.camera, this.renderer);
+    }
+    // v8: enchanted weapons shimmer by quality and leave a particle trail while swinging; legendary armor wears an aura
+    gearFx(dt) {
+      const pl = this.player, M = this.pmodel;
+      if (!pl || !pl.alive || !M || this.camDist <= 0) return;
+      const hi = EB.fx.high, G = pl.gear();
+      const w = pl.equip.primary && ITEMS[pl.equip.primary.id], col = w && EB.gear.glowHex(pl.equip.primary.id);
+      if (col && M.parts.weapon) {
+        const swinging = this.pAttackAnim > 0;
+        this._wfxT = (this._wfxT || 0) - dt;
+        if (this._wfxT <= 0) {
+          this._wfxT = swinging ? (hi ? 1 / 60 : 1 / 20) : (hi ? 0.12 : 0.35);
+          M.group.updateMatrixWorld(true);
+          const len = { dagger: 0.3, greatsword: 1.2, staff: 1.3, spear: 1.4, longsword: 0.9 }[M.weaponKind] || 0.7;
+          const n = swinging ? (hi ? 3 : 1) : 1;
+          for (let k = 0; k < n; k++) {
+            const tip = M.parts.weapon.localToWorld(this._wv = (this._wv || new THREE.Vector3()).set(0, 0.15 + Math.random() * len, 0));
+            EB.fx.emit(tip.x, tip.y, tip.z, (Math.random() - 0.5) * 0.3, swinging ? 0.1 : 0.5, (Math.random() - 0.5) * 0.3, swinging ? 0.45 : 0.7, swinging ? 0.16 : 0.1, col, 0, 1.5);
+          }
+        }
+      }
+      if (G.legendaryArmor) {
+        this._afxT = (this._afxT || 0) - dt;
+        if (this._afxT <= 0) {
+          this._afxT = hi ? 0.035 : 0.2;
+          this._afxA = ((this._afxA || 0) + 0.9) % (Math.PI * 2);
+          for (let k = 0; k < (hi ? 2 : 1); k++) {
+            const a = this._afxA + k * Math.PI + Math.random() * 0.3, r = 0.6 + Math.random() * 0.12, y = pl.pos.y + 0.05 + Math.random() * 0.3;
+            EB.fx.emit(pl.pos.x + Math.cos(a) * r, y, pl.pos.z + Math.sin(a) * r, -Math.cos(a) * 0.15, 1.3 + Math.random() * 0.5, -Math.sin(a) * 0.15, 1.3, 0.26, k ? 0xffd060 : EB.gear.QHEX.legendary, -0.15, 0.4);
+          }
+        }
+      }
     }
     castGlow(e, color, dt) {
       e._glowT = (e._glowT || 0) + dt;

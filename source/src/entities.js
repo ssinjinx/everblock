@@ -166,7 +166,7 @@
       EB.models.setDead(this.model, true);
       const L = this.level;
       this.loot = { coins: Math.random() < 0.8 ? U.randInt(0, L * 9 + 3) * (this.def.named ? 6 : 1) : 0, items: [] };
-      for (const [id, ch] of this.def.loot || []) if (Math.random() < ch) this.loot.items.push({ id, count: 1 });
+      for (const [id, ch] of this.def.loot || []) if (Math.random() < ch) this.loot.items.push(EB.gear ? EB.gear.rollDrop(id) : { id, count: 1 }); // v8: drops may roll a suffix affix
       this.refreshPlate(game);
       if (this.spawn) this.spawn.respawnAt = game.time + this.spawn.def.respawn * (0.85 + Math.random() * 0.3);
     }

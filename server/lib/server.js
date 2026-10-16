@@ -6,7 +6,7 @@ const { ZoneSim } = require('./zone');
 const { validateNewChar, sanitizeSave } = require('./sanitize');
 const D = EB.data, U = EB.util;
 const { B, BLOCKS, SPELLS, ITEMS, QUESTS, RACES, CLASSES, MERCS, conColor, CON_XP } = D;
-const VERSION = '6.0.0';
+const VERSION = '8.0.0';
 const ZONE_IDS = Object.keys(EB.WORLD.ZONES);
 
 // ---------------------------------------------------------------- passwords (scrypt)

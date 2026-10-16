@@ -61,8 +61,8 @@
       return true;
     }
     buffSum(f) { let t = 0; for (const b of this.buffs) if (b.buff[f]) t += b.buff[f]; return t; }
-    itemSum(f) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it[f]) t += it[f]; } return t; }
-    statSum(n) { let t = 0; for (const sl in this.equip) { const it = ITEMS[this.equip[sl].id]; if (it && it.stats && it.stats[n]) t += it.stats[n]; } return t; }
+    itemSum(f) { let t = 0; for (const sl in this.equip) { const it = EB.gear.def(this.equip[sl]); if (it && it[f]) t += it[f]; } return t; }
+    statSum(n) { let t = 0; for (const sl in this.equip) { const it = EB.gear.def(this.equip[sl]); if (it && it.stats && it.stats[n]) t += it.stats[n]; } return t; }
     get maxHp() {
       if (this.isPet) return Math.floor(EB.calc.maxHp('warrior', this.level, 80) * 0.85);
       const base = Math.floor(EB.calc.maxHp(this.cls, this.level, this.role === 'tank' ? 100 : 85) * (this.role === 'tank' ? 1.3 : 1));
@@ -162,7 +162,7 @@
     melee(foe, game, dt) {
       this.swing -= dt;
       if (this.swing > 0) return;
-      const tank = this.role === 'tank', w = this.equip.primary && ITEMS[this.equip.primary.id];
+      const tank = this.role === 'tank', w = this.equip.primary && EB.gear.def(this.equip.primary);
       this.swing = this.isPet ? 2.2 : w && w.delay ? w.delay : tank ? 2.4 : 3.0; this.attackT = 0.01;
       const verb = this.isPet ? 'hits' : w ? { slash: 'slashes', pierce: 'pierces', crush: 'crushes' }[w.verb] || 'hits' : tank ? 'slashes' : 'crushes';
       if (Math.random() > U.clamp(0.72 + (this.level - foe.level) * 0.05, 0.3, 0.95)) { game.log(`${this.name} tries to hit ${foe.name}, but whiffs!`, 'other'); foe.addHate(this, 1); return; }

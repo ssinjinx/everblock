@@ -89,11 +89,11 @@
   // ---------- HUD ----------
   const MAX_LOG = 250;
   const ui = {
-    log(msg, type) {
+    log(msg, type, html) {
       const el = $('chatLog');
       const d = document.createElement('div');
       d.className = 'm ' + (type || 'sys');
-      d.textContent = msg;
+      if (html) d.innerHTML = msg; else d.textContent = msg;
       const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
       el.appendChild(d);
       while (el.childNodes.length > MAX_LOG) el.removeChild(el.firstChild);
@@ -118,10 +118,13 @@
     },
     moveTip(e) { const t = $('tooltip'); t.style.left = Math.min(window.innerWidth - 270, e.clientX + 14) + 'px'; t.style.top = Math.min(window.innerHeight - 160, e.clientY + 14) + 'px'; },
     hideTip() { $('tooltip').classList.add('hidden'); },
-    itemTip(id) {
-      const it = ITEMS[id]; if (!it) return '';
-      let h = `<div class="tn ${it.rare ? 'rare' : ''}">${it.name}</div>`;
-      if (it.rare) h += '<div style="color:#ffb040">MAGIC ITEM &nbsp;LORE ITEM</div>';
+    qcls(item) { return item ? ' q-' + EB.gear.quality(item) : ''; },
+    // v8: tooltips show quality, affix, procs, click effects, focus effects and set bonuses; accepts an instance or an id
+    itemTip(inst) {
+      const G = EB.gear, it = G.def(inst); if (!it) return '';
+      const id = typeof inst === 'string' ? inst : inst.id, q = G.QUALITY[it.q] || G.QUALITY.common;
+      let h = `<div class="tn" style="color:${q.color}">${it.name}</div>`;
+      h += `<div style="color:${q.color}">${q.label}${it.slot ? '' : ' item'}${it.rare ? ' &nbsp;MAGIC ITEM &nbsp;LORE ITEM' : ''}</div>`;
       if (it.slot) h += `<div>Slot: ${it.slot.toUpperCase()}</div>`;
       if (it.dmg) h += `<div>Skill: ${it.verb === 'pierce' ? 'Piercing' : it.verb === 'crush' ? '1H Blunt' : '1H Slashing'} &nbsp; DMG: ${it.dmg} &nbsp; Delay: ${Math.round(it.delay * 10)}</div>`;
       if (it.ac) h += `<div>AC: ${it.ac}</div>`;
@@ -130,13 +133,25 @@
       if (it.hp) st.push(`HP: +${it.hp}`);
       if (it.mana) st.push(`MANA: +${it.mana}`);
       if (st.length) h += `<div style="color:#90e070">${st.join(' &nbsp; ')}</div>`;
+      if (it.affixed) h += `<div style="color:#5ee05e;font-style:italic">Suffix: ${G.AFFIXES[it.sfx].name}</div>`;
+      if (it.proc) { const P = G.PROCS[it.proc]; h += `<div style="color:#ffb060">Combat Effect: ${P.name} - ${P.desc} (${Math.round(G.procChance(it.proc, it.delay) * 100)}% per hit)</div>`; }
+      if (it.click) { const C = G.CLICKS[it.click]; h += `<div style="color:#8fd0ff">Click Effect: ${C.name} - ${C.desc} (recast ${C.cd >= 60 ? Math.round(C.cd / 60) + 'm' : C.cd + 's'}${it.slot ? ', must be worn' : ''})</div>`; }
+      if (it.focus) for (const k in it.focus) h += `<div style="color:#8fd0ff">Focus: ${G.FOCUS_LABEL[k]} +${it.focus[k]}%</div>`;
       if (it.use) h += `<div style="color:#8fd0ff">Use: Heals ${it.use.heal} HP</div>`;
+      if (it.set) {
+        const S = G.SETS[it.set], eq = (EB.game && EB.game.player && EB.game.player.equip) || {}, worn = new Set(Object.values(eq).filter(Boolean).map((e) => e.id));
+        const n = S.items.filter((x) => worn.has(x)).length;
+        h += `<div class="setb"><div style="color:#ffd870">${S.name} (${n}/${S.items.length})</div>`;
+        h += S.items.map((x) => `<div style="color:${worn.has(x) ? '#e8e0cc' : '#7a7468'};padding-left:8px">${EB.data.ITEMS[x].name}</div>`).join('');
+        for (const k in S.bonus) h += `<div style="color:${n >= +k ? '#5ee05e' : '#7a7468'}">(${k}) Set: ${G.bonusText(S.bonus[k])}</div>`;
+        h += '</div>';
+      }
       h += `<div style="color:#b0a080">Value: ${U.coinShort(it.value)}</div>`;
       return h;
     },
     slotHTML(item, label) {
       if (!item) return `<div class="sl">${label || ''}</div>`;
-      const it = ITEMS[item.id];
+      const it = EB.gear.def(item);
       return `${label ? `<div class="sl">${label}</div>` : ''}<div class="ic">${it.icon || '◆'}</div><div class="nm">${it.name}</div>${item.count > 1 ? `<div class="ct">${item.count}</div>` : ''}`;
     },
     blockSwatch(game, b) {

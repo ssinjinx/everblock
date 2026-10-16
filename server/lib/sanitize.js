@@ -30,7 +30,9 @@ const num = (v, lo, hi, d) => (typeof v === 'number' && isFinite(v) ? Math.min(h
 function item(it) {
   if (!it || typeof it !== 'object' || !ITEMS[it.id]) return null;
   const I = ITEMS[it.id];
-  return { id: it.id, count: I.stack ? Math.max(1, Math.min(1000, it.count | 0 || 1)) : 1 };
+  const o = { id: it.id, count: I.stack ? Math.max(1, Math.min(1000, it.count | 0 || 1)) : 1 };
+  if (it.sfx && EB.gear && EB.gear.AFFIXES[it.sfx] && EB.gear.canAffix(I)) o.sfx = it.sfx; // v8: suffix affixes
+  return o;
 }
 function equipMap(e) {
   const out = {};
@@ -38,7 +40,7 @@ function equipMap(e) {
   for (const sl of Object.keys(e)) {
     if (!EQUIP_SLOTS.includes(sl)) continue;
     const it = e[sl]; if (!it || !ITEMS[it.id] || ITEMS[it.id].slot !== sl) continue;
-    out[sl] = { id: it.id };
+    out[sl] = { id: it.id }; if (it.sfx && EB.gear && EB.gear.AFFIXES[it.sfx]) out[sl].sfx = it.sfx;
   }
   return out;
 }
@@ -56,8 +58,9 @@ function sanitizeSave(rec, data, ctx) {
   out.equip = equipMap(c.equip);
   const learnable = (s) => SPELLS[s] && SPELLS[s].classes[rec.cls] && SPELLS[s].classes[rec.cls] <= L;
   out.spells = Array.isArray(c.spells) ? [...new Set(c.spells.filter(learnable))] : undefined;
-  const pad = (a) => { a = (Array.isArray(a) ? a : []).slice(0, 8).map((x) => (x && out.spells && out.spells.includes(x) ? x : null)); while (a.length < 8) a.push(null); return a; };
-  if (out.spells) { out.gems = pad(c.gems); out.hotbar = pad(c.hotbar); }
+  const clickOK = (x) => typeof x === 'string' && x.startsWith('click:') && ITEMS[x.slice(6)] && ITEMS[x.slice(6)].click; // v8: item click effects on the hotbar
+  const pad = (a, hb) => { a = (Array.isArray(a) ? a : []).slice(0, 8).map((x) => (x && ((out.spells && out.spells.includes(x)) || (hb && clickOK(x))) ? x : null)); while (a.length < 8) a.push(null); return a; };
+  if (out.spells) { out.gems = pad(c.gems); out.hotbar = pad(c.hotbar, true); }
   out.title = typeof c.title === 'string' ? c.title.slice(0, 40) : '';
   out.faction = {};
   for (const f in FACTIONS) out.faction[f] = Math.round(num(c.faction && c.faction[f], -2000, 2000, FACTIONS[f].start));
