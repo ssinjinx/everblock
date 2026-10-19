@@ -27,7 +27,7 @@
       this.model = EB.models.buildModel(EB.models.playerOpts({ race: this.race, cls: this.cls, equip: this.equip }));
       this.plate = makeNameplate(this.name, '#9fd8ff', this.sub(info));
     }
-    sub(info) { return info.title ? info.title : `<Level ${info.level} ${CLASSES[info.cls].name}>`; }
+    sub(info) { return info.title ? info.title : `<Level ${info.level} ${info.classes && info.classes.length > 1 ? EB.multi.label(info.classes) : CLASSES[info.cls].name}>`; }
     get maxHp() { return this.mhp; }
     get hp() { return this._hp; }
     set hp(v) { const d = Math.round(v - this._hp); if (d > 0 && net.game && this.alive) net.send({ t: 'heal', to: this.pid, amt: d, from: net.game.player.name }); this._hp = Math.max(0, v); }
@@ -41,7 +41,7 @@
     constructor(owner, info, i) {
       super('rmerc', info.name || 'a mercenary');
       this.owner = owner; this.idx = i; this.role = info.role; this.petLvl = info.petLvl; this.hw = 0.3; this.atkSeq = 0; this.flags = 0;
-      this.model = EB.models.buildModel(info.role === 'pet' ? EB.models.petOpts(info.petLvl || 3) : EB.models.mercOpts(info.role, info.equip || {}));
+      this.model = EB.models.buildModel(info.role === 'pet' ? EB.models.petOpts(info.petLvl || 3, info.petType || 'skel') : EB.models.mercOpts(info.role, info.equip || {}));
       this.h = Math.max(1.4, this.model.height * 0.95);
       this.plate = makeNameplate(this.name, '#9fd8ff', `<${owner.name}'s ${info.role === 'pet' ? 'pet' : 'mercenary'}>`);
       this.hp = 1; this.maxHp = 1; this.dead = false;
@@ -262,6 +262,10 @@
       if (m.n > 0) { this.xpOK = true; try { g.gainXP(m.n, m.party); } finally { this.xpOK = false; } }
       else if (m.kill) g.log('That kill taught you absolutely nothing.', 'other');
       if (pl.level !== m.lvl || Math.abs(pl.xp - m.xp) > 1) { pl.level = m.lvl; pl.xp = m.xp; }
+      if (m.aaE != null) { // v9: Overachievement Points are server-authoritative
+        const got = m.aaE - (pl.aaEarned | 0); pl.aaEarned = m.aaE; pl.aaXp = m.aaX;
+        if (got > 0) { g.log(`You overachieved! (+${got} OP, ${pl.aaFree} unspent)`, 'xp'); g.windows.has('aaWin') && g.renderWin('aaWin'); }
+      }
     },
     h_ma(m, g) {
       const mob = this.mobById(m.id); if (!mob || !mob.alive) return;
@@ -446,7 +450,7 @@
     },
     sendLook(force) {
       const g = this.game, pl = g.player;
-      const look = { t: 'look', equip: pl.equip, title: pl.title, level: pl.level, mercs: g.mercs.map((m) => ({ role: m.role, petLvl: m.petLvl, name: m.name })) };
+      const look = { t: 'look', equip: pl.equip, title: pl.title, level: pl.level, mercs: g.mercs.map((m) => ({ role: m.role, petLvl: m.petLvl, petType: m.petType, name: m.name })) };
       const sig = JSON.stringify(look);
       if (!force && sig === this.lookSig) return;
       this.lookSig = sig; this.send(look);
@@ -571,7 +575,7 @@
       if (!m.chars.length) list.innerHTML = '<div class="sub">No characters yet. Create one to enter the world.</div>';
       for (const c of m.chars) {
         const row = document.createElement('div'); row.className = 'olChar';
-        row.innerHTML = `<div class="n"><b>${esc(c.name)}</b>${c.title ? ', ' + esc(c.title) : ''}<br><span>Level ${c.level} ${RACES[c.race].name} ${CLASSES[c.cls].name} &middot; ${esc(c.zone)}</span></div>`;
+        row.innerHTML = `<div class="n"><b>${esc(c.name)}</b>${c.title ? ', ' + esc(c.title) : ''}<br><span>Level ${c.level} ${RACES[c.race].name} ${c.classes && c.classes.length > 1 ? EB.multi.label(c.classes) : CLASSES[c.cls].name} &middot; ${esc(c.zone)}</span></div>`;
         const play = document.createElement('button'); play.className = 'big olPlay'; play.textContent = 'Play';
         play.onclick = () => { EB.audio.unlock(); this.status('Entering the world...'); net.send({ t: 'play', id: c.id }); };
         const del = document.createElement('button'); del.className = 'small'; del.textContent = 'Delete';

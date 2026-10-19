@@ -39,7 +39,7 @@ vm.createContext(sandbox);
 // Each file runs inside a function whose parameters are the sandbox globals: a bare global lookup inside a vm
 // context goes through a slow interceptor (Math.floor in the pathfinder's inner loop was most of the CPU).
 const GLOBALS = Object.keys(sandbox).filter((k) => /^[A-Za-z_$][\w$]*$/.test(k));
-for (const f of ['util.js', 'data.js', 'gear.js', 'models.js', 'world.js', 'path.js', 'entities.js']) {
+for (const f of ['util.js', 'data.js', 'gear.js', 'multi.js', 'models.js', 'world.js', 'path.js', 'entities.js']) {
   const code = `(function (${GLOBALS.join(', ')}) {\n${fs.readFileSync(path.join(SRC, f), 'utf8')}\n}).apply(globalThis, [${GLOBALS.map((k) => 'globalThis.' + k).join(', ')}]);`;
   vm.runInContext(code, sandbox, { filename: f, lineOffset: -1 });
 }

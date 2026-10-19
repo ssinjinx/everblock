@@ -11,9 +11,10 @@
     constructor(role, game, saved) {
       const isPet = role === 'pet';
       const petLvl = isPet ? (saved && saved.petLvl) || 3 : 0;
-      const M = isPet ? Object.assign({ cls: 'warrior' }, PETS[petLvl] || PETS[3]) : MERCS[role];
+      const petType = isPet ? (saved && EB.multi.PET_TYPES[saved.petType] ? saved.petType : 'skel') : null; // v9: several pet kinds
+      const M = isPet ? Object.assign({ cls: 'warrior' }, EB.multi.petDef(petType, petLvl)) : MERCS[role];
       super('merc', M.name);
-      this.role = role; this.cls = M.cls; this.isPet = isPet; this.petLvl = petLvl;
+      this.role = role; this.cls = M.cls; this.isPet = isPet; this.petLvl = petLvl; this.petType = petType;
       this.level = isPet ? petLvl : game.player.level;
       const tank = role === 'tank';
       this.equip = (saved && saved.equip) || {};
@@ -48,7 +49,7 @@
       return foe;
     }
     get alive() { return !this.dead; }
-    modelSpec() { return this.isPet ? EB.models.petOpts(this.petLvl) : EB.models.mercOpts(this.role, this.equip); }
+    modelSpec() { return this.isPet ? EB.models.petOpts(this.petLvl, this.petType) : EB.models.mercOpts(this.role, this.equip); }
     // v4: rebuild the rig when the merc's visible gear changes (keeps the same scene parent)
     refreshModel() {
       const spec = this.modelSpec(), sig = EB.models.sigOf(spec);
@@ -64,14 +65,14 @@
     itemSum(f) { let t = 0; for (const sl in this.equip) { const it = EB.gear.def(this.equip[sl]); if (it && it[f]) t += it[f]; } return t; }
     statSum(n) { let t = 0; for (const sl in this.equip) { const it = EB.gear.def(this.equip[sl]); if (it && it.stats && it.stats[n]) t += it.stats[n]; } return t; }
     get maxHp() {
-      if (this.isPet) return Math.floor(EB.calc.maxHp('warrior', this.level, 80) * 0.85);
+      if (this.isPet) return Math.floor(EB.calc.maxHp('warrior', this.level, 80) * 0.85 * (1 + Merc.ownerAA('petHpPct') / 100));
       const base = Math.floor(EB.calc.maxHp(this.cls, this.level, this.role === 'tank' ? 100 : 85) * (this.role === 'tank' ? 1.3 : 1));
       return base + this.buffSum('hp') + this.itemSum('hp') + Math.floor(this.statSum('STA') * this.level / 6);
     }
     get maxMana() { return this.role === 'healer' ? EB.calc.maxMana('cleric', this.level, [0, 0, 0, 0, 110 + this.statSum('WIS'), 0, 0]) + this.itemSum('mana') : 0; }
     get ac() { if (this.isPet) return 10 + this.level * 3; return (this.role === 'tank' ? 20 + this.level * 4 : 8 + this.level * 2) + this.buffSum('ac') + this.itemSum('ac') + Math.floor(this.statSum('AGI') / 4); }
     healSpell() { const L = this.level; return L >= 9 ? 'healing' : L >= 4 ? 'light_healing' : 'minor_healing'; }
-    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs, stance: this.stance, healAt: this.healAt, equip: this.equip, dead: this.dead, petLvl: this.petLvl || undefined,
+    toSave() { return { role: this.role, hp: this.hp, mana: this.mana, buffs: this.buffs, stance: this.stance, healAt: this.healAt, equip: this.equip, dead: this.dead, petLvl: this.petLvl || undefined, petType: this.isPet ? this.petType : undefined,
       petMode: this.isPet ? this.petMode : undefined, guardPos: this.isPet && this.guardPos ? [this.guardPos.x, this.guardPos.y, this.guardPos.z] : undefined }; }
     startCast(id, target, game) {
       const sp = SPELLS[id];
@@ -169,11 +170,13 @@
       let max = Math.max(2, Math.floor(((tank || this.isPet ? 7 : 5) * 2) * (1 + this.level / 12)));
       if (w && w.dmg) max = Math.max(max, Math.floor(w.dmg * 2 * (1 + this.level / 12)));
       max += Math.floor(this.statSum('STR') / 5);
+      if (this.isPet) max = Math.floor(max * (1 + Merc.ownerAA('petDmgPct') / 100));
       const dmg = U.randInt(Math.max(1, Math.floor(max / 4)), max);
       game.log(`${this.name} ${verb} ${foe.name} for ${dmg} damage.`, 'other');
       game.damageMob(foe, dmg, this);
     }
   }
   Merc.STANCES = STANCES;
+  Merc.ownerAA = (k) => { const p = EB.game && EB.game.player; return p && p.aaT ? p.aaT()[k] || 0 : 0; };
   EB.Merc = Merc;
 })();

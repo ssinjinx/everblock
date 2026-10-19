@@ -9,7 +9,7 @@
   const calc = EB.calc; // v6: formulas moved to data.js so the server shares them
 
   // ---------- Character creation ----------
-  const create = { race: 'human', cls: 'warrior', alloc: [0, 0, 0, 0, 0, 0, 0], pool: 20 };
+  const create = { race: 'human', cls: 'warrior', cls2: '', alloc: [0, 0, 0, 0, 0, 0, 0], pool: 20 };
   function baseStats() {
     const r = RACES[create.race].stats, c = CLASSES[create.cls].bonus;
     return r.map((v, i) => v + c[i] + create.alloc[i]);
@@ -26,9 +26,22 @@
       const b = document.createElement('button'); b.textContent = CLASSES[k].name;
       if (k === create.cls) b.className = 'sel';
       if (!RACES[create.race].classes.includes(k)) { b.disabled = true; b.title = `${RACES[create.race].name}s cannot become ${CLASSES[k].name}s`; }
-      b.onclick = () => { create.cls = k; create.alloc.fill(0); renderCreate(); };
+      b.onclick = () => { create.cls = k; if (create.cls2 === k) create.cls2 = ''; create.alloc.fill(0); renderCreate(); };
       cl.appendChild(b);
     }
+    // v9: second class (any class; the primary class decides race rules, starting gear and stat bonus)
+    const cl2 = $('classList2');
+    if (cl2) {
+      cl2.innerHTML = '';
+      for (const k of ['', ...Object.keys(CLASSES)]) {
+        if (k === create.cls) continue;
+        const b = document.createElement('button'); b.textContent = k ? CLASSES[k].name : 'None yet'; b.dataset.cls2 = k;
+        if (k === create.cls2) b.className = 'sel';
+        b.onclick = () => { create.cls2 = k; renderCreate(); };
+        cl2.appendChild(b);
+      }
+    }
+    const classes = create.cls2 ? [create.cls, create.cls2] : [create.cls];
     const st = baseStats();
     const used = create.alloc.reduce((a, b) => a + b, 0);
     let html = '<table>';
@@ -47,12 +60,12 @@
       };
     });
     $('bonusLeft').textContent = `Bonus points remaining: ${create.pool - used}`;
-    const hp = calc.maxHp(create.cls, 1, st[1]), mana = calc.maxMana(create.cls, 1, st);
-    $('derived').innerHTML = `Level 1 HP: <b>${hp}</b> &nbsp; Mana: <b>${mana || '—'}</b>`;
-    const sp = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[create.cls] === 1).map((s) => SPELLS[s].name).join(', ');
+    const hp = EB.multi.maxHp(classes, 1, st[1]), mana = EB.multi.maxMana(classes, 1, st);
+    $('derived').innerHTML = `<b>${EB.multi.label(classes)}</b> &nbsp; Level 1 HP: <b>${hp}</b> &nbsp; Mana: <b>${mana || '—'}</b>${classes.length > 1 ? ' &nbsp; <span style="color:#d0a060">XP -10%</span>' : ''}`;
+    const sp = Object.keys(SPELLS).filter((s) => EB.multi.spellLvl(s, classes) === 1).map((s) => SPELLS[s].name).join(', ');
     const eq = {}; for (const id of CLASSES[create.cls].startItems || []) { const it = EB.data.ITEMS[id]; if (it && it.slot) eq[it.slot] = { id }; }
     if (EB.models) EB.models.preview($('charPreview'), { race: create.race, cls: create.cls, equip: eq });
-    $('descBox').innerHTML = `<b>${RACES[create.race].name}</b>: ${RACES[create.race].desc}<br><br><b>${CLASSES[create.cls].name}</b>: ${CLASSES[create.cls].desc}<br><br><i>Starting abilities:</i> ${sp}`;
+    $('descBox').innerHTML = `<b>${RACES[create.race].name}</b>: ${RACES[create.race].desc}<br><br><b>${CLASSES[create.cls].name}</b>: ${CLASSES[create.cls].desc}${create.cls2 ? `<br><br><b>${CLASSES[create.cls2].name}</b>: ${CLASSES[create.cls2].desc}` : ''}<br><br><i>Starting abilities:</i> ${sp}`;
   }
   function validName(n) {
     if (!/^[A-Za-z]{3,15}$/.test(n)) return 'Names must be 3-15 letters, no spaces or numbers.';
@@ -63,7 +76,7 @@
     if (save && save.char) {
       $('continueBox').classList.remove('hidden');
       const c = save.char;
-      $('continueInfo').innerHTML = `<b style="color:#f3c85a;font-size:20px">${c.name}</b><br>Level ${c.level} ${RACES[c.race].name} ${CLASSES[c.cls].name}`;
+      $('continueInfo').innerHTML = `<b style="color:#f3c85a;font-size:20px">${c.name}</b><br>Level ${c.level} ${RACES[c.race].name} ${EB.multi.label(EB.multi.classesOf(c))}`;
     }
     $('btnContinue').onclick = () => { EB.audio.unlock(); if (EB.models) EB.models.stopPreview(); onPlay(null); };
     $('btnDelete').onclick = () => { if (confirm('Delete this character forever?')) { localStorage.removeItem(EB.SAVE_KEY); location.reload(); } };
@@ -74,13 +87,13 @@
       const err = validName(n);
       if (err) { $('nameErr').textContent = err; return; }
       n = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
-      if (EB.net && EB.net.creating) { $('nameErr').textContent = ''; EB.net.send({ t: 'create', char: { name: n, race: create.race, cls: create.cls, stats: baseStats() } }); return; } // v6: online characters live on the server
+      if (EB.net && EB.net.creating) { $('nameErr').textContent = ''; EB.net.send({ t: 'create', char: { name: n, race: create.race, cls: create.cls, classes: create.cls2 ? [create.cls, create.cls2] : [create.cls], stats: baseStats() } }); return; } // v6: online characters live on the server
       if (save && save.char && !confirm(`This will replace your existing character ${save.char.name}. Continue?`)) return;
       EB.audio.unlock();
       const seedStr = $('seedInput').value.trim() || '1999';
       const seed = /^\d+$/.test(seedStr) ? parseInt(seedStr, 10) : U.hashStr(seedStr);
       if (EB.models) EB.models.stopPreview();
-      onPlay({ name: n, race: create.race, cls: create.cls, stats: baseStats(), seed });
+      onPlay({ name: n, race: create.race, cls: create.cls, classes: create.cls2 ? [create.cls, create.cls2] : [create.cls], stats: baseStats(), seed });
     };
     $('nameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnCreate').click(); e.stopPropagation(); });
     if (EB.net) EB.net.bindTitle(onPlay); // v6: Play Online

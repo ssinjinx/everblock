@@ -6,7 +6,7 @@ const { ZoneSim } = require('./zone');
 const { validateNewChar, sanitizeSave } = require('./sanitize');
 const D = EB.data, U = EB.util;
 const { B, BLOCKS, SPELLS, ITEMS, QUESTS, RACES, CLASSES, MERCS, conColor, CON_XP } = D;
-const VERSION = '8.0.0';
+const VERSION = '9.0.0';
 const ZONE_IDS = Object.keys(EB.WORLD.ZONES);
 
 // ---------------------------------------------------------------- passwords (scrypt)
@@ -151,7 +151,7 @@ class EverblockServer {
   }
   isAdmin(s) { return !!(s.account && (s.account.admin || this.admins.has(s.account.username.toLowerCase()))); }
   sendChars(s) {
-    const chars = this.store.listCharacters(s.account.id).map((c) => ({ id: c.id, name: c.name, race: c.race, cls: c.cls, level: c.level,
+    const chars = this.store.listCharacters(s.account.id).map((c) => ({ id: c.id, name: c.name, race: c.race, cls: c.cls, classes: c.srv && c.srv.classes, level: c.level,
       zone: c.data && c.data.zone ? EB.WORLD.ZONES[c.data.zone].name : 'Everblock Keep', title: c.data && c.data.char ? c.data.char.title : '', equip: c.data && c.data.char ? c.data.char.equip : null }));
     s.send({ t: 'chars', chars, seed: this.seed });
   }
@@ -161,7 +161,7 @@ class EverblockServer {
     if (this.store.getCharacterByName(v.name)) return s.send({ t: 'err', where: 'create', err: 'That name is already taken on this server.' });
     if (this.store.listCharacters(s.account.id).length >= 8) return s.send({ t: 'err', where: 'create', err: 'You already have 8 characters. Delete one first.' });
     const w = this.zone('everblock').world;
-    const c = this.store.createCharacter(s.account.id, Object.assign(v, { srv: { bind: { zone: 'everblock', x: w.bind.x, y: w.bind.y, z: w.bind.z }, qx: {} } }));
+    const c = this.store.createCharacter(s.account.id, Object.assign(v, { srv: { bind: { zone: 'everblock', x: w.bind.x, y: w.bind.y, z: w.bind.z }, qx: {}, classes: v.classes, aa: { xp: 0, earned: 0, pct: 0 } } }));
     console.log(`[char] ${s.account.username} created ${c.name} (${c.race} ${c.cls})`);
     s.send({ t: 'created', id: c.id });
     this.sendChars(s);
@@ -179,6 +179,7 @@ class EverblockServer {
     if (!rec || rec.account_id !== s.account.id) return s.send({ t: 'err', where: 'play', err: 'No such character.' });
     for (const o of this.byPid.values()) if (o.rec && o.rec.id === rec.id) { o.sys('You have logged in from another location.'); this.leaveWorld(o, 'replaced'); this.kick(o, 'Logged in from another location'); }
     rec.srv = rec.srv || {}; rec.srv.qx = rec.srv.qx || {};
+    rec.srv.classes = EB.multi.validClasses(rec.cls, rec.srv.classes || [rec.cls], rec.level); rec.srv.aa = rec.srv.aa || { xp: 0, earned: 0, pct: 0 }; // v9
     const data = rec.data;
     let zoneId = data && EB.WORLD.ZONES[data.zone] ? data.zone : 'everblock';
     const z = this.zone(zoneId);
@@ -194,11 +195,11 @@ class EverblockServer {
     s.dmgBucket = new Bucket((60 + rec.level * 30) * 6, 60 + rec.level * 30);
     this.byPid.set(pid, s);
     const save = data ? Object.assign({}, data, { seed: this.seed, zone: zoneId }) : null;
-    if (save) { save.char = Object.assign({}, save.char, { level: rec.level, xp: rec.xp, name: rec.name, race: rec.race, cls: rec.cls, stats: rec.stats, bind: rec.srv.bind }); save.zoneEdits = {}; }
+    if (save) { save.char = Object.assign({}, save.char, { level: rec.level, xp: rec.xp, name: rec.name, race: rec.race, cls: rec.cls, classes: rec.srv.classes, aaEarned: rec.srv.aa.earned, aaXp: rec.srv.aa.xp, aaPct: rec.srv.aa.pct, stats: rec.stats, bind: rec.srv.bind }); save.zoneEdits = {}; }
     const edits = {}; for (const id of ZONE_IDS) edits[id] = this.zones.has(id) ? this.zones.get(id).edits : this.store.getZoneEdits(id);
     s.send({ t: 'welcome', pid, server: this.name, motd: this.motd, admin: this.isAdmin(s), seed: this.seed, zone: zoneId, dayT: this.dayT, edits,
       char: { id: rec.id, name: rec.name, race: rec.race, cls: rec.cls, level: rec.level, xp: rec.xp }, save,
-      newChar: save ? null : { name: rec.name, race: rec.race, cls: rec.cls, stats: rec.stats, seed: this.seed }, build: !!this.opts.allowBuild });
+      newChar: save ? null : { name: rec.name, race: rec.race, cls: rec.cls, classes: rec.srv.classes, stats: rec.stats, seed: this.seed }, build: !!this.opts.allowBuild });
     this.addToZone(s, z);
     console.log(`[play] ${s.account.username} entered as ${rec.name} (${z.name})`);
     const n = this.online().length;
@@ -224,7 +225,7 @@ class EverblockServer {
   }
   pinfo(s) {
     const p = s.proxy;
-    return { t: 'pinfo', pid: p.pid, name: p.name, race: p.race, cls: p.cls, level: p.level, title: p.title, equip: p.equip, mercs: p.look.mercs || [], gid: s.group ? s.group.id : 0, admin: this.isAdmin(s) };
+    return { t: 'pinfo', pid: p.pid, name: p.name, race: p.race, cls: p.cls, classes: s.rec && s.rec.srv ? s.rec.srv.classes : [p.cls], level: p.level, title: p.title, equip: p.equip, mercs: p.look.mercs || [], gid: s.group ? s.group.id : 0, admin: this.isAdmin(s) };
   }
   sendCorpses(z) {
     const list = [];
@@ -284,8 +285,14 @@ class EverblockServer {
     const eq = {}; if (m.equip && typeof m.equip === 'object') for (const sl of D.EQUIP_SLOTS) if (m.equip[sl] && ITEMS[m.equip[sl].id] && ITEMS[m.equip[sl].id].slot === sl) eq[sl] = { id: m.equip[sl].id };
     p.equip = eq;
     p.title = typeof m.title === 'string' ? m.title.slice(0, 40) : '';
-    p.look.mercs = (Array.isArray(m.mercs) ? m.mercs.slice(0, 3) : []).map((x) => ({ role: MERCS[x && x.role] || (x && x.role === 'pet') ? x.role : 'tank', petLvl: Math.max(1, Math.min(40, (x && x.petLvl) | 0 || 3)), name: String((x && x.name) || '').slice(0, 30), equip: {} }));
+    p.look.mercs = (Array.isArray(m.mercs) ? m.mercs.slice(0, 2 + EB.multi.MAX_PETS) : []).map((x) => ({ role: MERCS[x && x.role] || (x && x.role === 'pet') ? x.role : 'tank', petLvl: Math.max(1, Math.min(40, (x && x.petLvl) | 0 || 3)), petType: x && x.role === 'pet' && EB.multi.PET_TYPES[x.petType] ? x.petType : undefined, name: String((x && x.name) || '').slice(0, 30), equip: {} }));
     s.zone.broadcast(this.pinfo(s));
+  }
+  on_aapct(s, m) { const A = s.rec.srv.aa; A.pct = Math.max(0, Math.min(100, Math.round((+m.pct || 0) / 10) * 10)); }
+  on_addclass(s, m) {
+    const rec = s.rec, C = rec.srv.classes;
+    if (!D.CLASSES[m.cls] || C.includes(m.cls) || C.length >= EB.multi.maxClasses(rec.level)) return s.sys('You cannot take up that class right now.');
+    rec.srv.classes = C.concat(m.cls); this.store.saveCharacter(rec); s.zone && s.zone.broadcast(this.pinfo(s));
   }
   on_save(s, m) {
     s.pendingSave = m.data;
@@ -422,8 +429,13 @@ class EverblockServer {
     this.grantXP(s, n, false, 'quest');
   }
   grantXP(s, n, party, why, extra) {
-    const rec = s.rec;
-    if (rec.level >= D.MAX_LEVEL) { s.send(Object.assign({ t: 'xp', n: 0, party, why, lvl: rec.level, xp: rec.xp }, extra || {})); return; }
+    const rec = s.rec, A = rec.srv.aa;
+    // v9: multiclass XP penalty, then the Overachievement Points slider (everything goes to OP at max level)
+    n = Math.max(1, Math.floor(n * EB.multi.xpMult(rec.srv.classes || [rec.cls])));
+    const pct = rec.level >= D.MAX_LEVEL ? 100 : rec.level >= EB.multi.THIRD_AT ? A.pct || 0 : 0, a = Math.floor(n * pct / 100);
+    if (a > 0) { n -= a; A.xp += a; while (A.xp >= EB.multi.aaNeed(rec.level)) { A.xp -= EB.multi.aaNeed(rec.level); A.earned++; } }
+    extra = Object.assign({ aaE: A.earned, aaX: A.xp }, extra || {});
+    if (rec.level >= D.MAX_LEVEL) { s.send(Object.assign({ t: 'xp', n: 0, party, why, lvl: rec.level, xp: rec.xp }, extra)); return; }
     rec.xp += n;
     let ding = false;
     while (rec.level < D.MAX_LEVEL && rec.xp >= D.xpToNext(rec.level)) { rec.xp -= D.xpToNext(rec.level); rec.level++; ding = true; }

@@ -148,7 +148,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
     p.pos.set(best[0], w.surfaceY(best[0], best[1]), best[1]); w.updateChunks(best[0], best[1], 3, 999); });
   console.log('   pet spot', await ev(() => window.__spot));
   const pet0 = await ev(() => { const g = EB.game, p = g.player, pet = g.summonPet(18); pet.pos.set(p.pos.x + 2, p.pos.y, p.pos.z + 1); g.renderPetBar(); return { lvl: pet.petLvl, bar: !document.getElementById('petBar').classList.contains('hidden'), btns: document.querySelectorAll('#petBar .petBtn').length, mode: pet.petMode }; });
-  check('pet bar appears with 5 command buttons', pet0.bar && pet0.btns === 5 && pet0.mode === 'follow', pet0);
+  check('pet bar appears with 5 command buttons', pet0.bar && pet0.btns >= 5 && pet0.mode === 'follow', pet0);
   await page.click('#petBar .petBtn[data-pc="guard"]');
   const g1 = await ev(() => { const pet = EB.game.pet(); return { mode: pet.petMode, guard: !!pet.guardPos, on: document.querySelector('#petBar .petBtn[data-pc="guard"]').classList.contains('on') }; });
   check('Guard button: pet guards its spot', g1.mode === 'guard' && g1.guard && g1.on, g1);

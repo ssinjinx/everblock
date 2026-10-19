@@ -25,18 +25,22 @@
     constructor(c) {
       this.kind = 'player';
       this.name = c.name; this.race = c.race; this.cls = c.cls;
+      // v9: multiclass (primary class stays in cls) + Overachievement Points
+      this.classes = EB.multi.validClasses(c.cls, EB.multi.classesOf(c), c.level || 1);
+      this.aaEarned = c.aaEarned > 0 ? Math.floor(c.aaEarned) : 0; this.aaXp = c.aaXp > 0 ? c.aaXp : 0; this.aaPct = U.clamp(+c.aaPct || 0, 0, 100);
+      this.aa = EB.multi.cleanAA(c.aa, this.classes, c.level || 1, this.aaEarned);
       this.level = c.level || 1; this.xp = c.xp || 0;
       this.base = c.stats.slice();
       this.coins = c.coins != null ? c.coins : 150;
       this.inv = c.inv || new Array(24).fill(null);
       this.equip = c.equip || {};
-      this.spells = (c.spells || Object.keys(SPELLS).filter((s) => SPELLS[s].classes[c.cls] === 1)).filter((s) => SPELLS[s]);
+      this.spells = (c.spells || Object.keys(SPELLS).filter((s) => EB.multi.spellLvl(s, this.classes) === 1)).filter((s) => SPELLS[s]);
       // v3: spell gems + configurable hotbar (migrates v1/v2 saves)
-      const key = (id) => (SPELLS[id].classes[c.cls] || 99) + (id === 'bind_wound' ? 0.5 : 0);
+      const key = (id) => (EB.multi.spellLvl(id, this.classes) || 99) + (id === 'bind_wound' ? 0.5 : 0);
       const known = this.spells.slice().sort((a, b) => key(a) - key(b));
       const pad = (a) => { a = (a || []).slice(0, 8).map((x) => (x && SPELLS[x] && this.spells.includes(x) ? x : null)); while (a.length < 8) a.push(null); return a; };
       this.gems = pad(c.gems || known.filter(isSpell));
-      this.hotbar = (c.hotbar || known).slice(0, 8).map((x) => (x && ((SPELLS[x] && this.spells.includes(x)) || (/^click:/.test(x) && ITEMS[x.slice(6)] && ITEMS[x.slice(6)].click)) ? x : null)); while (this.hotbar.length < 8) this.hotbar.push(null);
+      this.hotbar = (c.hotbar || known).slice(0, 8).map((x) => (x && ((SPELLS[x] && this.spells.includes(x)) || (/^click:/.test(x) && ITEMS[x.slice(6)] && ITEMS[x.slice(6)].click) || (/^aa:/.test(x) && this.aa[x.slice(3)] && EB.multi.NODES[x.slice(3)].active)) ? x : null)); while (this.hotbar.length < 8) this.hotbar.push(null);
       this.title = c.title || '';
       // v5: EQ-style faction standings (older saves start at the defaults)
       this.faction = Object.assign({}, c.faction || {});
@@ -64,25 +68,31 @@
       const s = {};
       STAT_NAMES.forEach((n, i) => (s[n] = this.base[i]));
       const T = this.gear(); for (const k in T.stats) if (k in s) s[k] += T.stats[k];
+      const A = this.aaT(); for (const k in A.stats) if (k in s) s[k] += A.stats[k];
+      const cb = this.buffSum('cha'); if (cb) s.CHA += cb;
       return s;
     }
     statArr() { const s = this.stats(); return STAT_NAMES.map((n) => s[n]); }
     gear() { return EB.gear.totals(this.equip); } // v8: items + affixes + set bonuses + focus
     itemSum(field) { return this.gear()[field] || 0; }
-    focus(k) { return this.gear().focus[k] || 0; }
+    focus(k) { return (this.gear().focus[k] || 0) + (this.aaT()[k] || 0); }
+    aaT() { return EB.multi.aaTotals(this.aa, this.classes); }
+    get aaSpent() { return EB.multi.spent(this.aa); }
+    get aaFree() { return Math.max(0, this.aaEarned - this.aaSpent); }
+    get classLabel() { return EB.multi.label(this.classes); }
     buffSum(field) { let t = 0; for (const b of this.buffs) if (b.buff[field]) t += b.buff[field]; return t; }
-    get maxHp() { return calc.maxHp(this.cls, this.level, this.stats().STA) + this.itemSum('hp') + this.buffSum('hp'); }
-    get maxMana() { const m = calc.maxMana(this.cls, this.level, this.statArr()); return m ? m + this.itemSum('mana') : 0; }
-    get ac() { return this.itemSum('ac') + this.buffSum('ac') + Math.floor(this.stats().AGI / 8) + this.level * ({ warrior: 3, paladin: 3, rogue: 2, ranger: 2, shaman: 1.5 }[this.cls] || 1); }
+    get maxHp() { return Math.floor((EB.multi.maxHp(this.classes, this.level, this.stats().STA) + this.itemSum('hp') + this.buffSum('hp')) * (1 + (this.aaT().hpPct + this.buffSum('hpPct')) / 100)); }
+    get maxMana() { const m = EB.multi.maxMana(this.classes, this.level, this.statArr()); return m ? m + this.itemSum('mana') : 0; }
+    get ac() { return this.itemSum('ac') + this.buffSum('ac') + this.aaT().ac + Math.floor(this.stats().AGI / 8) + Math.floor(this.level * EB.multi.acPer(this.classes)); }
     weapon() { return this.equip.primary ? EB.gear.def(this.equip.primary) : Object.assign({}, FISTS, { dmg: FISTS.dmg + Math.floor(this.level / 3) }); }
-    castStat() { const ms = CLASSES[this.cls].manaStat; return ms != null ? this.statArr()[ms] : 75; }
+    castStat() { const mc = EB.multi.manaClass(this.classes), ms = mc ? CLASSES[mc].manaStat : null; return ms != null ? this.statArr()[ms] : 75; }
     modelOpts() {
       return EB.models.playerOpts({ race: this.race, cls: this.cls, equip: this.equip });
     }
     forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
     toSave() {
       return { name: this.name, race: this.race, cls: this.cls, level: this.level, xp: this.xp, stats: this.base, coins: this.coins, inv: this.inv, equip: this.equip,
-        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, bank: this.bank, bankCoins: this.bankCoins, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
+        spells: this.spells, gems: this.gems, hotbar: this.hotbar, title: this.title, faction: this.faction, petMode: this.petMode, buffs: this.buffs, bind: this.bind, played: this.played, bank: this.bank, bankCoins: this.bankCoins, classes: this.classes, aa: this.aa, aaXp: this.aaXp, aaEarned: this.aaEarned, aaPct: this.aaPct, pos: [this.pos.x, this.pos.y, this.pos.z], yaw: this.yaw, hp: this.hp, mana: this.mana };
     }
   }
 
@@ -197,7 +207,8 @@
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
-      ui.log(`Town Crier: Greetings, ${pl.name}. New in v8, the gear pass: item quality colors, weapon procs, click effects (look for the ⚡ button and your hotbar), focus effects, armor set bonuses and random suffixes like 'of the Bear Who Skipped Leg Day'. Also new in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
+      ui.log(`Town Crier: Greetings, ${pl.name}. New in v9: MULTICLASS! Two classes from level 1, a third at level 10 (any class trainer, or /class). Run several pets at once, and spend Overachievement Points (press O or 🏆) on passives, hotbar actives and class-combo synergies.`, 'help');
+      if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v8, the gear pass: item quality colors, weapon procs, click effects (look for the ⚡ button and your hotbar), focus effects, armor set bonuses and random suffixes like 'of the Bear Who Skipped Leg Day'. Also new in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
       if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soul-Notary Kerra). Press ? for help.`, 'help');
       if (newChar) ui.log(`Guild Coach Aldric says: "Welcome, young ${RACES[pl.race].name.toLowerCase()}. Go bully the rats and snakes outside the walls. Come back when you have grown, and stretch first."`, 'say');
       else ui.log(`Your character has been loaded. You are in ${this.world.zoneName}.`, 'sys');
@@ -407,6 +418,7 @@
       if (k === 'Enter' || k === 'Slash') { const ci = $('chatInput'); ci.classList.remove('hidden'); if (k === 'Slash') ci.value = '/'; setTimeout(() => ci.focus(), 0); if (this.locked()) document.exitPointerLock(); e.preventDefault(); return; }
       if (k === 'KeyI') { this.toggleWin('invWin'); return; }
       if (k === 'KeyP') { this.toggleWin('petWin'); return; }
+      if (k === 'KeyO') { this.toggleWin('aaWin'); return; }
       if (k === 'KeyM' && e.shiftKey) { this.log(EB.audio.toggleMusic() ? 'Music on.' : 'Music off.', 'sys'); return; }
       if (k === 'KeyM') { this.log(EB.audio.toggle() ? 'Sound on.' : 'Sound off.', 'sys'); return; }
       if (!pl.alive) return;
@@ -487,6 +499,8 @@
       else if (id === 'bookWin') this.renderBook();
       else if (id === 'mercCfgWin') this.renderMercCfg();
       else if (id === 'petWin') this.renderPetWin();
+      else if (id === 'aaWin') this.renderAA();
+      else if (id === 'classWin') this.renderClassPick();
       else if (id === 'bankWin') this.renderBank();
     }
 
@@ -572,7 +586,7 @@
         'Sellsword Agent Rook': `Mercenaries for every budget, ${pl.name}. Press E to browse.`,
       };
       if (this.world.zoneId === 'desert' && t.npcKind === 'guard' && !special[t.name]) special[t.name] = 'Keep your waterskin full and your blade sharp.';
-      if (t.npcKind === 'trainer' && t.data && t.data.cls) special[t.name] = t.data.cls === pl.cls ? `Ah, a fellow ${CLASSES[pl.cls].name}! I teach every ${CLASSES[pl.cls].name} trick from level 1 to ${D.MAX_LEVEL}. (Press E to train)` : `I only coach ${CLASSES[t.data.cls].name}s, ${pl.name}. Your coach is somewhere on this row; look for the ${CLASSES[pl.cls].name} Trainer sign.`;
+      if (t.npcKind === 'trainer' && t.data && t.data.cls) special[t.name] = pl.classes.includes(t.data.cls) ? `Ah, a fellow ${CLASSES[t.data.cls].name}! I teach every ${CLASSES[t.data.cls].name} trick from level 1 to ${D.MAX_LEVEL}. (Press E to train)` : (this.classSlotOpen() ? `Fancy becoming a ${CLASSES[t.data.cls].name} too, ${pl.name}? Press E and I will sign you up. (Permanent!)` : `I only coach ${CLASSES[t.data.cls].name}s, ${pl.name}. ${pl.classes.length < 3 ? `Come back at level ${EB.multi.THIRD_AT} if you want to pick up a third class.` : 'Three classes is plenty, even for you.'}`);
       if (t.npcKind === 'banker' && !special[t.name]) special[t.name] = `Press E to open your vault, ${pl.name}.`;
       setTimeout(() => this.log(`${t.name} says: "${special[t.name] || lines[t.npcKind]}"`, 'say'), 400);
     }
@@ -587,7 +601,7 @@
       } else if (t.kind === 'npc') { color = '#7fb0ff'; info = ({ merchant: 'Merchant - press E to trade', trainer: 'Guild Coach - press E to train', binder: 'Soul Notary - press E to bind', guard: 'Guard', quest: 'Quest giver - press E', banker: 'Banker - press E for your vault' }[t.npcKind] || '') + ' - ' + D.standingOf(this.standing(this.npcFaction(t))).label; }
       else if (t.kind === 'pcorpse') { color = '#ffcc66'; info = 'Your corpse - press E to loot'; }
       else if (t.kind === 'merc') { color = '#70ff70'; info = `Group member - Level ${t.level} ${t.role === 'healer' ? 'Cleric' : 'Warrior'} Mercenary`; }
-      else if (t.kind === 'pc') { color = t.grouped ? '#70ff70' : '#9fd8ff'; info = `${t.grouped ? 'Group member - ' : 'Player - '}Level ${t.level} ${RACES[t.race].name} ${CLASSES[t.cls].name}`; }
+      else if (t.kind === 'pc') { color = t.grouped ? '#70ff70' : '#9fd8ff'; info = `${t.grouped ? 'Group member - ' : 'Player - '}Level ${t.level} ${RACES[t.race].name} ${t.classes && t.classes.length ? EB.multi.label(t.classes) : CLASSES[t.cls].name}`; }
       $('tName').textContent = name; $('tName').style.color = color;
       const hp = (t.kind === 'mob' && t.alive) || t.kind === 'merc' || t.kind === 'pc' ? t.hp / t.maxHp : t.kind === 'npc' ? 1 : 0;
       ui.bar('tHp', 'tHpT', hp * 100, 100, Math.max(0, Math.ceil(hp * 100)) + '%');
@@ -625,12 +639,14 @@
       EB.audio.swing();
       const hitChance = U.clamp(0.72 + (pl.level - t.level) * 0.05 + (st.DEX - 75) / 400, 0.3, 0.95);
       if (Math.random() > hitChance) { this.log(`You try to ${w.verb} ${t.name}, but whiff!`, 'miss'); if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this); return; }
-      const dmg = this.meleeDamage(w, st);
+      let dmg = this.meleeDamage(w, st); const A = pl.aaT();
+      if (A.crit && Math.random() * 100 < A.crit) { dmg *= 2; this.log('You score a critical hit! (Lucky Socks are working)', 'melee'); }
       this.log(`You ${w.verb} ${t.name} for ${dmg} damage.`, 'melee');
       EB.audio.hit();
       this.damageMob(t, dmg, pl);
+      if (A.leech && pl.alive) pl.hp = Math.min(pl.maxHp, pl.hp + Math.ceil(dmg * A.leech / 100));
       this.tryProc(t, w);
-      if (t.alive && (pl.cls === 'warrior' || pl.cls === 'rogue') && pl.level >= 5 && Math.random() < 0.15 + pl.level * 0.01) {
+      if (t.alive && (pl.classes.includes('warrior') || pl.classes.includes('rogue')) && pl.level >= 5 && Math.random() < 0.15 + pl.level * 0.01) {
         const d2 = this.meleeDamage(w, st);
         this.log(`You ${w.verb} ${t.name} for ${d2} damage.`, 'melee');
         this.damageMob(t, d2, pl);
@@ -700,7 +716,7 @@
     meleeDamage(w, st) {
       const pl = this.player;
       const strB = Math.floor(Math.max(0, st.STR - 60) / 12);
-      const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * CLASSES[pl.cls].dmgMult * (1 + pl.level / 12) * (1 + (pl.buffSum('dmgPct') + pl.gear().dmgPct) / 100)));
+      const max = Math.max(2, Math.floor((w.dmg * 2 + strB) * EB.multi.dmgMult(pl.classes) * (1 + pl.level / 12) * (1 + (pl.buffSum('dmgPct') + pl.gear().dmgPct + pl.aaT().meleePct) / 100)));
       return U.randInt(Math.max(1, Math.floor(max / 4)), max);
     }
     // v5: mob casters heal and buff their allies
@@ -753,11 +769,120 @@
       if (this.target === m) { pl.autoAttack = false; this.updateTargetWin(); }
       if (pl.casting && pl.casting.target === m) this.interruptCast('Your target has died.');
     }
+    // ---------- v9: Overachievement Points (OP) ----------
+    gainAA(a) {
+      const pl = this.player; pl.aaXp += a; let got = 0;
+      while (pl.aaXp >= EB.multi.aaNeed(pl.level)) { pl.aaXp -= EB.multi.aaNeed(pl.level); pl.aaEarned++; got++; }
+      if (got) { this.log(`You have earned ${got > 1 ? got + ' Overachievement Points' : 'an Overachievement Point'}! (${pl.aaFree} unspent - press O)`, 'ding'); EB.audio.ding(); if (this.windows.has('aaWin')) this.renderAA(); }
+    }
+    setAAPct(v) { const pl = this.player; pl.aaPct = U.clamp(Math.round(+v / 10) * 10, 0, 100); if (this.net) this.net.send({ t: 'aapct', pct: pl.aaPct }); this.save(); }
+    buyAA(id) {
+      const pl = this.player, n = EB.multi.NODES[id]; if (!n) return false;
+      const r = pl.aa[id] || 0;
+      if (r >= n.max) { this.log(`${n.name} is already maxed. Overachiever.`, 'sys'); return false; }
+      if (!EB.multi.nodeOpen(n, pl.classes, pl.level)) { this.log(`${n.name} is locked.`, 'sys'); return false; }
+      if (pl.aaFree < n.cost) { this.log(`You need ${n.cost} Overachievement Points for ${n.name}.`, 'sys'); return false; }
+      pl.aa = Object.assign({}, pl.aa, { [id]: r + 1 });
+      this.log(`You train ${n.name}${n.max > 1 ? ` (rank ${r + 1}/${n.max})` : ''}.`, 'spell');
+      if (n.active && !pl.hotbar.includes('aa:' + id)) { const hs = pl.hotbar.indexOf(null); if (hs >= 0) { pl.hotbar[hs] = 'aa:' + id; this.rebuildHotbar(); } }
+      pl.hp = Math.min(pl.hp, pl.maxHp); EB.audio.ding(); this.renderAA(); this.save(); return true;
+    }
+    respecAA() {
+      const pl = this.player, c = EB.multi.respecCost(pl.level);
+      if (!pl.aaSpent) { this.log('You have nothing to un-learn.', 'sys'); return false; }
+      if (pl.coins < c) { this.log(`A respec costs ${U.coinStr(c)}. Your career counselor does not work for free.`, 'sys'); return false; }
+      pl.coins -= c; pl.aa = {}; pl.hotbar = pl.hotbar.map((x) => (x && /^aa:/.test(x) ? null : x));
+      this.log(`You pay ${U.coinStr(c)} to forget everything you overachieved. All ${pl.aaEarned} points refunded.`, 'loot');
+      pl.hp = Math.min(pl.hp, pl.maxHp); this.rebuildHotbar(); this.renderAA(); this.save(); return true;
+    }
+    renderAA() {
+      const pl = this.player, body = $('aaBody'); if (!body) return;
+      const M = EB.multi, tab = this.aaTab || 'general', lvlOK = pl.level >= M.THIRD_AT;
+      const trees = ['general', ...Object.keys(M.ARCH).filter((a) => pl.classes.some((k) => M.ARCH[a].includes(k))).map((a) => 'arch:' + a), ...pl.classes.map((k) => 'cls:' + k), 'synergy'];
+      let h = `<div class="aaHead"><b>${pl.aaFree}</b> unspent / ${pl.aaEarned} earned &nbsp; <span class="sub">next point: ${Math.floor(pl.aaXp / M.aaNeed(pl.level) * 100)}%</span></div>`;
+      h += `<div class="aaSlider">XP into OP: <input type="range" id="aaPct" min="0" max="100" step="10" value="${pl.level >= D.MAX_LEVEL ? 100 : pl.aaPct}" ${!lvlOK || pl.level >= D.MAX_LEVEL ? 'disabled' : ''}> <b id="aaPctV">${pl.level >= D.MAX_LEVEL ? 100 : pl.aaPct}%</b> ${!lvlOK ? `<span class="sub">(unlocks at level ${M.THIRD_AT})</span>` : pl.level >= D.MAX_LEVEL ? '<span class="sub">(max level: all XP goes to OP)</span>' : ''}</div>`;
+      h += `<div class="aaTabs">${trees.map((t) => `<button class="small${t === tab ? ' on' : ''}" data-tab="${t}">${M.TREE_NAME(t)}</button>`).join('')}</div><div class="aaGrid">`;
+      for (const n of M.NODE_LIST.filter((x) => x.tree === tab)) {
+        const r = pl.aa[n.id] || 0, open = M.nodeOpen(n, pl.classes, pl.level), canBuy = open && r < n.max && pl.aaFree >= n.cost;
+        h += `<div class="aaNode${r ? ' owned' : ''}${open ? '' : ' locked'}${n.active ? ' active' : ''}" data-aa="${n.id}"><div class="aaN">${n.active ? '⚡ ' : ''}${n.name}</div><div class="aaR">${r}/${n.max} &middot; ${n.cost} OP${n.lvl > M.THIRD_AT ? ` &middot; L${n.lvl}` : ''}</div><div class="aaD">${n.desc}</div>${open ? '' : `<div class="aaL">${n.tree === 'synergy' ? 'Needs the right class combo' : `Needs level ${n.lvl}`}</div>`}<button class="small" data-buy="${n.id}" ${canBuy ? '' : 'disabled'}>${r >= n.max ? 'Maxed' : 'Train'}</button></div>`;
+      }
+      if (tab === 'synergy' && !M.NODE_LIST.some((x) => x.tree === 'synergy' && M.nodeOpen(x, pl.classes, pl.level))) h += '<div class="sub">Synergy nodes unlock for specific class combinations (e.g. Cleric + Necro, Wizard + a melee class, two pet classes).</div>';
+      h += `</div><div class="btnRow"><button class="small" id="aaRespec" ${pl.aaSpent ? '' : 'disabled'}>Respec (${U.coinShort(M.respecCost(pl.level))})</button></div>`;
+      body.innerHTML = h;
+      body.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { this.aaTab = b.dataset.tab; this.renderAA(); }));
+      body.querySelectorAll('[data-buy]').forEach((b) => (b.onclick = () => this.buyAA(b.dataset.buy)));
+      const sl = $('aaPct'); if (sl) { sl.oninput = () => { $('aaPctV').textContent = sl.value + '%'; }; sl.onchange = () => this.setAAPct(sl.value); }
+      const rs = $('aaRespec'); if (rs) rs.onclick = () => { if (confirm(`Respec all Overachievement Points for ${U.coinStr(M.respecCost(pl.level))}?`)) this.respecAA(); };
+    }
+    useAAActive(id) {
+      const pl = this.player, n = EB.multi.NODES[id], A = n && n.active;
+      if (!A || !pl.aa[id] || !pl.alive) return false;
+      const key = 'aa:' + id, cd = (pl.cooldowns[key] || 0) - this.time;
+      if (cd > 0) { this.log(`${n.name} is recharging (${Math.ceil(cd)}s).`, 'sys'); return false; }
+      const t = this.target, L = pl.level;
+      if ((A.kind === 'nuke' || A.kind === 'tap') && (!t || t.kind !== 'mob' || !t.alive || pl.pos.distanceTo(t.pos) > 34)) { this.log(`${n.name} needs a monster target in range.`, 'sys'); return false; }
+      pl.cooldowns[key] = this.time + A.cd;
+      this.log(`You use ${n.name}!`, 'spell');
+      const healE = (e, pct) => { const b = e.hp; e.hp = Math.min(e.maxHp, e.hp + Math.ceil(e.maxHp * pct / 100)); EB.fx.heal(e); return Math.round(e.hp - b); };
+      switch (A.kind) {
+        case 'heal': this.log(`You feel much better. (+${healE(pl, A.pct)} HP)`, 'spell'); EB.audio.heal(); break;
+        case 'groupheal': for (const g of this.groupMembers()) if (g.pos.distanceTo(pl.pos) < 40) healE(g, A.pct); EB.audio.heal(); break;
+        case 'petheal': for (const p of this.pets()) healE(p, 100); EB.audio.heal(); break;
+        case 'mana': { const b = pl.mana; pl.mana = Math.min(pl.maxMana, pl.mana + Math.ceil(pl.maxMana * A.pct / 100)); this.log(`Your mind clears. (+${Math.round(pl.mana - b)} mana)`, 'spell'); EB.fx.heal(pl, 0x80a0ff); break; }
+        case 'buff': pl.buffs = pl.buffs.filter((b) => b.id !== key); pl.buffs.push({ id: key, name: n.name, left: A.dur, buff: A.buff }); EB.fx.buff(pl, A.color); EB.audio.spell(); break;
+        case 'groupbuff': for (const g of this.groupMembers()) { if (!g.buffs || g.pos.distanceTo(pl.pos) > 40) continue; g.buffs = g.buffs.filter((b) => b.id !== key); g.buffs.push({ id: key, name: n.name, left: A.dur, buff: A.buff }); EB.fx.buff(g, A.color); } EB.audio.spell(); break;
+        case 'fade': for (const m of this.mobs) if (m.alive && m.hate.has(pl)) { m.hate.delete(pl); if (m.target === pl) m.goHome(); } pl.autoAttack = false; this.log('Monsters suddenly remember they left the stove on.', 'spell'); EB.fx.column(pl, 0x606080); break;
+        case 'nuke': case 'tap': {
+          const dmg = Math.round((A.base + A.per * L) * (1 + pl.focus('spellDmg') / 100));
+          this.spellFx(t, A.school); EB.audio.spell();
+          this.log(`${n.name} hits ${t.name} for ${dmg} damage.`, 'nonmelee'); this.damageMob(t, dmg, pl);
+          if (A.kind === 'tap') { const b = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + dmg); this.log(`You feel invigorated. (+${Math.round(pl.hp - b)} HP)`, 'spell'); }
+          break;
+        }
+      }
+      return true;
+    }
+    // ---------- v9: multiclass ----------
+    classSlotOpen() { const pl = this.player; return pl.classes.length < EB.multi.maxClasses(pl.level); }
+    openClassPick(pre) { this.classPre = pre || null; this.openWin('classWin'); }
+    renderClassPick() {
+      const pl = this.player, body = $('classBody'); if (!body) return;
+      const nth = pl.classes.length === 1 ? 'second' : 'third';
+      if (!this.classSlotOpen()) { body.innerHTML = `<div class="sub">You are a ${pl.classLabel}. ${pl.classes.length < 3 ? `You can pick a third class at level ${EB.multi.THIRD_AT}.` : 'That is the maximum: three classes.'}</div>`; return; }
+      let h = `<div class="sub">You are a <b>${pl.classLabel}</b>. Pick your <b>${nth}</b> class. This is <b>permanent</b>. You keep the best HP and mana pool of your classes (trimmed 6% per extra class), get every class's spells and abilities by level, and earn 10% less XP per extra class.</div><div class="classPick">`;
+      for (const k of Object.keys(CLASSES)) {
+        if (pl.classes.includes(k)) continue;
+        const C = CLASSES[k], n1 = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[k] && SPELLS[s].classes[k] <= pl.level).length;
+        h += `<div class="cpk${this.classPre === k ? ' pre' : ''}"><b style="color:#${C.color.toString(16).padStart(6, '0')}">${C.name}</b><div class="sub">${C.desc}</div><div class="sub">${n1} abilities available at your level &middot; as ${EB.multi.label(pl.classes.concat(k))}</div><button data-cls="${k}">Become a ${C.name} too</button></div>`;
+      }
+      body.innerHTML = h + '</div>';
+      body.querySelectorAll('[data-cls]').forEach((b) => (b.onclick = () => { if (confirm(`Become a ${EB.multi.label(pl.classes.concat(b.dataset.cls))}? This cannot be undone.`)) this.addClass(b.dataset.cls); }));
+    }
+    addClass(k) {
+      const pl = this.player;
+      if (!CLASSES[k] || pl.classes.includes(k) || !this.classSlotOpen()) return false;
+      const hpPct = pl.hp / pl.maxHp;
+      pl.classes = pl.classes.concat(k);
+      const free = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[k] === 1 && !pl.spells.includes(s));
+      for (const s of free) { pl.spells.push(s); const hs = pl.hotbar.indexOf(null); if (hs >= 0) pl.hotbar[hs] = s; if (isSpell(s)) { const g = pl.gems.indexOf(null); if (g >= 0) pl.gems[g] = s; } }
+      pl.hp = Math.ceil(pl.maxHp * hpPct); pl.mana = Math.min(pl.mana, pl.maxMana);
+      ui.center(`${pl.classLabel}!`, `You are now a ${pl.classLabel}. Visit trainers for your new ${CLASSES[k].name} abilities.`, 4);
+      this.log(`You are now a ${pl.classLabel}! ${free.length ? `You learn ${free.map((s) => SPELLS[s].name).join(', ')} for free.` : ''} Trainers will teach you the rest.`, 'ding');
+      EB.fx.column(pl, CLASSES[k].color); EB.audio.ding();
+      this.closeWin('classWin'); this.rebuildHotbar(); this.renderGems && this.renderGems(); this.save();
+      if (this.net) this.net.send({ t: 'addclass', cls: k });
+      return true;
+    }
     questXP(n, id, step) { if (this.net) this.net.send({ t: 'qxp', q: id, step }); else this.gainXP(n); } // v6: the server grants quest XP once
     gainXP(n, party) {
       const pl = this.player;
       if (this.net && !this.net.xpOK) return; // v6: experience comes from the server
-      if (pl.level >= D.MAX_LEVEL) return;
+      if (!this.net) { // v9: multiclass XP penalty, then the Overachievement slider (the server does this itself online)
+        n = Math.max(1, Math.floor(n * EB.multi.xpMult(pl.classes)));
+        const pct = pl.level >= D.MAX_LEVEL ? 100 : pl.level >= EB.multi.THIRD_AT ? pl.aaPct : 0, a = Math.floor(n * pct / 100);
+        if (a > 0) { n -= a; this.gainAA(a); }
+      }
+      if (pl.level >= D.MAX_LEVEL || n <= 0) return;
       pl.xp += n;
       this.log(party ? 'You and your party feel smarter. (shared XP)' : 'You feel a little smarter. (XP)', 'xp');
       let dinged = false;
@@ -771,9 +896,11 @@
       }
       if (dinged) {
         ui.center('DING!', `You are now level ${pl.level}. Your mom would be proud.`, 3);
+        if (pl.level >= EB.multi.THIRD_AT && !this._classPrompted && this.classSlotOpen()) { this._classPrompted = true; setTimeout(() => { this.log(`At level ${EB.multi.THIRD_AT} you may pick a THIRD class. Choose now, or visit any class trainer later.`, 'ding'); if (!this.windows.size) this.openClassPick(); }, 1500); }
+        if (pl.level === EB.multi.THIRD_AT) this.log('Overachievement Points unlocked! Open them with O (or the 🏆 button) and set how much XP goes into OP.', 'help');
         EB.fx.column(pl, 0xffe070);
         EB.audio.ding();
-        const avail = Object.keys(SPELLS).filter((s) => { const L = SPELLS[s].classes[pl.cls]; return L && L <= pl.level && !pl.spells.includes(s); });
+        const avail = Object.keys(SPELLS).filter((s) => { const L = EB.multi.spellLvl(s, pl.classes); return L && L <= pl.level && !pl.spells.includes(s); });
         if (avail.length) this.log(`Your Guild Coach has new tricks to teach you. (${avail.map((s) => SPELLS[s].name).join(', ')})`, 'help');
         for (const m of this.mobs) m.refreshPlate(this);
         this.updateTargetWin();
@@ -814,7 +941,7 @@
       if (!pl.alive) return;
       const st = pl.stats();
       const hitChance = U.clamp(0.62 + (m.level - pl.level) * 0.05 - pl.ac / 500, 0.2, 0.95);
-      const dodge = U.clamp((st.AGI - 60) / 600 + pl.buffSum('dodge') / 100 + (pl.cls === 'rogue' ? 0.05 : 0), 0, 0.6);
+      const dodge = U.clamp((st.AGI - 60) / 600 + pl.buffSum('dodge') / 100 + (pl.classes.includes('rogue') ? 0.05 : 0), 0, 0.6);
       const verb = m.def.verb;
       if (Math.random() > hitChance) { this.log(`${U.cap(m.name)} tries to ${verb} you, but swings at air!`, 'miss'); return; }
       if (Math.random() < dodge) { this.log(`${U.cap(m.name)} tries to ${verb} you, but you dodge like a pro!`, 'miss'); return; }
@@ -885,7 +1012,7 @@
       if (this.buildMode) { if (i < D.BUILDABLE.length) { this.buildSel = i; this.rebuildHotbar(); } return; }
       const list = this.hotbarList();
       if (this.bookSel) { const s = this.bookSel; this.bookSel = null; if (i < 8) this.assignHotbar(i, s); if (this.windows.has('bookWin')) this.renderBook(); return; }
-      if (list[i] && /^click:/.test(list[i])) this.useClick(list[i].slice(6)); else if (list[i]) this.useAbility(list[i]);
+      if (list[i] && /^aa:/.test(list[i])) this.useAAActive(list[i].slice(3)); else if (list[i] && /^click:/.test(list[i])) this.useClick(list[i].slice(6)); else if (list[i]) this.useAbility(list[i]);
     }
     useAbility(id) {
       const pl = this.player, sp = SPELLS[id];
@@ -977,6 +1104,7 @@
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           let dmg = Math.round((U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * dmgF);
+          if (!sp.skill && pl.aaT().scrit && Math.random() * 100 < pl.aaT().scrit) { dmg *= 2; this.log('Your spell is extra spicy! (critical blast)', 'spell'); }
           if (sp.undead && t.def.faction === 'undead') { dmg = Math.floor(dmg * sp.undead); this.log(`${U.cap(t.name)} is seared by holy fire!`, 'spell'); }
           const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
@@ -1026,7 +1154,7 @@
           break;
         }
         case 'pet': {
-          { const pet = this.summonPet(sp.petLvl); if (pet) EB.fx.summon(pet); } EB.audio.spell();
+          { const pet = this.summonPet(sp.petLvl, sp.petType); if (pet) EB.fx.summon(pet); } EB.audio.spell();
           break;
         }
         case 'buff': {
@@ -1149,7 +1277,7 @@
       }
       if (t.npcKind === 'merchant') { this.merchant = t; this.log(`${t.name} says: "Take a look, ${pl.name}. Everything is priced to sell!${this.questFor(t) && this.quests[this.questFor(t)] !== 'done' ? ' And hail me if you want some work.' : ''}"`, 'say'); this.openWin('merchantWin'); }
       else if (t.npcKind === 'trainer') {
-        if (t.data && t.data.cls && t.data.cls !== pl.cls) { this.hail(); return; }
+        if (t.data && t.data.cls && !pl.classes.includes(t.data.cls)) { this.hail(); if (this.classSlotOpen()) this.openClassPick(t.data.cls); return; }
         this.trainerNpc = t; this.openWin('trainerWin');
       }
       else if (t.npcKind === 'banker') { this.banker = t; this.log(`${t.name} says: "Your vault, ${pl.name}. Please do not put frogs in it."`, 'say'); this.openWin('bankWin'); }
@@ -1248,7 +1376,7 @@
         bg.appendChild(el);
       });
       const st = pl.stats(), w = pl.weapon();
-      $('statsBox').innerHTML = `<b>${pl.name}</b><br>Level ${pl.level} ${RACES[pl.race].name} ${CLASSES[pl.cls].name}<br>` +
+      $('statsBox').innerHTML = `<b>${pl.name}</b><br>Level ${pl.level} ${RACES[pl.race].name} ${pl.classLabel}<br>` +
         `HP: ${Math.ceil(pl.hp)} / ${pl.maxHp}<br>` + (pl.maxMana ? `Mana: ${Math.floor(pl.mana)} / ${pl.maxMana}<br>` : '') +
         `AC: ${pl.ac} &nbsp; ${w.name} (${w.dmg}/${Math.round(w.delay * 10)})<br>` +
         STAT_NAMES.map((n) => `${n}: <b>${st[n]}</b>`).join(' &nbsp; ') +
@@ -1332,10 +1460,12 @@
     trainCost(L) { return L <= 1 ? 0 : L * L * 12; }
     renderTrainer() {
       const pl = this.player, list = $('trainList');
-      list.innerHTML = `<div class="sub">${this.trainerNpc ? this.trainerNpc.name : 'Guild Coach Aldric'} teaches ${CLASSES[pl.cls].name}s (levels 1-${D.MAX_LEVEL}). Your coin: ${U.coinStr(pl.coins)}</div>`;
-      const ids = Object.keys(SPELLS).filter((s) => SPELLS[s].classes[pl.cls]).sort((a, b) => SPELLS[a].classes[pl.cls] - SPELLS[b].classes[pl.cls]);
+      const tc = this.trainerNpc && this.trainerNpc.data && this.trainerNpc.data.cls, cl = tc ? [tc] : pl.classes;
+      list.innerHTML = `<div class="sub">${this.trainerNpc ? this.trainerNpc.name : 'Guild Coach Aldric'} teaches ${cl.map((k) => CLASSES[k].name + 's').join(', ')} (levels 1-${D.MAX_LEVEL}). Your coin: ${U.coinStr(pl.coins)}</div>`;
+      if (this.classSlotOpen()) { const b = document.createElement('button'); b.className = 'small'; b.textContent = `Pick your ${pl.classes.length === 1 ? 'second' : 'third'} class...`; b.onclick = () => this.openClassPick(); list.appendChild(b); }
+      const ids = Object.keys(SPELLS).filter((s) => EB.multi.spellLvl(s, cl)).sort((a, b) => EB.multi.spellLvl(a, cl) - EB.multi.spellLvl(b, cl));
       for (const id of ids) {
-        const sp = SPELLS[id], L = sp.classes[pl.cls];
+        const sp = SPELLS[id], L = EB.multi.spellLvl(id, cl);
         const row = document.createElement('div'); row.className = 'row';
         row.innerHTML = `<span style="width:50px">Lvl ${L}</span><span class="n"><b>${sp.name}</b> - ${sp.desc}${sp.mana ? ` (${sp.mana} mana)` : ''}</span>`;
         const b = document.createElement('button'); b.className = 'small';
@@ -1345,7 +1475,8 @@
       }
     }
     train(id) {
-      const pl = this.player, sp = SPELLS[id], c = this.trainCost(sp.classes[pl.cls]);
+      const pl = this.player, sp = SPELLS[id], c = this.trainCost(EB.multi.spellLvl(id, pl.classes));
+      if (!EB.multi.spellLvl(id, pl.classes)) return;
       if (pl.coins < c) return;
       pl.coins -= c; pl.spells.push(id);
       this.log(isSpell(id) ? `You copy ${sp.name} into your spellbook in your neatest handwriting.` : `You have learned ${sp.name}!`, 'spell');
@@ -1448,12 +1579,15 @@
       this.renderGroup();
       return m;
     }
-    summonPet(petLvl) {
-      const old = this.mercs.find((m) => m.isPet);
-      if (old) { this.log(`${old.name} crumbles to dust.`, 'spell'); this.removeMercModel(old); }
-      const pet = this.addMerc('pet', { petLvl }, true);
-      this.log(`You summon ${pet.name}, a level ${petLvl} servant, from the grave.`, 'spell');
-      this.log(`${pet.name} says: "Reporting for duty, boss. Bones and all."`, 'say');
+    summonPet(petLvl, type) {
+      type = type || 'skel';
+      // v9: one pet per pet type (so a Necro/Shaman/Enchanter can run three); summoning replaces only the same kind
+      const old = this.mercs.find((m) => m.isPet && (m.petType || 'skel') === type);
+      if (old) { this.log(`${old.name} ${type === 'skel' ? 'crumbles to dust' : 'fades away'}.`, 'spell'); this.removeMercModel(old); }
+      if (this.mercs.filter((m) => m.isPet).length >= EB.multi.MAX_PETS) { this.log(`You already have ${EB.multi.MAX_PETS} pets. Even you cannot walk that many.`, 'sys'); return null; }
+      const pet = this.addMerc('pet', { petLvl, petType: type }, true);
+      this.log(`You summon ${pet.name}, a level ${petLvl} servant, ${EB.multi.PET_TYPES[type].verb}.`, 'spell');
+      this.log(`${pet.name} says: "Reporting for duty, boss.${type === 'skel' ? ' Bones and all.' : type === 'wolf' ? ' Woof, respectfully.' : ' You can totally see me, right?'}"`, 'say');
       return pet;
     }
     hireMerc(role) {
@@ -1728,10 +1862,10 @@
       el.addEventListener('drop', (e) => { e.preventDefault(); el.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (id && SPELLS[id]) fn(id); });
     }
     spellTip(id) {
-      const sp = SPELLS[id], L = sp.classes[this.player.cls];
+      const sp = SPELLS[id], L = EB.multi.spellLvl(id, this.player.classes);
       return `<div class="tn">${sp.name}</div>${sp.desc}<br>${L ? `Level ${L} &nbsp; ` : ''}${sp.mana ? `Mana: ${sp.mana} &nbsp; ` : ''}Cast: ${sp.cast ? sp.cast + 's' : 'Instant'} &nbsp; Recast: ${sp.recast}s`;
     }
-    memTime(id) { return Math.min(6, 2 + (SPELLS[id].classes[this.player.cls] || 1) * 0.25); }
+    memTime(id) { return Math.min(6, 2 + (EB.multi.spellLvl(id, this.player.classes) || 1) * 0.25); }
     memorize(id, gem, instant) {
       const pl = this.player;
       if (!isSpell(id)) { this.log('Only spells can be memorized. Place abilities on your hotbar instead.', 'sys'); return; }
@@ -1766,16 +1900,17 @@
     }
     assignHotbar(slot, id) {
       const pl = this.player;
-      if (id && !pl.spells.includes(id) && !/^click:/.test(id)) return;
+      if (id && !pl.spells.includes(id) && !/^(click|aa):/.test(id)) return;
       for (let i = 0; i < 8; i++) if (pl.hotbar[i] === id) pl.hotbar[i] = null;
       pl.hotbar[slot] = id;
-      if (id && /^click:/.test(id)) this.log(`${ITEMS[id.slice(6)].name} placed on hotbar slot ${slot + 1}.`, 'sys');
+      if (id && /^aa:/.test(id)) this.log(`${EB.multi.NODES[id.slice(3)].name} placed on hotbar slot ${slot + 1}.`, 'sys');
+      else if (id && /^click:/.test(id)) this.log(`${ITEMS[id.slice(6)].name} placed on hotbar slot ${slot + 1}.`, 'sys');
       else if (id) this.log(`${SPELLS[id].name} placed on hotbar slot ${slot + 1}.${isSpell(id) && !pl.gems.includes(id) ? ' (Memorize it in a spell gem to cast it.)' : ''}`, 'sys');
       this.rebuildHotbar(); this.save();
     }
     renderBook() {
       const pl = this.player, box = $('bookList'); box.innerHTML = '';
-      const sortL = (a, b) => (SPELLS[a].classes[pl.cls] || 0) - (SPELLS[b].classes[pl.cls] || 0);
+      const sortL = (a, b) => (EB.multi.spellLvl(a, pl.classes) || 0) - (EB.multi.spellLvl(b, pl.classes) || 0);
       const known = pl.spells.filter((id) => SPELLS[id]).sort(sortL);
       const sect = (title, ids) => {
         if (!ids.length) return;
@@ -1785,7 +1920,7 @@
           const sp = SPELLS[id], el = document.createElement('div');
           const gi = pl.gems.indexOf(id);
           el.className = 'bspell' + (this.bookSel === id ? ' sel' : '') + (gi >= 0 ? ' memd' : '');
-          el.innerHTML = `${EB.icons.img(id)}<div><b>${sp.name}</b><br><span>L${sp.classes[pl.cls] || '?'}${sp.mana ? ` · ${sp.mana} mana` : ''}${gi >= 0 ? ` · gem ${gi + 1}` : ''}</span></div>`;
+          el.innerHTML = `${EB.icons.img(id)}<div><b>${sp.name}</b><br><span>L${EB.multi.spellLvl(id, pl.classes) || '?'}${sp.mana ? ` · ${sp.mana} mana` : ''}${gi >= 0 ? ` · gem ${gi + 1}` : ''}</span></div>`;
           el.draggable = true; el.dataset.id = id;
           el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', id); this.bookSel = null; };
           el.onclick = () => { this.bookSel = this.bookSel === id ? null : id; this.renderBook(); if (this.bookSel) this.log(`Selected ${sp.name}: click a ${isSpell(id) ? 'spell gem or ' : ''}hotbar slot to place it.`, 'help'); };
@@ -1917,23 +2052,36 @@
           for (const f in D.FACTIONS) { const v = this.standing(f), st = D.standingOf(v); this.log(`  ${D.FACTIONS[f].name}: ${st.label} (${v})`, 'faction'); }
           break;
         }
-        case 'pet': { const a = (v.split(/\s+/)[1] || '').toLowerCase().replace(/[^a-z]/g, ''); if (a === 'window' || a === '') this.toggleWin('petWin'); else this.petCommand(a === 'back' || a === 'backoff' ? 'backoff' : a); break; }
+        case 'pet': { const a = (v.split(/\s+/)[1] || '').toLowerCase().replace(/[^a-z]/g, ''); if (a === 'window' || a === '') this.toggleWin('petWin'); else if (a === 'next' || a === 'select') this.cyclePetSel(); else this.petCommand(a === 'back' || a === 'backoff' ? 'backoff' : a); break; }
         case 'phone': {
           const a = (v.split(/\s+/)[1] || '').toLowerCase();
           if (a === 'status' || a === 'debug' || a === 'info') { const s = EB.phone.status(); this.log(`Phone Mode ${s['Phone Mode']} (${s['decided by']}); touch=${s['touch capable']} maxTouchPoints=${s.maxTouchPoints} ontouchstart=${s.ontouchstart} coarse=${s.pointerCoarse} hoverNone=${s.hoverNone} mobileUA=${s.mobileUA} iOS=${s.iOS} standalone=${s['standalone (home screen)']}`, 'sys'); break; }
           EB.phone.source = 'command'; EB.phone.set(a === 'off' ? false : a === 'on' ? true : !EB.phone.on); this.log(`Phone mode ${EB.phone.on ? 'ON' : 'OFF'}. (/phone status shows touch detection details)`, 'sys'); break;
         }
-        case 'help': this.log('Commands: /save /loc /who /played /time /corpse /quests /faction /pet attack|backoff|follow|guard|sit|window /dismiss /zone /sit /stand /music /book /lights /gfx /phone. Press ? for key bindings.', 'help'); break;
+        case 'op': case 'aa': this.toggleWin('aaWin'); break;
+        case 'class': case 'multiclass': this.openClassPick(); break;
+        case 'help': this.log('Commands: /op (Overachievement Points) /class (multiclass)  /save /loc /who /played /time /corpse /quests /faction /pet attack|backoff|follow|guard|sit|window /dismiss /zone /sit /stand /music /book /lights /gfx /phone. Press ? for key bindings.', 'help'); break;
         default: this.log('Huh? That is not a command. Try /help.', 'sys');
       }
     }
 
     // ---------- v5 pet commands ----------
     pet() { return this.mercs.find((m) => m.isPet && !m.dead) || null; }
-    petCommand(cmd) {
-      const pet = this.pet(), t = this.target;
-      if (!pet) { this.log('You do not have a pet.', 'sys'); return; }
-      const say = (s) => this.log(`${pet.name} says: "${s}"`, 'say');
+    pets() { return this.mercs.filter((m) => m.isPet && !m.dead); }
+    // v9: commands go to the selected pet, or to every pet when "All pets" is selected
+    petCommand(cmd, only) {
+      const all = this.pets();
+      if (!all.length) { this.log('You do not have a pet.', 'sys'); return; }
+      if (this.petSel && !all.includes(this.petSel)) this.petSel = null;
+      const list = only ? [only] : this.petSel ? [this.petSel] : all;
+      for (let i = 0; i < list.length; i++) this.petCommand1(list[i], cmd, i > 0);
+      this.player.petMode = list[0].petMode;
+      this.renderPetBar(); if (this.windows.has('petWin')) this.renderPetWin();
+    }
+    cyclePetSel() { const all = this.pets(); if (all.length < 2) { this.petSel = null; return; } const i = this.petSel ? all.indexOf(this.petSel) : -1; this.petSel = i + 1 < all.length ? all[i + 1] : null; this.log(`Pet commands now go to: ${this.petSel ? this.petSel.name : 'all pets'}.`, 'sys'); this.renderPetBar(); if (this.windows.has('petWin')) this.renderPetWin(); }
+    petCommand1(pet, cmd, quiet) {
+      const t = this.target;
+      const say = (s) => { if (!quiet) this.log(`${pet.name} says: "${s}"`, 'say'); };
       switch (cmd) {
         case 'attack':
           if (!t || t.kind !== 'mob' || !t.alive) { this.log('You must first target something for your pet to attack.', 'sys'); return; }
@@ -1947,10 +2095,8 @@
         case 'follow': pet.petMode = 'follow'; pet.guardPos = null; say('Right behind you, boss. Like, RIGHT behind you.'); break;
         case 'guard': pet.petMode = 'guard'; pet.guardPos = pet.pos.clone(); pet.petTarget = null; say('Guarding this exact spot. Nobody touches it.'); break;
         case 'sit': pet.petMode = pet.petMode === 'sit' ? 'follow' : 'sit'; pet.petTarget = null; say(pet.petMode === 'sit' ? 'Taking a load off, boss. (sitting)' : 'Back on my feet, boss. (standing)'); break;
-        default: this.log('Pet commands: /pet attack, backoff, follow, guard, sit, window.', 'sys'); return;
+        default: this.log('Pet commands: /pet attack, backoff, follow, guard, sit, next, window.', 'sys'); return;
       }
-      this.player.petMode = pet.petMode;
-      this.renderPetBar(); if (this.windows.has('petWin')) this.renderPetWin();
     }
     renderPetBar() {
       const bar = $('petBar'); if (!bar) return;
@@ -1959,21 +2105,28 @@
       if (!pet) return;
       if (!bar.dataset.built) {
         bar.dataset.built = '1';
-        bar.innerHTML = '<span class="plabel">Pet</span>' + [['attack', '⚔', 'Attack'], ['backoff', '✋', 'Back off'], ['follow', '👣', 'Follow'], ['guard', '🛡', 'Guard'], ['sit', '💤', 'Sit']].map(([c, ic, n]) => `<button class="petBtn" data-pc="${c}" title="Pet: ${n}"><span>${ic}</span><small>${n}</small></button>`).join('');
-        bar.querySelectorAll('.petBtn').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); this.petCommand(b.dataset.pc); }; });
+        bar.innerHTML = '<button class="petBtn petSel" data-pc="next" title="Choose which pet takes orders"><span>🐾</span><small>All</small></button>' + [['attack', '⚔', 'Attack'], ['backoff', '✋', 'Back off'], ['follow', '👣', 'Follow'], ['guard', '🛡', 'Guard'], ['sit', '💤', 'Sit']].map(([c, ic, n]) => `<button class="petBtn" data-pc="${c}" title="Pet: ${n}"><span>${ic}</span><small>${n}</small></button>`).join('');
+        bar.querySelectorAll('.petBtn').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); if (b.dataset.pc === 'next') this.cyclePetSel(); else this.petCommand(b.dataset.pc); }; });
       }
+      const ps = bar.querySelector('.petSel small'); if (ps) ps.textContent = this.petSel ? this.petSel.name.split(' ')[0] : (this.pets().length > 1 ? `All ${this.pets().length}` : 'Pet');
       bar.querySelectorAll('.petBtn').forEach((b) => b.classList.toggle('on', b.dataset.pc === pet.petMode || (b.dataset.pc === 'attack' && !!pet.petTarget)));
     }
     renderPetWin() {
-      const body = $('petBody'), pet = this.pet(); if (!body) return;
-      if (!pet) { body.innerHTML = '<div class="sub">You have no pet. Necromancers summon one with a pet spell.</div>'; return; }
-      const foe = pet.petTarget && pet.petTarget.alive ? pet.petTarget.name : 'none';
-      body.innerHTML = `<div><b>${pet.name}</b> - level ${pet.level} ${D.PETS[pet.petLvl] ? D.PETS[pet.petLvl].desc : ''}</div>
-        <div class="bar hp"><div class="fill" style="width:${Math.round((pet.hp / pet.maxHp) * 100)}%"></div><span>${Math.ceil(pet.hp)} / ${pet.maxHp}</span></div>
-        <div class="sub">Mode: <b>${pet.petMode}</b> &nbsp; Attacking: <b>${foe}</b></div>
-        <div class="btnRow petCmds">${['attack', 'backoff', 'follow', 'guard', 'sit'].map((c) => `<button data-pc="${c}" class="${pet.petMode === c ? 'on' : ''}">${{ attack: 'Attack', backoff: 'Back Off', follow: 'Follow', guard: 'Guard Here', sit: pet.petMode === 'sit' ? 'Stand' : 'Sit' }[c]}</button>`).join('')}</div>
-        <div class="sub">Also: /pet attack | backoff | follow | guard | sit</div>`;
-      body.querySelectorAll('button[data-pc]').forEach((b) => { b.onclick = () => this.petCommand(b.dataset.pc); });
+      const body = $('petBody'), pets = this.pets(); if (!body) return;
+      if (!pets.length) { body.innerHTML = '<div class="sub">You have no pet. Necromancers, Shamans and Enchanters summon pets with a pet spell; multiclass characters can keep one of each.</div>'; return; }
+      if (this.petSel && !pets.includes(this.petSel)) this.petSel = null;
+      const btns = (pet, i) => ['attack', 'backoff', 'follow', 'guard', 'sit'].map((c) => `<button data-pc="${c}" data-pi="${i}" class="${pet && pet.petMode === c ? 'on' : ''}">${{ attack: 'Attack', backoff: 'Back Off', follow: 'Follow', guard: 'Guard', sit: pet && pet.petMode === 'sit' ? 'Stand' : 'Sit' }[c]}</button>`).join('');
+      let h = pets.length > 1 ? `<div class="petAll"><b>All pets (${pets.length}/${EB.multi.MAX_PETS})</b><div class="btnRow petCmds">${btns(null, -1)}</div></div>` : '';
+      pets.forEach((pet, i) => {
+        const foe = pet.petTarget && pet.petTarget.alive ? pet.petTarget.name : 'none', d = EB.multi.petDef(pet.petType || 'skel', pet.petLvl);
+        h += `<div class="petRow${this.petSel === pet ? ' sel' : ''}"><div><b>${pet.name}</b> - level ${pet.level} <span class="sub">${d ? d.desc : ''}</span> <button class="small" data-psel="${i}">${this.petSel === pet ? 'Selected' : 'Select'}</button> <button class="small" data-ptgt="${i}">Target</button></div>
+          <div class="bar hp"><div class="fill" style="width:${Math.round((pet.hp / pet.maxHp) * 100)}%"></div><span>${Math.ceil(pet.hp)} / ${pet.maxHp}</span></div>
+          <div class="sub">Mode: <b>${pet.petMode}</b> &nbsp; Attacking: <b>${foe}</b></div><div class="btnRow petCmds">${btns(pet, i)}</div></div>`;
+      });
+      body.innerHTML = h + '<div class="sub">Also: /pet attack | backoff | follow | guard | sit | next (cycles which pet takes orders; the 🐾 button does the same)</div>';
+      body.querySelectorAll('button[data-pc]').forEach((b) => { b.onclick = () => { const i = +b.dataset.pi; if (i < 0) { const s = this.petSel; this.petSel = null; this.petCommand(b.dataset.pc); this.petSel = s; } else this.petCommand(b.dataset.pc, pets[i]); }; });
+      body.querySelectorAll('button[data-psel]').forEach((b) => { b.onclick = () => { const p = pets[+b.dataset.psel]; this.petSel = this.petSel === p ? null : p; this.renderPetBar(); this.renderPetWin(); }; });
+      body.querySelectorAll('button[data-ptgt]').forEach((b) => { b.onclick = () => this.setTarget(pets[+b.dataset.ptgt]); });
     }
 
     // ---------- HUD ----------
@@ -2005,6 +2158,15 @@
           el.onclick = () => this.hotkey(i);
           hb.appendChild(el); return;
         }
+        if (/^aa:/.test(id)) { // v9: Overachievement active
+          const n = EB.multi.NODES[id.slice(3)];
+          el.className = 'slot clicky aaSlot';
+          el.innerHTML = `<span class="k">${i + 1}</span><span class="ic">🏆</span><span class="hn">${n.name}</span><div class="cd"></div>`;
+          el.onclick = () => this.hotkey(i);
+          el.oncontextmenu = (e) => { e.preventDefault(); this.assignHotbar(i, null); };
+          ui.tooltipFor(el, () => `<div class="tn">${n.name}</div>${n.desc}<div style="color:#b0a080">Overachievement ability &middot; Right-click to clear</div>`);
+          hb.appendChild(el); this.hotbarEls.push({ el, id, aa: id.slice(3), cd: el.querySelector('.cd') }); return;
+        }
         if (/^click:/.test(id)) { // v8: item click effect
           const I = ITEMS[id.slice(6)], C = EB.gear.CLICKS[I.click];
           el.className = 'slot clicky'; el.style.borderColor = EB.gear.qcolor(id.slice(6));
@@ -2032,7 +2194,7 @@
     updateHUD() {
       const pl = this.player;
       $('pName').textContent = pl.title ? `${pl.name}, ${pl.title}` : pl.name;
-      $('pLvl').textContent = `${pl.level} ${RACES[pl.race].name} ${CLASSES[pl.cls].name}`;
+      $('pLvl').textContent = `${pl.level} ${RACES[pl.race].name} ${pl.classLabel}`;
       ui.bar('pHp', 'pHpT', Math.max(0, pl.hp), pl.maxHp, `HP ${Math.max(0, Math.ceil(pl.hp))} / ${pl.maxHp}`);
       if (pl.maxMana) ui.bar('pMana', 'pManaT', pl.mana, pl.maxMana, `Mana ${Math.floor(pl.mana)} / ${pl.maxMana}`); else $('pManaBar').classList.add('hidden');
       const need = D.xpToNext(pl.level);
@@ -2044,6 +2206,7 @@
       this.petWinT = (this.petWinT || 0) + 1; if (this.windows.has('petWin') && this.petWinT % 5 === 0) this.renderPetWin();
       const at = $('atkSlot'); if (at) at.classList.toggle('active', pl.autoAttack);
       for (const h of this.hotbarEls || []) {
+        if (h.aa) { const n = EB.multi.NODES[h.aa], left = (pl.cooldowns['aa:' + h.aa] || 0) - this.time; h.cd.style.height = left > 0 ? Math.min(100, (left / n.active.cd) * 100) + '%' : '0%'; continue; }
         if (h.click) { const C = EB.gear.CLICKS[ITEMS[h.click].click], left = (pl.cooldowns['click:' + h.click] || 0) - this.time; h.cd.style.height = left > 0 ? Math.min(100, (left / C.cd) * 100) + '%' : '0%'; h.el.classList.toggle('unmem', !this.hasClicky(h.click)); continue; }
         const sp = SPELLS[h.id], left = (pl.cooldowns[h.id] || 0) - this.time;
         h.cd.style.height = left > 0 ? Math.min(100, (left / sp.recast) * 100) + '%' : '0%';
@@ -2166,7 +2329,7 @@
         const f = pl.forward(), r = new THREE.Vector3(-Math.cos(pl.yaw), 0, Math.sin(pl.yaw));
         let mx = f.x * fz + r.x * fx, mz = f.z * fz + r.z * fx;
         const l = Math.hypot(mx, mz);
-        const speed = (fz < 0 && Math.abs(fx) < 0.3 ? 3.2 : 5.6) * (1 + pl.buffSum('speed')) * analog;
+        const speed = (fz < 0 && Math.abs(fx) < 0.3 ? 3.2 : 5.6) * (1 + pl.buffSum('speed') + pl.aaT().runPct / 100) * analog;
         if (l > 0) { mx = (mx / l) * speed; mz = (mz / l) * speed; }
         pl.vel.x = mx; pl.vel.z = mz;
         const jumpQ = EB.phone && EB.phone.jumpQ; if (jumpQ) EB.phone.jumpQ = false; // v5: a quick tap on the touch jump button still jumps
@@ -2198,7 +2361,7 @@
           let hpR = 1 + Math.floor(pl.level / 4);
           if (pl.sitting) hpR = 3 + pl.level + Math.floor(st.STA / 30);
           if (!inCombat) hpR += 1;
-          pl.hp = Math.min(pl.maxHp, pl.hp + hpR);
+          pl.hp = Math.min(pl.maxHp, pl.hp + hpR + pl.aaT().regen);
           for (const m of this.mercs) {
             const ooc = !this.mobs.some((mb) => mb.alive && mb.target === m);
             m.hp = Math.min(m.maxHp, m.hp + (2 + Math.floor(m.level / 2)) * (ooc ? 3 : 1));
@@ -2209,7 +2372,7 @@
             const ms = pl.castStat();
             let mR = 1 + Math.floor(pl.level / 5);
             if (pl.sitting) mR = 4 + Math.floor(pl.level / 2) + Math.floor(ms / 40);
-            pl.mana = Math.min(pl.maxMana, pl.mana + mR + pl.buffSum('manaRegen'));
+            pl.mana = Math.min(pl.maxMana, pl.mana + mR + pl.buffSum('manaRegen') + pl.aaT().manaRegen);
           }
         }
       }

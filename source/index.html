@@ -71,7 +71,8 @@ if (/^https?:/.test(location.protocol)) {
       <div class="createGrid">
         <div class="panel">
           <h3>Race</h3><div id="raceList" class="choiceList"></div>
-          <h3>Class</h3><div id="classList" class="choiceList"></div>
+          <h3>Primary class</h3><div id="classList" class="choiceList"></div>
+          <h3>Second class <small class="sub">(multiclass: pick a third at level 10)</small></h3><div id="classList2" class="choiceList"></div>
         </div>
         <div class="panel">
           <h3>Attributes</h3>
@@ -150,6 +151,7 @@ if (/^https?:/.test(location.protocol)) {
       <button data-act="book" title="Spellbook">📖</button>
       <button data-act="map" title="Map">🗺</button>
       <button data-act="pet" title="Pet" class="hidden">🐾</button>
+      <button data-act="aa" title="Overachievement Points">🏆</button>
       <button data-act="cam" title="1st / 3rd person">🎥</button>
       <button data-act="say" title="Type a command">⌨</button>
       <button data-act="help" title="Help">?</button>
@@ -205,6 +207,14 @@ if (/^https?:/.test(location.protocol)) {
     <div class="wtitle">Pet <span class="x" data-close="petWin">✕</span></div>
     <div id="petBody"></div>
   </div>
+  <div id="aaWin" class="win panelwin hidden">
+    <div class="wtitle">Overachievement Points <span class="x" data-close="aaWin">✕</span></div>
+    <div id="aaBody"></div>
+  </div>
+  <div id="classWin" class="win panelwin hidden">
+    <div class="wtitle">Multiclass: Pick a Class <span class="x" data-close="classWin">✕</span></div>
+    <div id="classBody"></div>
+  </div>
   <div id="dialogWin" class="win panelwin hidden">
     <div class="wtitle" id="dlgTitle">Quest <span class="x" data-close="dialogWin">✕</span></div>
     <div id="dlgText"></div>
@@ -255,6 +265,7 @@ if (/^https?:/.test(location.protocol)) {
 <script src="src/util.js"></script>
 <script src="src/data.js"></script>
 <script src="src/gear.js"></script>
+<script src="src/multi.js"></script>
 <script src="src/icons.js"></script>
 <script src="src/models.js"></script>
 <script src="src/fx.js"></script>

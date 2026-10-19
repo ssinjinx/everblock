@@ -816,7 +816,8 @@
     }
     return o;
   }
-  function petOpts(lvl) {
+  function petOpts(lvl, type) {
+    if (type && type !== 'skel' && EB.multi) { const d = EB.multi.petDef(type, lvl), o = mobOpts(d.model, Object.assign({ type: d.model }, EB.data.MOBS[d.model])); o.scale = Math.min(1.6, (o.scale || 1) * (lvl >= 30 ? 1.15 : 1)); return o; } // v9: spirit wolves, imaginary friends
     const P = Object.assign({}, HUMAN, { skeleton: true, skull: true, skin: 0xe8e2c8, torsoW: 0.44, armW: 0.14, eyeGlow: 0x60ff90 }), gear = {};
     if (lvl >= 8) { gear.weapon = { kind: 'sword', o: { metal: METAL.rusty } }; gear.shield = { kind: 'shield_bone', o: {} }; P.rags = 0x4a3a2a; }
     // v7 pets

@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node index.js",
     "admin": "node admin.js",
-    "test": "node test/bots.js && node test/v7.js && node test/v8.js"
+    "test": "node test/bots.js && node test/v7.js && node test/v8.js && node test/v9.js"
   },
   "dependencies": {
     "three": "0.149.0",

@@ -118,8 +118,8 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   check('Bazaar has return portals to all five towns', towns.every((t) => bzi.portals.includes(t)), bzi.portals);
   const talk = (name) => ev((name) => { const g = EB.game, n = g.npcs.find((n) => n.name === name); g.player.pos.set(n.pos.x, n.pos.y, n.pos.z + 1.6); g.setTarget(n); g.interact(); return [...g.windows]; }, name);
   await clearLog();
-  const wrong = await talk('Coach Brawnhilda');
-  check('wrong-class trainer refuses to train a wizard', !wrong.includes('trainerWin') && (await logText()).includes('Coach Brawnhilda'), wrong);
+  const wrong = await talk('Coach Brawnhilda'); await page.waitForTimeout(700);
+  check('wrong-class trainer refuses to train a wizard', !wrong.includes('trainerWin') /* v9: may offer the multiclass pick instead */ && (await logText()).includes('Coach Brawnhilda'), wrong);
   const tr = await talk('Magus Kablooey');
   const tres = await ev(() => { const g = EB.game, p = g.player; p.coins = 1e8; const id = Object.keys(EB.data.SPELLS).find((s) => EB.data.SPELLS[s].classes.wizard === 38); const had = p.spells.includes(id); g.train(id); return { had, has: p.spells.includes(id), title: document.getElementById('trainerWin').innerText.includes('Kablooey') }; });
   check('wizard trainer opens and teaches a level-38 spell', tr.includes('trainerWin') && !tres.had && tres.has, { tr, tres });

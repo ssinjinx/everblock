@@ -123,7 +123,7 @@
     // action buttons
     const acts = {
       attack: () => g.toggleAuto(), interact: () => g.interact(), sit: () => g.toggleSit(), consider: () => g.consider(), tab: () => g.tabTarget(false), hail: () => g.hail(),
-      inv: () => g.toggleWin('invWin'), book: () => g.toggleWin('bookWin'), pet: () => g.toggleWin('petWin'), help: () => g.toggleWin('helpWin'),
+      inv: () => g.toggleWin('invWin'), book: () => g.toggleWin('bookWin'), pet: () => g.toggleWin('petWin'), aa: () => g.toggleWin('aaWin'), help: () => g.toggleWin('helpWin'),
       map: () => { g.showMap = !g.showMap; $('minimap').classList.toggle('hidden', !g.showMap); },
       chat: () => phone.setChat(!document.body.classList.contains('chatOpen')),
       cam: () => { g.camDist = g.camDist > 0 ? 0 : 5.5; },
@@ -143,7 +143,7 @@
     const upd = () => { // live button states
       if (!phone.on || !g.player) return;
       const set = (a, on) => { const el = document.querySelector(`#phoneUI [data-act="${a}"]`); if (el) el.classList.toggle('on', !!on); };
-      set('attack', g.player.autoAttack); set('sit', g.player.sitting); set('map', g.showMap); set('inv', g.windows.has('invWin')); set('book', g.windows.has('bookWin')); set('pet', g.windows.has('petWin'));
+      set('attack', g.player.autoAttack); set('sit', g.player.sitting); set('map', g.showMap); set('inv', g.windows.has('invWin')); set('book', g.windows.has('bookWin')); set('pet', g.windows.has('petWin')); set('aa', g.windows.has('aaWin'));
       const pb = document.querySelector('#phoneUI [data-act="pet"]'); if (pb) pb.classList.toggle('hidden', !g.pet());
     };
     setInterval(upd, 250);

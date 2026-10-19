@@ -23,7 +23,8 @@ function validateNewChar(c) {
   let extra = 0;
   for (let i = 0; i < base.length; i++) { const v = c.stats[i] | 0; if (v < base[i] || v > base[i] + 20) return 'Bad stats.'; extra += v - base[i]; }
   if (extra > 20) return 'Too many bonus points.';
-  return { name, race: c.race, cls: c.cls, stats: c.stats.map((v) => v | 0) };
+  const classes = EB.multi.validClasses(c.cls, Array.isArray(c.classes) ? c.classes : [], 1); // v9: up to two classes at creation
+  return { name, race: c.race, cls: c.cls, classes, stats: c.stats.map((v) => v | 0) };
 }
 
 const num = (v, lo, hi, d) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
@@ -56,10 +57,15 @@ function sanitizeSave(rec, data, ctx) {
   out.inv = bag(c.inv, 24);
   out.bank = bag(c.bank, 48); out.bankCoins = Math.floor(num(c.bankCoins, 0, 1e9, 0)); // v7: First Bank of Bizarre vault
   out.equip = equipMap(c.equip);
-  const learnable = (s) => SPELLS[s] && SPELLS[s].classes[rec.cls] && SPELLS[s].classes[rec.cls] <= L;
+  // v9: classes are server-authoritative (rec.srv.classes); OP spending is clamped to points earned on the server
+  const srv = rec.srv || {}, classes = EB.multi.validClasses(rec.cls, srv.classes || [rec.cls], L), A = srv.aa || { earned: 0, xp: 0, pct: 0 };
+  out.classes = classes; out.aaEarned = A.earned | 0; out.aaXp = A.xp || 0; out.aaPct = A.pct || 0;
+  out.aa = EB.multi.cleanAA(c.aa, classes, L, out.aaEarned);
+  const learnable = (s) => { const l = EB.multi.spellLvl(s, classes); return l && l <= L; };
   out.spells = Array.isArray(c.spells) ? [...new Set(c.spells.filter(learnable))] : undefined;
+  const aaOK = (x) => typeof x === 'string' && x.startsWith('aa:') && out.aa[x.slice(3)] && EB.multi.NODES[x.slice(3)].active;
   const clickOK = (x) => typeof x === 'string' && x.startsWith('click:') && ITEMS[x.slice(6)] && ITEMS[x.slice(6)].click; // v8: item click effects on the hotbar
-  const pad = (a, hb) => { a = (Array.isArray(a) ? a : []).slice(0, 8).map((x) => (x && ((out.spells && out.spells.includes(x)) || (hb && clickOK(x))) ? x : null)); while (a.length < 8) a.push(null); return a; };
+  const pad = (a, hb) => { a = (Array.isArray(a) ? a : []).slice(0, 8).map((x) => (x && ((out.spells && out.spells.includes(x)) || (hb && (clickOK(x) || aaOK(x)))) ? x : null)); while (a.length < 8) a.push(null); return a; };
   if (out.spells) { out.gems = pad(c.gems); out.hotbar = pad(c.hotbar, true); }
   out.title = typeof c.title === 'string' ? c.title.slice(0, 40) : '';
   out.faction = {};
@@ -72,10 +78,11 @@ function sanitizeSave(rec, data, ctx) {
   const res = { v: 3, seed: ctx.seed, zone: ctx.zone, char: out, zoneEdits: {} };
   res.corpses = (Array.isArray(data.corpses) ? data.corpses : []).slice(0, 10).filter((k) => k && EB.WORLD.ZONES[k.zone || 'everblock']).map((k) => ({
     zone: k.zone || 'everblock', x: num(k.x, 0, 256, 128), y: num(k.y, 0, 64, 30), z: num(k.z, 0, 256, 128), coins: Math.floor(num(k.coins, 0, 1e8, 0)), items: bag(k.items, 24).filter(Boolean), equip: equipMap(k.equip) }));
-  res.mercs = (Array.isArray(data.mercs) ? data.mercs : []).slice(0, 3).filter((m) => m && (MERCS[m.role] || m.role === 'pet')).map((m) => ({
+  res.mercs = (Array.isArray(data.mercs) ? data.mercs : []).slice(0, 2 + EB.multi.MAX_PETS).filter((m) => m && (MERCS[m.role] || m.role === 'pet')).map((m) => ({
     role: m.role, hp: num(m.hp, 0, 1e6, 1), mana: num(m.mana, 0, 1e6, 0), buffs: [], stance: ['passive', 'balanced', 'aggressive'].includes(m.stance) ? m.stance : 'balanced',
     healAt: num(m.healAt, 0.2, 0.95, 0.62), equip: equipMap(m.equip), dead: !!m.dead, petLvl: m.role === 'pet' ? Math.min(L + 2, Math.max(1, m.petLvl | 0 || 3)) : undefined,
-    petMode: m.role === 'pet' && ['follow', 'guard', 'sit'].includes(m.petMode) ? m.petMode : undefined }));
+    petMode: m.role === 'pet' && ['follow', 'guard', 'sit'].includes(m.petMode) ? m.petMode : undefined,
+    petType: m.role === 'pet' ? (EB.multi.PET_TYPES[m.petType] ? m.petType : 'skel') : undefined }));
   res.quests = {};
   if (data.quests && typeof data.quests === 'object') for (const q in data.quests) if (QUESTS[q] && (data.quests[q] === 'active' || data.quests[q] === 'done')) res.quests[q] = data.quests[q];
   res.questSteps = {};
