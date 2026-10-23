@@ -81,7 +81,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   check('impact flashes a point light, lays ground decals and flinches the target', fi.light > 0 && fi.decals >= 1, fi);
 
   step('frost impact + crit shake');
-  await ev(() => { const g = EB.game; EB.fx.clear(); g._crit = true; g.applyAbility('frost_rift', g.dummy); });
+  await ev(() => { const g = EB.game; EB.fx.clear(); g.applyAbility('frost_rift', g.dummy); g._pendingBolt = null; g._crit = true; g.combatNumber(g.dummy, 777, g.player); });
   await waitGame(0.3);
   const fr = await ev(() => ({ shakes: EB.fx.counts.shakes, big: [...document.querySelectorAll('.fxNum.big')].filter((e) => e.style.display !== 'none').length }));
   check('a crit shakes the camera and shows a big number', fr.shakes >= 1 && fr.big >= 1, fr);
@@ -139,7 +139,7 @@ const check = (name, ok, info) => { results.push({ name, ok: !!ok }); console.lo
   check('fx update stays cheap under load (<3ms/frame in swiftshader)', pf.ms < 3, pf);
 
   step('low / phone mode');
-  const lo = await ev(() => { const g = EB.game, F = EB.fx; g.applyGfx('low', true); F.clear(); g.applyAbility('shock_of_fire', g.dummy); for (let i = 0; i < 4; i++) F.update(0.05, g.camera); const n = F.n; const sz = Math.max(...F.s0.slice(0, F.n)); return { n, sz, high: F.high }; });
+  const lo = await ev(() => { const g = EB.game, F = EB.fx; g.applyGfx('low', true); F.clear(); g.spellFx(g.dummy, 'fire'); F.impact(g.dummy, 'cold', {}); for (let i = 0; i < 4; i++) F.update(0.05, g.camera); const n = F.n; const sz = Math.max(...F.s0.slice(0, F.n)); return { n, sz, high: F.high }; });
   await ev(() => { const g = EB.game; EB.fx.clear(); g.applyAbility('shock_of_fire', g.dummy); setTimeout(() => g.applyAbility('frost_rift', g.dummy2), 0); g.dummy2.mezUntil = g.time + 5; });
   await waitGame(0.28);
   const lo2 = await ev(() => ({ light: Math.max(...EB.fx.lights.map((l) => l.L.intensity)), decals: EB.fx.decals.filter((d) => d.live).length, nums: [...document.querySelectorAll('.fxNum')].filter((e) => e.style.display !== 'none').length }));
