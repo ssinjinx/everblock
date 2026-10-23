@@ -80,7 +80,30 @@
     if (!timer) timer = setInterval(schedule, 200);
   }
 
+  const hp = (dur, vol, f) => { if (!enabled || !ensure()) return; noiseF(dur, vol, f, 'highpass'); };
+  function noiseF(dur, vol, f, type) {
+    const n = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f;
+    const g = ctx.createGain(); g.gain.value = vol; src.connect(fl); fl.connect(g); g.connect(master); src.start();
+  }
+  const SFX = {
+    fire:    { cast() { noise(0.5, 0.12, 600); tone(110, 0.5, 'sawtooth', 0.06, 220); }, release() { noise(0.25, 0.3, 900); tone(180, 0.25, 'sawtooth', 0.1, 90); }, impact() { noise(0.45, 0.45, 500); tone(80, 0.35, 'square', 0.12, 40); } },
+    cold:    { cast() { tone(1400, 0.5, 'sine', 0.06, 2200); hp(0.4, 0.06, 5000); }, release() { tone(2200, 0.2, 'triangle', 0.1, 1200); hp(0.15, 0.12, 4000); }, impact() { hp(0.3, 0.3, 3000); [2600, 3100, 3700].forEach((f, i) => tone(f, 0.18, 'triangle', 0.06, null, i * 0.04)); } },
+    magic:   { cast() { tone(500, 0.5, 'triangle', 0.08, 1000); }, release() { tone(1000, 0.2, 'triangle', 0.14, 600); }, impact() { tone(700, 0.25, 'square', 0.08, 300); noise(0.15, 0.2, 2500); } },
+    disease: { cast() { tone(140, 0.6, 'sine', 0.1, 90); }, release() { [0, 0.07, 0.15].forEach((d) => tone(300 + Math.random() * 200, 0.08, 'sine', 0.12, 120, d)); }, impact() { [0, 0.06, 0.13, 0.2].forEach((d) => tone(200 + Math.random() * 300, 0.09, 'sine', 0.14, 90, d)); noise(0.3, 0.12, 400); } },
+    life:    { cast() { tone(220, 0.6, 'sawtooth', 0.05, 330); }, release() { tone(330, 0.3, 'sawtooth', 0.08, 165); }, impact() { tone(160, 0.4, 'sawtooth', 0.1, 70); tone(240, 0.4, 'sine', 0.08, 480, 0.1); } },
+    heal:    { cast() { tone(523, 0.6, 'sine', 0.07, 784); }, release() { tone(784, 0.3, 'sine', 0.1); }, impact() { [784, 988, 1175].forEach((f, i) => tone(f, 0.35, 'sine', 0.08, null, i * 0.07)); } },
+    holy:    { cast() { tone(660, 0.6, 'triangle', 0.06, 990); }, release() { [660, 880, 1320].forEach((f, i) => tone(f, 0.4, 'triangle', 0.08, null, i * 0.05)); }, impact() { tone(1320, 0.4, 'sine', 0.08); tone(990, 0.5, 'sine', 0.06, null, 0.05); } },
+    mind:    { cast() { tone(400, 0.7, 'sine', 0.07, 600); tone(404, 0.7, 'sine', 0.07, 606); }, release() { tone(800, 0.4, 'sine', 0.08, 400); }, impact() { [600, 500, 400, 300].forEach((f, i) => tone(f, 0.25, 'sine', 0.07, f * 1.05, i * 0.08)); } },
+    shadow:  { cast() { tone(90, 0.7, 'sawtooth', 0.06, 60); }, release() { tone(120, 0.4, 'sawtooth', 0.1, 50); }, impact() { tone(70, 0.6, 'sawtooth', 0.14, 35); noise(0.4, 0.2, 300); } },
+    wolf:    { cast() {}, release() {}, impact() { tone(380, 0.9, 'sine', 0.12, 620); tone(620, 0.6, 'sine', 0.06, 420, 0.5); } },
+    friend:  { cast() {}, release() {}, impact() { [880, 1108, 1318, 1760].forEach((f, i) => tone(f, 0.18, 'square', 0.04, null, i * 0.05)); } },
+  };
+  SFX.poison = SFX.disease;
   EB.audio = {
+    get enabled() { return enabled; },
     unlock() { ensure(); if (ctx && ctx.state === 'suspended') ctx.resume(); },
     toggle() { enabled = !enabled; return enabled; },
     setMood,
@@ -92,7 +115,9 @@
     hit() { noise(0.1, 0.5, 700); tone(110, 0.12, 'square', 0.15, 60); },
     hurt() { tone(220, 0.18, 'sawtooth', 0.2, 110); },
     miss() { noise(0.08, 0.12, 4000); },
-    cast() { tone(300, 0.6, 'sine', 0.15, 900); },
+    cast(school) { if (school && SFX[school]) { SFX[school].cast(); return; } tone(300, 0.6, 'sine', 0.15, 900); },
+    // v10: per-school synth voices for cast start / release / impact (all routed through the master gain, so mute (M) silences them)
+    sfx(school, phase) { const S = SFX[school] || SFX.magic; (S[phase] || S.impact)(); },
     spell() { tone(900, 0.3, 'triangle', 0.25, 400); noise(0.25, 0.2, 3000); },
     heal() { tone(520, 0.25, 'sine', 0.2); tone(780, 0.35, 'sine', 0.2, null, 0.12); },
     fizzle() { tone(200, 0.3, 'sawtooth', 0.15, 80); },

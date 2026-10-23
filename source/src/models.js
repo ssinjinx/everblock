@@ -1149,7 +1149,7 @@
     if (attackT > 0 && st.lastAtk <= 0) st.swingN++;
     st.lastAtk = attackT;
     const cast = !!ex.cast;
-    const a = { ph: walkPhase || 0, mv: st.mv, atk: attackT > 0 && !cast ? clamp01(attackT) : -1, kind: ex.kind || attackKindFor(M), cast, sit: !!sitting, speed: ex.speed || 1 };
+    const a = { ph: walkPhase || 0, mv: st.mv, atk: attackT > 0 && !cast ? clamp01(attackT) : -1, kind: ex.kind || attackKindFor(M), cast, castP: ex.castP || 0, release: ex.release || 0, sit: !!sitting, speed: ex.speed || 1 };
     if (M.rig === 'human') poseHuman(M, a, st);
     else if (M.rig === 'quad') poseQuad(M, a, st);
     else if (M.rig === 'insect') poseInsect(M, a, st);
@@ -1197,8 +1197,13 @@
     }
     if (a.cast) {
       const w = Math.sin(t * 7) * 0.07;
-      uL = [-1.25 + w, 0, -0.3]; uR = [-1.25 - w, 0, 0.3]; fL[0] = -0.6; fR[0] = -0.6;
+      const k = a.castP || 0; // v10: arms climb overhead as the cast charges
+      uL = [-1.25 - 1.15 * k + w, 0, -0.3 - 0.15 * k]; uR = [-1.25 - 1.15 * k - w, 0, 0.3 + 0.15 * k]; fL[0] = -0.6 + 0.35 * k; fR[0] = -0.6 + 0.35 * k;
       R(p.torso, -0.08, 0, 0); R(p.head, -0.12, 0, 0);
+    }
+    if (a.release > 0 && !a.cast) { // v10: release - both arms thrust forward at the target
+      const r = Math.min(1, a.release / 0.35);
+      uL = [-1.55 * r + uL[0] * (1 - r), 0, -0.12]; uR = [-1.55 * r + uR[0] * (1 - r), 0, 0.12]; fL[0] *= 1 - r; fR[0] *= 1 - r;
     }
     // attacks
     if (a.atk >= 0) {

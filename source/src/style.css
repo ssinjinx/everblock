@@ -441,3 +441,11 @@ body.phone.chatOpen #chatWin { top: calc(env(safe-area-inset-top) + 124px); }
 .petRow { border-top: 1px solid #3a2e1c; padding: 4px 0; } .petRow.sel { background: rgba(80,140,80,0.15); } .petAll { padding-bottom: 4px; }
 #petBar .petSel small { max-width: 46px; overflow: hidden; white-space: nowrap; }
 body.phone .aaGrid, body.phone .classPick { grid-template-columns: 1fr 1fr; }
+/* v10: floating combat numbers and crowd-control tags */
+#fxNums { position: fixed; inset: 0; pointer-events: none; z-index: 6; overflow: hidden; }
+.fxNum, .fxCC { position: absolute; left: 0; top: 0; font: 900 18px/1 system-ui, sans-serif; color: #fff; text-shadow: 0 0 3px #000, 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); white-space: nowrap; will-change: transform; }
+.fxNum.big { font-size: 28px; color: #ffe040 !important; }
+.fxNum.heal { font-size: 19px; }
+.fxCC { font-size: 26px; letter-spacing: 1px; padding: 2px 8px; border-radius: 10px; }
+.fxCC.mez { color: #e8b0ff; background: rgba(60,20,110,.55); border: 2px solid #c080ff; font-style: italic; }
+.fxCC.stun { color: #fff070; background: rgba(110,70,0,.55); border: 2px solid #ffd040; }

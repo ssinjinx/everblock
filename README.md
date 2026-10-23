@@ -8,6 +8,23 @@ A blocky voxel world (Minecraft-style) that plays like **EverQuest Classic (1999
 
 Everything is generated in code: terrain, textures, models, spell icons, sound and music. There are no external assets. The whole game is one self-contained `index.html` (Three.js r149 inlined) that works offline from `file://`. Solo progress saves to localStorage. Multiplayer needs an Everblock server ([SERVER.md](SERVER.md)).
 
+## New in v10: spell effects that hit like they mean it
+
+- **A look per school**: fire embers, frost shards, poison and disease bubbles, magic helixes, holy pillars and mind sparkles. Particles fade from one colour into another and come in four shapes: orbs, four-point sparks, shards and bubbles.
+- **Wind-up and release**: a rune circle grows under the caster, an orb swells in each hand and the arms rise with cast progress. On release the arms thrust forward with a burst.
+- **Impact feedback**: targets flash and flinch, an impact light and a ground ring or shockwave appear, and a floating damage number rides the bolt in. Crits get a big number and a camera shake. Heals show a green +N.
+- **Lingering effects**: DoTs leave a puddle under the target. Mez shows a big "zZz" tag and stun shows "@#%!", each with a halo.
+- **Signature effects**: OP actives, weapon procs (chain zaps, pillars, frost novas, life taps), clickies, and a separate summon effect for each pet type (bones, wolf, friend).
+- **Sound per school**: synthesized cast, release and impact voices, silenced by mute (M).
+- **Low/phone mode**: about 1/3 of the particles, chunkier and brighter, no dynamic lights, and fewer decals and numbers. It still reads well on an iPhone.
+
+| | |
+|---|---|
+| ![wind-up](screenshots/v10-windup.png) | ![fire nuke](screenshots/v10-fire-nuke.png) |
+| ![frost impact](screenshots/v10-frost-impact.png) | ![heal + buff](screenshots/v10-heal-buff.png) |
+| ![DoT + mez](screenshots/v10-dot-mez.png) | ![pet summons](screenshots/v10-pet-summons.png) |
+| ![OP active + proc](screenshots/v10-op-active.png) | ![low/phone mode](screenshots/v10-low-mode.png) |
+
 ## New in v9: multiclass, multiple pets and Overachievement Points
 
 - **Multiclass.** Pick a primary and an optional second class at creation; at level 10 you can add a **third** (pop-up, any class trainer, including those in the Bizarre Bazaar, or `/class`). You learn every chosen class's spells and abilities at the lowest level any of them gets it, can wear anything any of them could, and keep the best HP and mana pool, trimmed 6% per extra class. XP is 10% lower per extra class. Labels read like `Cleric/Necro/Shaman`. Old characters load as one class and can add a second at any time.
@@ -198,4 +215,4 @@ cd source
 python3 build.py     # inlines src/*.js, src/style.css and vendor/three.min.js into ../index.html (and source/dist/everblock.html)
 sh pwa/stage.sh      # copies manifest.webmanifest, icons/ and the build-stamped sw.js next to ../index.html
 ```
-For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`). Multiclass/pets/OP: `node test_v9.js` and `cd server && node test/v9.js`. Gear pass: `node test_v8.js` (procs, clickies, focus, sets, affixes, save compatibility) and `cd server && node test/v8.js`. Multiplayer: `node test_v7.js` (v7 zones, portals, Bazaar, bank), `node test_v6.js` (starts a throwaway server and plays it with two desktop browsers and one phone), plus `cd server && npm install && npm test` (protocol test with bot clients) and `node test/load.js` (load test).
+For development, open `source/index.html` directly. `source/tools/` contains Playwright scripts for headless Chromium (`npm install`, then `node test.js`, `node test_v2.js`, `node test_v10.js`, `node test_v3.js`, `node test_v4.js`, `node test_v5.js`, `node test_phone.js` for the iPhone 13 / Pixel 5 touch emulation test, `node test_iphone.js` for the WebKit iPhone test (needs `npx playwright install webkit`), or `URL=http://localhost:8000/ node test_pwa.js` for the PWA (serve the repo root over http first); they expect Chrome at `/usr/bin/google-chrome`). Multiclass/pets/OP: `node test_v9.js` and `cd server && node test/v9.js`. Gear pass: `node test_v8.js` (procs, clickies, focus, sets, affixes, save compatibility) and `cd server && node test/v8.js`. Multiplayer: `node test_v7.js` (v7 zones, portals, Bazaar, bank), `node test_v6.js` (starts a throwaway server and plays it with two desktop browsers and one phone), plus `cd server && npm install && npm test` (protocol test with bot clients) and `node test/load.js` (load test).

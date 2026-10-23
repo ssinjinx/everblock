@@ -207,6 +207,7 @@
       if (EB.phone && EB.phone.bindGame) EB.phone.bindGame(this); // v5c: phone controls on every entry path (new character + Enter World)
       this.updateClickPrompt();
       ui.log('Welcome to Everblock!', 'ding');
+      ui.log(`Town Crier: Greetings, ${pl.name}. New in v10: SPELLS GO BOOM! Every school has its own sparks, shards and sounds. Ground runes, floating numbers, crit shakes, bigger mez/stun markers, flashy pet summons and OP actives. Too much sparkle for your phone? Low graphics keeps it bold but cheap.`, 'sys');
       ui.log(`Town Crier: Greetings, ${pl.name}. New in v9: MULTICLASS! Two classes from level 1, a third at level 10 (any class trainer, or /class). Run several pets at once, and spend Overachievement Points (press O or 🏆) on passives, hotbar actives and class-combo synergies.`, 'help');
       if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v8, the gear pass: item quality colors, weapon procs, click effects (look for the ⚡ button and your hotbar), focus effects, armor set bonuses and random suffixes like 'of the Bear Who Skipped Leg Day'. Also new in v7: level cap 40 with new tricks for every class, The Soggybottom Mire (levels 25-32, west from the Sunscorched Expanse) and The Cinderpeak Caldera (levels 32-40, east), and The Bizarre Bazaar: step into the glowing portal in any town for trainers, vendors, a bank and a sellsword agent. From v6: multiplayer (Play Online, see SERVER.md). From v5: the Sunscorched Expanse (levels 15-25, north through the Frostfang pass) with the Great Pyramid and the Tomb of Ankhet-Ra, level cap 25 with new spells for every class, pet commands (P or /pet), faction standing (/faction), smarter monsters that heal, flee and bring friends, rare named spawns, and Phone Mode with touch controls. Press ? for help.`, 'help');
       if (false) ui.log(`Town Crier: Greetings, ${pl.name}. New in v4: detailed, fully animated character and monster models with visible gear and spell effects (/gfx low|high to change quality). From v3: five new classes, the spellbook (K), merc stances and gear, and The Warden's Legacy quest (hail Soul-Notary Kerra). Press ? for help.`, 'help');
@@ -640,7 +641,7 @@
       const hitChance = U.clamp(0.72 + (pl.level - t.level) * 0.05 + (st.DEX - 75) / 400, 0.3, 0.95);
       if (Math.random() > hitChance) { this.log(`You try to ${w.verb} ${t.name}, but whiff!`, 'miss'); if (t.state !== 'chase' && t.state !== 'flee') t.aggroOn(pl, this); return; }
       let dmg = this.meleeDamage(w, st); const A = pl.aaT();
-      if (A.crit && Math.random() * 100 < A.crit) { dmg *= 2; this.log('You score a critical hit! (Lucky Socks are working)', 'melee'); }
+      if (A.crit && Math.random() * 100 < A.crit) { dmg *= 2; this._crit = true; this.log('You score a critical hit! (Lucky Socks are working)', 'melee'); }
       this.log(`You ${w.verb} ${t.name} for ${dmg} damage.`, 'melee');
       EB.audio.hit();
       this.damageMob(t, dmg, pl);
@@ -664,7 +665,8 @@
       if (!P || !t.alive || Math.random() >= EB.gear.procChance(pid, w.delay)) return false;
       const roll = (r) => U.randInt(r[0], r[1]);
       this.log(`Your ${w.name} flares: ${P.name}!`, 'spell');
-      EB.fx.burst(EB.fx.center(t), P.color, 44, 5, 0.45, 0.8, 1); EB.fx.column(t, P.color); this.spellFx(t, P.school);
+      EB.fx.burst(EB.fx.center(t), P.color, 44, 5, 0.45, 0.8, 1, 1, 0xffffff); this.spellFx(t, P.school, 'nuke', pl, { big: true });
+      EB.fx.signature({ chain: 'chain', frost: 'frostnova', tap: 'tapflow' }[P.kind] || 'pillar', t, P.color, pl);
       if (this.pmodel && this.pmodel.parts.weapon) { this.pmodel.group.updateMatrixWorld(true); const v = this.pmodel.parts.weapon.localToWorld(new THREE.Vector3(0, 0.5, 0)); EB.fx.burst(v, P.color, 18, 3, 0.25, 0.5, 0.5); }
       EB.audio.spell();
       const hit = (m, dmg) => { this.log(`${U.cap(m.name)} is hit by ${P.name} for ${dmg} damage.`, 'nonmelee'); this.damageMob(m, dmg, pl); };
@@ -678,7 +680,7 @@
           for (const m of this.mobs) {
             if (n >= P.jumps) break;
             if (m === t || !m.alive || m.pos.distanceTo(t.pos) > 8 || !(m.hate && (m.hate.has(pl) || this.mercs.some((mc) => m.hate.has(mc))))) continue;
-            EB.fx.bolt(EB.fx.center(from).clone(), m, P.color, { speed: 40 }); hit(m, Math.round(roll(P.dmg) * 0.6)); from = m; n++;
+            EB.fx.bolt(EB.fx.center(from).clone(), m, P.color, { speed: 40, school: P.school }); EB.fx.signature('chain', from, P.color, m); hit(m, Math.round(roll(P.dmg) * 0.6)); from = m; n++;
           }
           break;
         }
@@ -698,6 +700,7 @@
       const pl = this.player, I = ITEMS[id], C = I && EB.gear.CLICKS[I.click];
       if (!C || !pl.alive) return false;
       if (!this.hasClicky(id)) { this.log(`You need the ${I.name} in your bags or equipped to use ${C.name}.`, 'sys'); return false; }
+      if (!((pl.cooldowns['click:' + id] || 0) > this.time)) EB.fx.signature('click', pl, C.color || (C.kind === 'heal' ? 0x9effa0 : C.kind === 'mana' ? 0x80a0ff : C.kind === 'port' ? 0xb080ff : 0xffe070));
       if (I.slot && !Object.values(pl.equip).some((e) => e && e.id === id)) { this.log(`You must be wearing the ${I.name} to use it. Fashion first.`, 'sys'); return false; }
       if (pl.casting) { this.log('One spell at a time, show-off!', 'sys'); return false; }
       const key = 'click:' + id, cd = (pl.cooldowns[key] || 0) - this.time;
@@ -738,6 +741,7 @@
     }
     damageMob(m, dmg, src) {
       if (!m.alive) return;
+      this.combatNumber(m, dmg, src);
       if (this.net && m.net) { this.net.damage(m, dmg, src); if (m === this.target) this.updateTargetWin(); return; } // v6: the server applies damage, hate and kills
       if (dmg > 0 && this.time < (m.wardUntil || 0)) dmg = Math.max(1, Math.round(dmg * (1 - (m.ward || 0))));
       m.hp -= dmg; if (dmg > 0) EB.models.flinch(m.model);
@@ -747,6 +751,16 @@
       m.addHate(src, dmg + 1);
       if (m.hp <= 0) this.killMob(m, src);
       if (m === this.target) this.updateTargetWin();
+    }
+    // v10: floating damage numbers (spell numbers ride the bolt and pop on impact), crit shake
+    combatNumber(m, dmg, src) {
+      const crit = !!this._crit; this._crit = false;
+      if (!(dmg > 0) || !src || !(src === this.player || src.kind === 'merc')) return;
+      const col = this._dmgColor || (src === this.player ? '#ffffff' : '#c8d8ff'), txt = crit ? dmg + '!' : String(dmg);
+      const b = this._pendingBolt;
+      if (b && b.to === m && !b.done) { (b.nums = b.nums || []).push([txt, col, crit]); if (crit) b.crit = true; }
+      else { EB.fx.number(m, txt, col, crit); if (crit && src === this.player) EB.fx.shake(0.14); }
+      if (crit && src === this.player) EB.fx.flash(m, 0xffe040, true);
     }
     killMob(m, src) {
       const pl = this.player;
@@ -823,6 +837,7 @@
       if ((A.kind === 'nuke' || A.kind === 'tap') && (!t || t.kind !== 'mob' || !t.alive || pl.pos.distanceTo(t.pos) > 34)) { this.log(`${n.name} needs a monster target in range.`, 'sys'); return false; }
       pl.cooldowns[key] = this.time + A.cd;
       this.log(`You use ${n.name}!`, 'spell');
+      if (A.kind === 'fade') EB.fx.signature('fade', pl); else if (A.kind !== 'nuke' && A.kind !== 'tap') EB.fx.signature('op', pl, A.color || (/heal/.test(A.kind) ? 0x9effa0 : A.kind === 'mana' ? 0x80a0ff : 0xffd040));
       const healE = (e, pct) => { const b = e.hp; e.hp = Math.min(e.maxHp, e.hp + Math.ceil(e.maxHp * pct / 100)); EB.fx.heal(e); return Math.round(e.hp - b); };
       switch (A.kind) {
         case 'heal': this.log(`You feel much better. (+${healE(pl, A.pct)} HP)`, 'spell'); EB.audio.heal(); break;
@@ -834,7 +849,8 @@
         case 'fade': for (const m of this.mobs) if (m.alive && m.hate.has(pl)) { m.hate.delete(pl); if (m.target === pl) m.goHome(); } pl.autoAttack = false; this.log('Monsters suddenly remember they left the stove on.', 'spell'); EB.fx.column(pl, 0x606080); break;
         case 'nuke': case 'tap': {
           const dmg = Math.round((A.base + A.per * L) * (1 + pl.focus('spellDmg') / 100));
-          this.spellFx(t, A.school); EB.audio.spell();
+          this.spellFx(t, A.school, 'nuke', pl, { big: true }); EB.audio.spell(); EB.fx.signature('op', pl, EB.fx.SCHOOL[A.school] || 0xffd040);
+          if (A.kind === 'tap') EB.fx.signature('tapflow', t, 0xff4070, pl);
           this.log(`${n.name} hits ${t.name} for ${dmg} damage.`, 'nonmelee'); this.damageMob(t, dmg, pl);
           if (A.kind === 'tap') { const b = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + dmg); this.log(`You feel invigorated. (+${Math.round(pl.hp - b)} HP)`, 'spell'); }
           break;
@@ -927,7 +943,7 @@
     mobSpell(m, t, sp) {
       if (Math.random() < 0.1) { if (t === this.player) this.log(`You shrug off ${sp.name}!`, 'spell'); return; }
       const dmg = U.randInt(sp.dmg[0], sp.dmg[1]);
-      EB.fx.bolt(this.castHand(m), t, /frost|glacial/i.test(sp.name) ? 0x9ee8ff : 0xff8040, { size: 0.6, speed: 24 });
+      EB.fx.bolt(this.castHand(m), t, /frost|glacial/i.test(sp.name) ? 0x9ee8ff : 0xff8040, { size: 0.6, speed: 24, school: /frost|glacial/i.test(sp.name) ? 'cold' : 'fire' });
       if (t === this.player) {
         if (!this.player.alive) return;
         this.log(`${sp.name} smacks you for ${dmg} spell damage!`, 'hitme');
@@ -1038,7 +1054,7 @@
       this.stand();
       if (sp.cast > 0) {
         pl.casting = { id, t: 0, total: sp.skill ? sp.cast : sp.cast * (1 - pl.focus('castSpeed') / 100), target: ft, skill: !!sp.skill, startPos: pl.pos.clone() };
-        if (!sp.skill) { this.log(`You start waving your hands around: ${sp.name}.`, 'spell'); EB.audio.cast(); }
+        if (!sp.skill) { this.log(`You start waving your hands around: ${sp.name}.`, 'spell'); EB.audio.cast(sp.school || (sp.kind === 'heal' ? 'heal' : sp.kind === 'pet' ? 'shadow' : 'magic')); }
         else this.log(`You begin to ${sp.name.toLowerCase()}.`, 'sys');
         $('castBar').classList.remove('hidden'); $('castName').textContent = sp.name; $('castFill').style.width = '0%';
       } else this.applyAbility(id, ft);
@@ -1067,6 +1083,7 @@
           }
         }
         if (c.target && !c.target.alive) { this.log('Your target has died.', 'spell'); return; }
+        if (!sp.skill) { this.pReleaseT = 0.35; EB.fx.release(this.castHand(pl), sp.school || (sp.kind === 'heal' ? 'heal' : sp.kind === 'buff' ? 'holy' : sp.kind === 'pet' ? 'shadow' : 'magic')); }
         this.applyAbility(c.id, c.target);
       }
     }
@@ -1104,7 +1121,7 @@
         case 'nuke': {
           if (Math.random() < 0.05 + Math.max(0, t.level - L) * 0.04) { this.log(`${U.cap(t.name)} shrugs off your ${sp.name}!`, 'spell'); this.damageMob(t, 0, pl); break; }
           let dmg = Math.round((U.randInt(sp.dmg[0], sp.dmg[1]) + Math.floor((sp.perLvl || 0) * (L - 1))) * dmgF);
-          if (!sp.skill && pl.aaT().scrit && Math.random() * 100 < pl.aaT().scrit) { dmg *= 2; this.log('Your spell is extra spicy! (critical blast)', 'spell'); }
+          if (!sp.skill && pl.aaT().scrit && Math.random() * 100 < pl.aaT().scrit) { dmg *= 2; this._crit = true; this.log('Your spell is extra spicy! (critical blast)', 'spell'); }
           if (sp.undead && t.def.faction === 'undead') { dmg = Math.floor(dmg * sp.undead); this.log(`${U.cap(t.name)} is seared by holy fire!`, 'spell'); }
           const flavor = { cold: 'is blasted by frost', fire: 'is engulfed in flame', magic: 'is struck by divine power', life: 'staggers as its life is drained' }[sp.school] || 'is struck';
           this.log(`${U.cap(t.name)} ${flavor}.`, 'spell');
@@ -1112,7 +1129,7 @@
           EB.audio.spell();
           this.spellFx(t, sp.school);
           this.damageMob(t, dmg, pl);
-          if (sp.lifetap) { const before = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + dmg); this.log(`You feel invigorated. (+${Math.round(pl.hp - before)} HP)`, 'spell'); }
+          if (sp.lifetap) { EB.fx.signature('tapflow', t, 0xff4070, pl); const before = pl.hp; pl.hp = Math.min(pl.maxHp, pl.hp + dmg); this.log(`You feel invigorated. (+${Math.round(pl.hp - before)} HP)`, 'spell'); }
           break;
         }
         case 'dot': {
@@ -1154,7 +1171,7 @@
           break;
         }
         case 'pet': {
-          { const pet = this.summonPet(sp.petLvl, sp.petType); if (pet) EB.fx.summon(pet); } EB.audio.spell();
+          { const pet = this.summonPet(sp.petLvl, sp.petType); if (pet) EB.fx.summonType(pet, sp.petType || 'skel'); } EB.audio.spell();
           break;
         }
         case 'buff': {
@@ -1219,10 +1236,13 @@
       this.fx.push({ m: a, life: 0.35, from: a.position.clone(), to: new THREE.Vector3(t.pos.x, t.pos.y + t.h * 0.6, t.pos.z), arrow: true });
     }
     // v4: particle spell effects (bolt from the caster's hand, impact burst, mez/stun stars, DoT clouds are per-frame)
-    spellFx(t, school, kind, src) {
+    spellFx(t, school, kind, src, o) {
       src = src || this.player;
       const from = this.castHand(src);
-      EB.fx.spell(src, from, t, school, kind || 'nuke');
+      const b = EB.fx.spell(src, from, t, school, kind || 'nuke', o);
+      if (b) this._pendingBolt = b;
+      this._dmgColor = '#' + (EB.fx.SCHOOL[school] || 0xffffff).toString(16).padStart(6, '0');
+      return b;
     }
     castHand(e) {
       const M = e === this.player ? this.pmodel : e.model;
@@ -2436,12 +2456,19 @@
     updateFx(dt) {
       const pl = this.player;
       EB.models.camPos.copy(this.camera.position);
+      this._pendingBolt = null; this._dmgColor = null; this._crit = false; this._fxDt = dt;
+      // v10: heal numbers - any HP gain within a moment of a heal effect pops a green +N
+      for (const e of [pl, ...this.mercs]) {
+        if (e._lastHp != null && e.hp > e._lastHp + 0.5 && EB.fx.now - (e._healMark == null ? -9 : e._healMark) < 0.4) EB.fx.number(e, '+' + Math.round(e.hp - e._lastHp), '#70ff90', false, 'heal');
+        e._lastHp = e.hp;
+      }
       const DOT = { fire: 0xff7020, disease: 0x90d040, poison: 0x80e040, magic: 0xd080ff, life: 0xff4070, cold: 0x80d0ff };
       for (const m of this.mobs) {
         if (!m.alive || m.pos.distanceToSquared(pl.pos) > 3600) continue;
-        if (m.dots && m.dots.length) EB.fx.cloud(m, DOT[m.dots[0].school] || 0x90d040, dt);
+        if (m.dots && m.dots.length) EB.fx.cloud(m, DOT[m.dots[0].school] || 0x90d040, dt, m.dots[0].school);
         if (m.casting) this.castGlow(m, m.def.glow || 0x80c0ff, dt);
-        if (this.time < (m.mezUntil || 0) || this.time < (m.stunUntil || 0)) { m._starT = (m._starT || 0) - dt; if (m._starT <= 0) { m._starT = 1.2; EB.fx.stars(m, 1.25); } }
+        const mez = this.time < (m.mezUntil || 0), stun = this.time < (m.stunUntil || 0);
+        if (mez || stun) EB.fx.ccMark(m, mez ? 'mez' : 'stun', dt);
       }
       for (const m of this.mercs) if (!m.dead && m.casting) this.castGlow(m, m.isPet ? 0xb060ff : 0xfff4b0, dt);
       if (pl.alive && pl.casting && !pl.casting.skill && this.camDist > 0) { const sp = SPELLS[pl.casting.id]; this.castGlow(pl, EB.fx.SCHOOL[sp && sp.school] || (sp && sp.kind === 'heal' ? 0x9effa0 : 0xfff080), dt); }
@@ -2483,13 +2510,16 @@
       }
     }
     castGlow(e, color, dt) {
+      const c = e.casting, tot = c && (c.total || (c.sp && c.sp.cast) || (c.support && c.support.cast));
+      const prog = !c || !tot ? 0.5 : c.total ? c.t / tot : 1 - c.t / tot;
+      EB.fx.castCircle(e, color, prog);
       e._glowT = (e._glowT || 0) + dt;
       if (e._glowT < 1 / 30) return;
       e._glowT = 0;
       const M = e === this.player ? this.pmodel : e.model;
       if (!M || !M.parts || !M.parts.handR) return;
-      EB.fx.hand(EB.models.handPos(M, 'R'), color, dt);
-      EB.fx.hand(EB.models.handPos(M, 'L'), color, dt);
+      EB.fx.hand(EB.models.handPos(M, 'R'), color, dt, prog);
+      EB.fx.hand(EB.models.handPos(M, 'L'), color, dt, prog);
     }
     updatePlayerModel(dt, moving) {
       const pl = this.player, M = this.pmodel;
@@ -2506,11 +2536,13 @@
         if (EB.models.sigOf(spec) !== M.sig) { EB.models.dispose(M); this.pmodel = EB.models.buildModel(spec); this.scene.add(this.pmodel.group); return this.updatePlayerModel(0, moving); }
       }
       const casting = !!(pl.casting && !pl.casting.skill && SPELLS[pl.casting.id] && SPELLS[pl.casting.id].cast > 0);
-      animateModel(M, this.pWalk || 0, moving && pl.onGround, casting ? 0 : this.pAttackAnim || 0, pl.sitting, { dt, cast: casting, kind: this.pAttackAnim > 0 ? this.pAttackKind || undefined : undefined, always: true });
+      if (this.pReleaseT > 0) this.pReleaseT = Math.max(0, this.pReleaseT - dt);
+      animateModel(M, this.pWalk || 0, moving && pl.onGround, casting ? 0 : this.pAttackAnim || 0, pl.sitting, { dt, cast: casting, castP: casting ? Math.min(1, pl.casting.t / pl.casting.total) : 0, release: this.pReleaseT || 0, kind: this.pAttackAnim > 0 ? this.pAttackKind || undefined : undefined, always: true });
     }
     updateCamera() {
       const pl = this.player, cam = this.camera;
-      if (this.camOverride) { cam.position.copy(this.camOverride.pos); cam.lookAt(this.camOverride.look); return; } // screenshot/photo mode hook
+      const sh = EB.fx.shakeOffset(this._fxDt || 1 / 60);
+      if (this.camOverride) { cam.position.copy(this.camOverride.pos); cam.lookAt(this.camOverride.look); if (sh) cam.position.add(sh); return; } // screenshot/photo mode hook
       const sitDrop = pl.sitting ? pl.h * 0.35 : 0;
       const eye = new THREE.Vector3(pl.pos.x, pl.pos.y + pl.eyeH - sitDrop + (this.eyeOffset || 0), pl.pos.z);
       const dir = this.camDir();
@@ -2523,6 +2555,7 @@
         cam.position.copy(eye).addScaledVector(back, d);
       } else cam.position.copy(eye);
       cam.lookAt(cam.position.x + dir.x, cam.position.y + dir.y, cam.position.z + dir.z);
+      if (sh) cam.position.add(sh);
     }
     updateSky(dt) {
       this.dayT = (this.dayT + dt / DAY_LEN) % 1;
